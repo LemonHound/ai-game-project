@@ -1,77 +1,61 @@
-class GameClient {
+class App {
     constructor() {
-        this.gameContainer = document.getElementById('game-container');
         this.init();
     }
 
-    async init() {
-        // Initialize game UI
-        this.renderGameUI();
-
-        // Load initial game state
-        await this.loadGameState();
+    init() {
+        this.setupEventListeners();
+        this.showStatus('✅ Frontend loaded successfully!', 'success');
     }
 
-    renderGameUI() {
-        this.gameContainer.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">Game Board</h2>
-                        <div id="game-board" class="min-h-64 bg-base-200 rounded">
-                            <!-- Game board content -->
-                        </div>
-                    </div>
-                </div>
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">Controls</h2>
-                        <button id="make-move-btn" class="btn btn-primary">Make Move</button>
-                        <button id="ai-move-btn" class="btn btn-secondary">AI Move</button>
-                    </div>
-                </div>
-            </div>
-        `;
+    setupEventListeners() {
+        document.getElementById('test-server').addEventListener('click', () => {
+            this.testServer();
+        });
 
-        // Add event listeners
-        document.getElementById('make-move-btn').addEventListener('click', () => this.makeMove());
-        document.getElementById('ai-move-btn').addEventListener('click', () => this.requestAIMove());
+        document.getElementById('test-database').addEventListener('click', () => {
+            this.testDatabase();
+        });
     }
 
-    async loadGameState() {
+    async testServer() {
         try {
-            const response = await fetch('/api/game/state');
-            const gameState = await response.json();
-            // Update UI with game state
-            console.log('Game state loaded:', gameState);
+            this.showStatus('🔄 Testing server...', 'info');
+            const response = await fetch('/api/health');
+            const data = await response.json();
+            this.showStatus(`✅ ${data.message}`, 'success');
         } catch (error) {
-            console.error('Error loading game state:', error);
+            this.showStatus(`❌ Server test failed: ${error.message}`, 'error');
         }
     }
 
-    async makeMove() {
-        // Implement player move logic
-        console.log('Player move');
+    async testDatabase() {
+        try {
+            this.showStatus('🔄 Testing database...', 'info');
+            const response = await fetch('/api/test-db');
+            const data = await response.json();
+            this.showStatus(`✅ ${data.status} Users: ${data.userCount}`, 'success');
+        } catch (error) {
+            this.showStatus(`❌ Database test failed: ${error.message}`, 'error');
+        }
     }
 
-    async requestAIMove() {
-        try {
-            const response = await fetch('/api/ai/move', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ gameState: 'current_state' })
-            });
-            const aiMove = await response.json();
-            console.log('AI move:', aiMove);
-        } catch (error) {
-            console.error('Error requesting AI move:', error);
-        }
+    showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        const messageSpan = document.getElementById('status-message');
+
+        statusDiv.className = `alert alert-${type}`;
+        messageSpan.textContent = message;
+        statusDiv.classList.remove('hidden');
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            statusDiv.classList.add('hidden');
+        }, 5000);
     }
 }
 
-// Initialize the game when DOM is loaded
+// Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new GameClient();
+    new App();
 });
