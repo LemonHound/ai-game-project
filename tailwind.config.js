@@ -2,6 +2,8 @@
 
 module.exports = {
     content: [
+        "./src/frontend/views/**/*.ejs",
+        "./src/frontend/views/**/*.html",
         "./src/frontend/public/**/*.{html,js}",
         "./src/frontend/public/js/**/*.js"
     ],

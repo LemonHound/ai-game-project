@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="/css/output.css">
     <%- include('partials/head-extras') %>
 </head>
-<body class="bg-base-100 min-h-screen">
+<body class="bg-base-100 h-full rounded-2xl">
 <%- include('partials/navbar') %>
 
-<div class="flex min-h-screen">
+<div class="flex h-full rounded-2xl">
     <% if (typeof showSidebar === 'undefined' || showSidebar) { %>
         <%- include('partials/sidebar') %>
 
@@ -27,11 +27,8 @@
     <% } %>
 
     <!-- Main Content -->
-    <main class="<%= typeof showSidebar === 'undefined' || showSidebar ? 'flex-1' : 'w-full' %> p-4 lg:p-6">
-        <!-- This is where page content gets inserted -->
-        <% if (typeof body !== 'undefined') { %>
-            <%- body %>
-        <% } %>
+    <main class="<%= typeof showSidebar === 'undefined' || showSidebar ? 'flex-1' : 'w-full' %> p-4 lg:p-6 rounded-2xl">
+        <%- include(currentTemplate) %>
     </main>
 </div>
 

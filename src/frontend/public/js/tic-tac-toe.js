@@ -10,6 +10,7 @@ class TicTacToeGame {
 
         this.initializeBoard();
         this.updateGameStatus();
+        this.updateAIThoughts("Ready for a new game! Make your first move.");
     }
 
     initializeBoard() {
@@ -17,8 +18,8 @@ class TicTacToeGame {
         boardElement.innerHTML = '';
 
         for (let i = 0; i < 9; i++) {
-            const square = document.createElement('div');
-            square.className = 'btn btn-lg btn-square bg-base-100 border-2 border-base-300 hover:border-primary text-2xl font-bold transition-all duration-200';
+            const square = document.createElement('button');
+            square.className = 'btn btn-lg btn-neutral w-20 h-20 text-3xl font-bold hover:btn-primary transition-all duration-200';
             square.setAttribute('data-index', i);
             square.addEventListener('click', () => this.makeMove(i));
             boardElement.appendChild(square);
@@ -53,7 +54,6 @@ class TicTacToeGame {
     }
 
     async makeAIMove() {
-        // For now, use simple AI logic (can be enhanced with API calls later)
         const aiMove = this.getBestAIMove();
 
         if (aiMove !== -1) {
@@ -75,7 +75,7 @@ class TicTacToeGame {
     }
 
     getBestAIMove() {
-        // Simple AI strategy:
+        // Simple "AI" strategy:
         // 1. Try to win
         // 2. Try to block player from winning
         // 3. Take center if available
@@ -130,8 +130,14 @@ class TicTacToeGame {
     updateSquare(index, player) {
         const square = document.querySelector(`[data-index="${index}"]`);
         square.textContent = player;
-        square.classList.add(player === 'X' ? 'btn-primary' : 'btn-secondary');
-        square.classList.remove('btn-square', 'hover:border-primary');
+        if (player === 'X') {
+            square.classList.remove('btn-neutral');
+            square.classList.add('btn-success', 'btn-active');
+        } else {
+            square.classList.remove('btn-neutral');
+            square.classList.add('btn-error', 'btn-active');
+        }
+        square.disabled = true;
     }
 
     checkWinner() {
@@ -159,7 +165,8 @@ class TicTacToeGame {
     highlightWinningLine(line) {
         line.forEach(index => {
             const square = document.querySelector(`[data-index="${index}"]`);
-            square.classList.add('btn-success');
+            square.classList.remove('btn-success', 'btn-error', 'btn-neutral');
+            square.classList.add('btn-warning');
         });
     }
 
@@ -167,15 +174,23 @@ class TicTacToeGame {
         this.gameOver = true;
         this.updateGameStatus();
         this.updateAIThoughts(this.getEndGameMessage());
+
+        // Disable all squares
+        for (let i = 0; i < 9; i++) {
+            const square = document.querySelector(`[data-index="${i}"]`);
+            if (square) {
+                square.disabled = true;
+            }
+        }
     }
 
     getEndGameMessage() {
         if (this.winner === 'X') {
-            return "Congratulations! You won this round. I'll learn from this game.";
+            return "Congratulations! You won this round. I'll learn from this game and get better!";
         } else if (this.winner === 'O') {
-            return "I won this time! Good game. Ready for another round?";
+            return "I won this time! Good game. I'm learning your strategies. Ready for another round?";
         } else {
-            return "It's a draw! Well played. That was a strategic game.";
+            return "It's a draw! Well played. That was a strategic game. Want to try again?";
         }
     }
 
@@ -209,15 +224,17 @@ class TicTacToeGame {
             const playerIcon = currentPlayerElement.querySelector('.w-8.h-8');
             const playerText = currentPlayerElement.querySelector('span');
 
-            if (this.gameOver) {
-                playerIcon.innerHTML = '<span class="text-primary-content font-bold">🏁</span>';
-                playerText.textContent = 'Game Over';
-            } else if (this.currentPlayer === 'X') {
-                playerIcon.innerHTML = '<span class="text-primary-content font-bold">X</span>';
-                playerText.textContent = 'Your Turn';
-            } else {
-                playerIcon.innerHTML = '<span class="text-primary-content font-bold">O</span>';
-                playerText.textContent = 'AI Turn';
+            if (playerIcon && playerText) {
+                if (this.gameOver) {
+                    playerIcon.innerHTML = '<span class="text-primary-content font-bold">🏁</span>';
+                    playerText.textContent = 'Game Over';
+                } else if (this.currentPlayer === 'X') {
+                    playerIcon.innerHTML = '<span class="text-primary-content font-bold">X</span>';
+                    playerText.textContent = 'Your Turn';
+                } else {
+                    playerIcon.innerHTML = '<span class="text-primary-content font-bold">O</span>';
+                    playerText.textContent = 'AI Turn';
+                }
             }
         }
     }
@@ -238,12 +255,18 @@ class TicTacToeGame {
         const historyElement = document.getElementById('move-history');
         if (!historyElement) return;
 
+        if (this.moveHistory.length === 0) {
+            historyElement.innerHTML = '<div class="text-sm opacity-70">No moves yet</div>';
+            return;
+        }
+
         historyElement.innerHTML = '';
         this.moveHistory.forEach(move => {
             const moveDiv = document.createElement('div');
             moveDiv.className = 'text-sm flex justify-between items-center py-1';
+            const icon = move.player === 'Player' ? '❌' : '⭕';
             moveDiv.innerHTML = `
-                <span>${move.turn}. ${move.player}</span>
+                <span>${move.turn}. ${move.player} ${icon}</span>
                 <span class="badge badge-outline badge-sm">Square ${move.index + 1}</span>
             `;
             historyElement.appendChild(moveDiv);
@@ -267,6 +290,7 @@ class TicTacToeGame {
 
     getHint() {
         if (this.gameOver || this.currentPlayer !== 'X') {
+            this.updateAIThoughts("🤔 I can only give hints during your turn!");
             return;
         }
 
@@ -279,7 +303,7 @@ class TicTacToeGame {
                 this.board[i] = 'X';
                 if (this.checkWinner() === 'X') {
                     this.board[i] = null;
-                    hintMessage += `You can win by playing square ${i + 1}!`;
+                    hintMessage += `You can win by playing square ${i + 1}! Go for it! 🎯`;
                     this.updateAIThoughts(hintMessage);
                     return;
                 }
@@ -293,7 +317,7 @@ class TicTacToeGame {
                 this.board[i] = 'O';
                 if (this.checkWinner() === 'O') {
                     this.board[i] = null;
-                    hintMessage += `Block the AI by playing square ${i + 1}!`;
+                    hintMessage += `Careful! Block me by playing square ${i + 1}! 🛡️`;
                     this.updateAIThoughts(hintMessage);
                     return;
                 }
@@ -303,14 +327,14 @@ class TicTacToeGame {
 
         // General strategic hints
         if (!this.board[4]) {
-            hintMessage += "The center (square 5) is usually a good strategic choice!";
+            hintMessage += "The center (square 5) is usually a good strategic choice! 🎯";
         } else {
             const corners = [0, 2, 6, 8];
             const availableCorners = corners.filter(i => !this.board[i]);
             if (availableCorners.length > 0) {
-                hintMessage += `Try a corner like square ${availableCorners[0] + 1} for better positioning!`;
+                hintMessage += `Try a corner like square ${availableCorners[0] + 1} for better positioning! 📐`;
             } else {
-                hintMessage += "Look for opportunities to create multiple winning paths!";
+                hintMessage += "Look for opportunities to create multiple winning paths! 🧠";
             }
         }
 
@@ -326,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
     startGame();
 });
 
-// Global functions for button handlers
+// Global functions for button handlers (called from EJS)
 function startGame() {
     game = new TicTacToeGame();
 }
@@ -341,4 +365,13 @@ function getHint() {
     if (game) {
         game.getHint();
     }
+}
+
+// Modal functions (from your layout's scripts.ejs)
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('modal-open');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('modal-open');
 }

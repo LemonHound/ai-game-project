@@ -126,29 +126,32 @@ app.get('/api/games', (req, res) => {
 
 // Page Routes with Templates
 app.get('/', (req, res) => {
-    res.render('index', {
+    res.render('layout', {
         title: 'AI Game Hub - Intelligent Gaming Experience',
         currentPage: 'home',
-        games: games.slice(0, 5), // Featured games for sidebar
-        featuredGames: games.filter(g => g.status === 'active').slice(0, 3) // Hero section games
+        currentTemplate: 'index',
+        games: games.slice(0, 5),
+        featuredGames: games.filter(g => g.status === 'active').slice(0, 3)
     });
 });
 
 app.get('/games', (req, res) => {
-    res.render('games', {
+    res.render('layout', {
         title: 'All Games - AI Game Hub',
         currentPage: 'games',
-        games: games.slice(0, 5), // For sidebar
+        currentTemplate: 'games',
+        games: games.slice(0, 5),
         allGames: games,
         highlight: req.query.highlight || null
     });
 });
 
 app.get('/about', (req, res) => {
-    res.render('about', {
+    res.render('layout', {
         title: 'About - AI Game Hub',
         currentPage: 'about',
-        games: games.slice(0, 5) // For sidebar
+        currentTemplate: 'about',
+        games: games.slice(0, 5)
     });
 });
 
@@ -159,38 +162,42 @@ app.get('/game/:gameId', (req, res) => {
     const { gameId } = req.params;
 
     if (!validGames.includes(gameId)) {
-        return res.status(404).render('404', {
+        return res.status(404).render('layout', {
             title: 'Game Not Found - AI Game Hub',
-            currentPage: 'games',
+            currentPage: 'error',
+            currentTemplate: '404',
             games: games.slice(0, 5)
         });
     }
 
     const currentGame = games.find(g => g.id === gameId);
+
     if (!currentGame) {
-        return res.status(404).render('404', {
+        return res.status(404).render('layout', {
             title: 'Game Not Found - AI Game Hub',
-            currentPage: 'games',
+            currentPage: 'error',
+            currentTemplate: '404',
             games: games.slice(0, 5)
         });
     }
 
-    // For coming soon games, redirect to games page with highlight
     if (currentGame.status === 'coming-soon') {
         return res.redirect(`/games?highlight=${gameId}`);
     }
 
-    res.render('game', {
+    res.render('layout', {
         title: `${currentGame.name} - AI Game Hub`,
         currentPage: 'games',
-        games: games.slice(0, 5), // For sidebar
+        currentTemplate: gameId, // This will load 'tic-tac-toe.ejs'
+        games: games.slice(0, 5),
         currentGame: currentGame,
         gameStats: {
             gamesPlayed: 12,
             winRate: 67,
             bestStreak: 5,
             aiLevel: 3
-        }
+        },
+        pageScripts: [`${gameId}.js`] // This loads 'tic-tac-toe.js'
     });
 });
 
@@ -207,21 +214,21 @@ app.get('/api/game/:gameId/info', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     console.error(err.stack);
-    res.status(500).render('error', {
+    res.status(500).render('layout', {
         title: 'Server Error - AI Game Hub',
-        currentPage: 'error',
-        games: games.slice(0, 5),
+        currentPage: '404',
         error: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message
     });
 });
 
 // 404 handler for any unmatched routes
 app.use((req, res) => {
-    res.status(404).render('404', {
+    res.status(404).render('layout', {
         title: 'Page Not Found - AI Game Hub',
         currentPage: 'error',
+        currentTemplate: '404',
         games: games.slice(0, 5)
     });
 });
@@ -229,18 +236,6 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Database: ${process.env.DB_NAME}`);
-    console.log(`🎨 Template Engine: EJS`);
-    console.log(`🎮 Available routes:`);
-    console.log(`   - GET  /              (Home page)`);
-    console.log(`   - GET  /games         (Games page)`);
-    console.log(`   - GET  /about         (About page)`);
-    console.log(`   - GET  /game/:gameId  (Individual games)`);
-    console.log(`     Valid games: ${validGames.join(', ')}`);
-    console.log(`🔌 Available API endpoints:`);
-    console.log(`   - GET  /api/health`);
-    console.log(`   - GET  /api/test-db`);
-    console.log(`   - GET  /api/games`);
-    console.log(`   - GET  /api/game/:gameId/info`);
 });
 
 module.exports = app;

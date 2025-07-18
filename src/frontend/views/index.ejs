@@ -1,120 +1,52 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="abyss">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="../public/css/output.css">
-    <%- include('partials/head-extras') %>
-</head>
-<body class="bg-base-100 min-h-screen">
-<%- include('partials/navbar') %>
+<!-- Hero Section -->
+<section class="mb-8">
+    <div class="hero bg-gradient-to-br from-primary to-secondary rounded-box shadow-2xl">
+        <div class="hero-overlay bg-opacity-20 rounded-box"></div>
+        <div class="hero-content text-center text-primary-content py-12">
+            <div class="max-w-md">
+                <h1 class="text-5xl font-bold mb-6">Welcome to AI Game Hub</h1>
+                <p class="py-6 text-lg opacity-90">
+                    Experience the future of gaming with AI that learns and adapts to your playing style.
+                    Every game makes our AI smarter.
+                </p>
+                <a href="/games" class="btn btn-lg btn-accent">
+                    <span class="text-xl mr-2">🚀</span>
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
 
-<div class="flex min-h-screen">
-    <%- include('partials/sidebar') %>
-
-    <!-- Mobile Menu Button -->
-    <div class="lg:hidden fixed top-20 left-4 z-50">
-        <button class="btn btn-square btn-primary" onclick="document.getElementById('mobile-sidebar').classList.toggle('hidden')">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-        </button>
+<!-- Features Section -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="card bg-base-200 shadow-lg">
+        <div class="card-body text-center">
+            <div class="text-4xl mb-4">🤖</div>
+            <h3 class="card-title justify-center">Adaptive AI</h3>
+            <p class="text-sm opacity-70">
+                Our AI learns from every move you make, creating unique challenges tailored to your skill level.
+            </p>
+        </div>
     </div>
 
-    <%- include('partials/mobile-sidebar') %>
+    <div class="card bg-base-200 shadow-lg">
+        <div class="card-body text-center">
+            <div class="text-4xl mb-4">📊</div>
+            <h3 class="card-title justify-center">Progress Tracking</h3>
+            <p class="text-sm opacity-70">
+                Monitor your improvement across all games with detailed statistics and performance analytics.
+            </p>
+        </div>
+    </div>
 
-    <!-- Main Content -->
-    <main class="flex-1 p-4 lg:p-6">
-        <!-- Hero Section -->
-        <section class="mb-8">
-            <div class="hero bg-gradient-to-br from-primary to-secondary rounded-box shadow-2xl">
-                <div class="hero-overlay bg-opacity-20 rounded-box"></div>
-                <div class="hero-content text-center text-primary-content py-12">
-                    <div class="max-w-md">
-                        <h1 class="text-5xl font-bold mb-6">Welcome to AI Game Hub</h1>
-                        <p class="py-6 text-lg opacity-90">
-                            Experience the future of gaming with AI that learns and adapts to your playing style.
-                            Every game makes our AI smarter.
-                        </p>
-                        <a href="/games" class="btn btn-lg btn-accent">
-                            <span class="text-xl mr-2">🚀</span>
-                            Get Started
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Features Section -->
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="card bg-base-200 shadow-lg">
-                <div class="card-body text-center">
-                    <div class="text-4xl mb-4">🤖</div>
-                    <h3 class="card-title justify-center">Adaptive AI</h3>
-                    <p class="text-sm opacity-70">
-                        Our AI learns from every move you make, creating unique challenges tailored to your skill level.
-                    </p>
-                </div>
-            </div>
-
-            <div class="card bg-base-200 shadow-lg">
-                <div class="card-body text-center">
-                    <div class="text-4xl mb-4">📊</div>
-                    <h3 class="card-title justify-center">Progress Tracking</h3>
-                    <p class="text-sm opacity-70">
-                        Monitor your improvement across all games with detailed statistics and performance analytics.
-                    </p>
-                </div>
-            </div>
-
-            <div class="card bg-base-200 shadow-lg">
-                <div class="card-body text-center">
-                    <div class="text-4xl mb-4">🏆</div>
-                    <h3 class="card-title justify-center">Achievements</h3>
-                    <p class="text-sm opacity-70">
-                        Unlock achievements and compete on leaderboards as you master each game.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Featured Games Quick Access -->
-        <% if (featuredGames && featuredGames.length > 0) { %>
-            <section>
-                <h2 class="text-2xl font-bold mb-6 text-center">🎯 Ready to Play?</h2>
-                <div class="grid grid-cols-1 md:grid-cols-<%= Math.min(featuredGames.length, 3) %> gap-6">
-                    <% featuredGames.forEach(game => { %>
-                        <div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300">
-                            <figure class="px-6 pt-6">
-                                <div class="w-full h-24 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
-                                    <span class="text-4xl"><%= game.icon %></span>
-                                </div>
-                            </figure>
-                            <div class="card-body">
-                                <h3 class="card-title text-base">
-                                    <%= game.name %>
-                                    <div class="badge badge-<%= game.difficulty === 'Easy' ? 'primary' : game.difficulty === 'Medium' ? 'secondary' : 'accent' %> badge-sm">
-                                        <%= game.difficulty %>
-                                    </div>
-                                </h3>
-                                <p class="text-sm opacity-70"><%= game.description %></p>
-                                <div class="card-actions justify-end mt-4">
-                                    <a href="/game/<%= game.id %>" class="btn btn-primary btn-sm">
-                                        <span class="mr-1">🎯</span>
-                                        Play Now
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    <% }); %>
-                </div>
-            </section>
-        <% } %>
-    </main>
-</div>
-
-<%- include('partials/modals') %>
-<script src="../public/js/main.js"></script>
-</body>
-</html>
+    <div class="card bg-base-200 shadow-lg">
+        <div class="card-body text-center">
+            <div class="text-4xl mb-4">🏆</div>
+            <h3 class="card-title justify-center">Achievements</h3>
+            <p class="text-sm opacity-70">
+                Unlock achievements and compete on leaderboards as you master each game.
+            </p>
+        </div>
+    </div>
+</section>

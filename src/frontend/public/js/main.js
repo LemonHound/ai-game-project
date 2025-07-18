@@ -1,6 +1,5 @@
 // main.js - Minimal JavaScript for behavior only, no HTML rendering
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize any page-specific functionality
     initializePageBehavior();
 });
 
