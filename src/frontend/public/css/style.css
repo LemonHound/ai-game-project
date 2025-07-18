@@ -1,0 +1,145 @@
+/* Game card hover effects */
+.game-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.game-card:hover {
+    transform: translateY(-8px);
+}
+
+/* Carousel smooth scrolling */
+.carousel {
+    scroll-behavior: smooth;
+}
+
+.carousel-item {
+    scroll-snap-align: start;
+}
+
+/* Navigation link active state */
+.nav-link.active {
+    background-color: hsl(var(--p) / 0.1);
+    color: hsl(var(--p));
+}
+
+/* Smooth page transitions */
+.page-transition {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.page-transition.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hero section background animation */
+.hero-bg-animated {
+    background: linear-gradient(-45deg,
+    hsl(var(--p)),
+    hsl(var(--s)),
+    hsl(var(--a)),
+    hsl(var(--p)));
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Loading states */
+.loading-shimmer {
+    background: linear-gradient(90deg,
+    hsl(var(--b2)) 25%,
+    hsl(var(--b3)) 50%,
+    hsl(var(--b2)) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Interactive elements */
+.interactive-scale {
+    transition: transform 0.2s ease;
+}
+
+.interactive-scale:hover {
+    transform: scale(1.05);
+}
+
+.interactive-scale:active {
+    transform: scale(0.95);
+}
+
+/* Floating animation for decorative elements */
+.float-gentle {
+    animation: floatGentle 4s ease-in-out infinite;
+}
+
+@keyframes floatGentle {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Custom scrollbar for carousel */
+.carousel::-webkit-scrollbar {
+    height: 8px;
+}
+
+.carousel::-webkit-scrollbar-track {
+    background: hsl(var(--b2));
+    border-radius: 4px;
+}
+
+.carousel::-webkit-scrollbar-thumb {
+    background: hsl(var(--p));
+    border-radius: 4px;
+}
+
+.carousel::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--p));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .carousel-item {
+        min-width: 280px;
+    }
+
+    .hero h1 {
+        font-size: 2.5rem;
+    }
+}
+
+/* Focus styles for accessibility */
+.nav-link:focus,
+.game-card:focus,
+button:focus {
+    outline: 2px solid hsl(var(--p));
+    outline-offset: 2px;
+}
+
+/* Smooth entrance animations */
+.fade-in {
+    opacity: 0;
+    animation: fadeIn 0.6s ease forwards;
+}
+
+.fade-in-delay-1 { animation-delay: 0.1s; }
+.fade-in-delay-2 { animation-delay: 0.2s; }
+.fade-in-delay-3 { animation-delay: 0.3s; }
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}

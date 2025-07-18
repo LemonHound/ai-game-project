@@ -2,18 +2,28 @@
   "name": "aigamewebsite",
   "version": "1.0.0",
   "scripts": {
-    "start": "node src/backend/server.js",
-    "dev": "nodemon src/backend/server.js",
-    "test": "node test-db-connection.js"
+    "dev": "concurrently \"npm run build-css:watch\" \"nodemon src/backend/server.js\"",
+    "start": "npm run build-css && node src/backend/server.js",
+    "test": "node -e \"require('./src/shared/database/connection').query('SELECT NOW()').then(r => console.log('DB OK:', r.rows[0])).catch(e => console.error('DB Error:', e.message))\"",
+    "build-css": "tailwindcss -i ./src/frontend/public/css/input.css -o ./src/frontend/public/css/output.css --minify",
+    "build-css:watch": "tailwindcss -i ./src/frontend/public/css/input.css -o ./src/frontend/public/css/output.css --watch"
   },
   "dependencies": {
-    "express": "5.0.0",
+    "@parcel/watcher": "^2.5.1",
+    "@tailwindcss/postcss": "^4.1.11",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
     "helmet": "^7.0.0",
     "morgan": "^1.10.0",
-    "dotenv": "^16.3.1",
+    "path-to-regexp": "8.0.0",
     "pg": "^8.11.3",
-    "path-to-regexp": "8.0.0"
+    "postcss": "^8.5.6",
+    "postcss-cli": "^11.0.1",
+    "tailwindcss": "^3.4.0",
+    "daisyui": "^4.12.24"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
