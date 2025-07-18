@@ -13,6 +13,7 @@ module.exports = {
                 'gradient-shift': 'gradientShift 15s ease infinite',
                 'shimmer': 'shimmer 2s infinite',
                 'fade-in': 'fadeIn 0.6s ease forwards',
+                'vertical-scroll': 'verticalScroll 20s linear infinite',
             },
             keyframes: {
                 floatGentle: {
@@ -30,6 +31,10 @@ module.exports = {
                 },
                 fadeIn: {
                     'to': { opacity: '1' },
+                },
+                verticalScroll: {
+                    '0%': { transform: 'translateY(0)' },
+                    '100%': { transform: 'translateY(-100%)' },
                 }
             },
             transitionProperty: {
@@ -38,6 +43,28 @@ module.exports = {
             },
             backgroundSize: {
                 '400': '400% 400%',
+            },
+            height: {
+                'screen-dynamic': '100dvh', // Dynamic viewport height
+                'carousel-card': '20rem', // 320px for game cards
+            },
+            width: {
+                'carousel-sidebar': '25rem', // 400px for games sidebar
+            },
+            spacing: {
+                'carousel-gap': '1.5rem', // 24px gap between cards
+            },
+            scrollBehavior: {
+                'smooth': 'smooth',
+            },
+            scrollSnapType: {
+                'y-mandatory': 'y mandatory',
+                'x-mandatory': 'x mandatory',
+            },
+            scrollSnapAlign: {
+                'start': 'start',
+                'center': 'center',
+                'end': 'end',
             }
         },
     },

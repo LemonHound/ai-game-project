@@ -8,13 +8,64 @@
     transform: translateY(-8px);
 }
 
-/* Carousel smooth scrolling */
-.carousel {
-    scroll-behavior: smooth;
+/* Viewport-bound layout - FIXED */
+.main-layout {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.carousel-item {
-    scroll-snap-align: start;
+.content-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 2rem;
+    padding: 2rem;
+    overflow: hidden;
+    max-height: 100%;
+}
+
+/* Hero section container - FIXED */
+.hero-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Games section - FIXED */
+.games-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100%;
+}
+
+/* Scrollable games container - FIXED */
+.games-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.games-scrollable::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+}
+
+.game-card-vertical {
+    margin-bottom: 1.5rem;
+    min-height: 16rem;
+}
+
+.game-card-vertical:last-child {
+    margin-bottom: 0;
 }
 
 /* Navigation link active state */
@@ -90,7 +141,7 @@
     50% { transform: translateY(-5px); }
 }
 
-/* Custom scrollbar for carousel */
+/* Custom scrollbar for horizontal carousel (legacy) */
 .carousel::-webkit-scrollbar {
     height: 8px;
 }
@@ -109,15 +160,54 @@
     background: hsl(var(--p));
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .carousel-item {
-        min-width: 280px;
+/* Responsive adjustments - FIXED */
+@media (max-width: 1024px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 300px;
+        gap: 1rem;
+        padding: 1rem;
     }
 
-    .hero h1 {
-        font-size: 2.5rem;
+    .games-section {
+        max-height: 300px;
     }
+
+    .games-scrollable {
+        max-height: 250px;
+    }
+
+    .game-card-vertical {
+        min-height: 12rem;
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-grid {
+        grid-template-rows: 1fr 250px;
+        padding: 0.5rem;
+    }
+
+    .games-section {
+        max-height: 250px;
+    }
+
+    .games-scrollable {
+        max-height: 200px;
+    }
+
+    .game-card-vertical {
+        min-height: 10rem;
+        margin-bottom: 0.75rem;
+    }
+}
+
+/* Prevent page scrolling */
+body.viewport-locked {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
 }
 
 /* Focus styles for accessibility */
@@ -142,4 +232,20 @@ button:focus {
     to {
         opacity: 1;
     }
+}
+
+/* Auto-scroll animation for vertical carousel */
+.auto-scroll-vertical {
+    animation: verticalScroll 20s linear infinite;
+}
+
+.auto-scroll-vertical:hover {
+    animation-play-state: paused;
+}
+
+/* Prevent page scrolling */
+body.viewport-locked {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
 }

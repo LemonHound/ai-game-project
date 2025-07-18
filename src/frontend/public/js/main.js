@@ -1,4 +1,4 @@
-// Main application entry point - Enhanced version preserving existing architecture
+// Main application entry point - Fixed version
 class App {
     constructor() {
         this.apiClient = new ApiClient();
@@ -47,9 +47,6 @@ class App {
         window.addEventListener('popstate', (e) => {
             this.navigate(window.location.pathname, false);
         });
-
-        // Add carousel navigation if on home page
-        this.setupCarouselNavigation();
     }
 
     navigate(path, pushState = true) {
@@ -111,72 +108,48 @@ class App {
     }
 
     loadHomePage() {
-        // Reset main container with home page structure
+        // Reset main container with new viewport-bound structure
         document.getElementById('main-container').innerHTML = `
-            <div id="hero-section"></div>
+            <div id="hero-section" class="hero-container"></div>
             <div id="games-section"></div>
-            <div id="links-section"></div>
         `;
+
+        // Add viewport-locked class to body
+        document.body.classList.add('viewport-locked');
 
         // Re-initialize all home page components
         window.Components.initializePage();
 
-        // Setup carousel after components are loaded
+        // Setup games scroll after components are loaded
         setTimeout(() => {
-            this.setupCarouselNavigation();
+            this.setupGamesScroll();
         }, 100);
     }
 
-    setupCarouselNavigation() {
-        const carousel = document.getElementById('games-carousel');
-        const prevBtn = document.getElementById('carousel-prev');
-        const nextBtn = document.getElementById('carousel-next');
+    setupGamesScroll() {
+        const gamesContainer = document.getElementById('games-container');
+        if (!gamesContainer) return;
 
-        if (!carousel || !prevBtn || !nextBtn) return;
+        gamesContainer.style.scrollBehavior = 'smooth';
 
-        const cardWidth = 320; // Width of card + margin
+        let autoScrollInterval = setInterval(() => {
+            const maxScroll = gamesContainer.scrollHeight - gamesContainer.clientHeight;
+            if (gamesContainer.scrollTop >= maxScroll) {
+                gamesContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                gamesContainer.scrollBy({ top: 100, behavior: 'smooth' });
+            }
+        }, 4000);
 
-        // Remove existing listeners to prevent duplicates
-        prevBtn.replaceWith(prevBtn.cloneNode(true));
-        nextBtn.replaceWith(nextBtn.cloneNode(true));
-
-        // Get fresh references
-        const newPrevBtn = document.getElementById('carousel-prev');
-        const newNextBtn = document.getElementById('carousel-next');
-
-        newPrevBtn.addEventListener('click', () => {
-            carousel.scrollBy({ left: -cardWidth, behavior: 'smooth' });
-        });
-
-        newNextBtn.addEventListener('click', () => {
-            carousel.scrollBy({ left: cardWidth, behavior: 'smooth' });
-        });
-
-        // Auto-scroll functionality
-        let autoScrollInterval;
-        const startAutoScroll = () => {
-            autoScrollInterval = setInterval(() => {
-                const maxScroll = carousel.scrollWidth - carousel.clientWidth;
-                if (carousel.scrollLeft >= maxScroll) {
-                    carousel.scrollTo({ left: 0, behavior: 'smooth' });
-                } else {
-                    carousel.scrollBy({ left: cardWidth, behavior: 'smooth' });
-                }
-            }, 5000);
-        };
-
-        const stopAutoScroll = () => {
-            clearInterval(autoScrollInterval);
-        };
-
-        // Start auto-scroll and stop on user interaction
-        startAutoScroll();
-        carousel.addEventListener('mouseenter', stopAutoScroll);
-        carousel.addEventListener('mouseleave', startAutoScroll);
-        carousel.addEventListener('scroll', stopAutoScroll);
+        // Stop auto-scroll on user interaction
+        gamesContainer.addEventListener('mouseenter', () => clearInterval(autoScrollInterval));
+        gamesContainer.addEventListener('scroll', () => clearInterval(autoScrollInterval));
     }
 
     loadGamesPage() {
+        // Remove viewport lock for full games page
+        document.body.classList.remove('viewport-locked');
+
         document.getElementById('main-container').innerHTML = `
             <div class="text-center mb-8">
                 <h1 class="text-4xl font-bold mb-4">All Games</h1>
@@ -199,6 +172,7 @@ class App {
     }
 
     loadAboutPage() {
+        document.body.classList.remove('viewport-locked');
         document.getElementById('main-container').innerHTML = `
             <div class="max-w-4xl mx-auto">
                 <div class="text-center mb-12">

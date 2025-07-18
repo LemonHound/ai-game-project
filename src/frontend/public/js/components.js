@@ -1,4 +1,4 @@
-// Component System - Similar to Rails partials but in vanilla JS
+// Component System - Fixed version
 class ComponentSystem {
     constructor() {
         this.components = new Map();
@@ -105,7 +105,10 @@ class ComponentSystem {
             getStartedBtn.addEventListener('click', () => {
                 if (this.currentUser) {
                     // Scroll to games section
-                    document.getElementById('games-section').scrollIntoView({ behavior: 'smooth' });
+                    const gamesSection = document.getElementById('games-section');
+                    if (gamesSection) {
+                        gamesSection.scrollIntoView({ behavior: 'smooth' });
+                    }
                 } else {
                     this.showLoginModal();
                 }
@@ -116,9 +119,9 @@ class ComponentSystem {
     initializeGamesSection() {
         // Load and render game cards
         this.loadGames().then(games => {
-            const carousel = document.getElementById('games-carousel');
-            if (carousel) {
-                carousel.innerHTML = games.map(game =>
+            const gamesContainer = document.getElementById('games-container');
+            if (gamesContainer) {
+                gamesContainer.innerHTML = games.map(game =>
                     this.render('game-card', game)
                 ).join('');
 
@@ -321,12 +324,28 @@ class ComponentSystem {
         window.location.href = `/game/${gameId}`;
     }
 
-    // Initialize the entire page
+    // Initialize the entire page - ONLY for home page
     initializePage() {
+        // Only initialize header, hero, and games for home page
         this.mount('header-container', 'header');
-        this.mount('hero-section', 'hero');
-        this.mount('games-section', 'games-section');
-        this.mount('links-section', 'links-section');
+
+        // Check if we're on home page by looking for hero-section
+        const heroSection = document.getElementById('hero-section');
+        const gamesSection = document.getElementById('games-section');
+
+        if (heroSection) {
+            this.mount('hero-section', 'hero');
+        }
+
+        if (gamesSection) {
+            this.mount('games-section', 'games-section');
+        }
+
+        // Only mount links-section if it exists (not on new layout)
+        const linksSection = document.getElementById('links-section');
+        if (linksSection) {
+            this.mount('links-section', 'links-section');
+        }
     }
 }
 

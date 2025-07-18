@@ -1510,15 +1510,6 @@ html {
   color: var(--fallback-nc,oklch(var(--nc)/var(--tw-text-opacity)));
 }
 
-.\!carousel {
-  display: inline-flex !important;
-  overflow-x: scroll !important;
-  scroll-snap-type: x mandatory !important;
-  scroll-behavior: smooth !important;
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
-}
-
 .carousel {
   display: inline-flex;
   overflow-x: scroll;
@@ -1526,25 +1517,6 @@ html {
   scroll-behavior: smooth;
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-.carousel-item {
-  box-sizing: content-box;
-  display: flex;
-  flex: none;
-  scroll-snap-align: start;
-}
-
-.carousel-start .carousel-item {
-  scroll-snap-align: start;
-}
-
-.carousel-center .carousel-item {
-  scroll-snap-align: center;
-}
-
-.carousel-end .carousel-item {
-  scroll-snap-align: end;
 }
 
 .dropdown {
@@ -2525,10 +2497,6 @@ html {
   border-radius: inherit;
 }
 
-.\!carousel::-webkit-scrollbar {
-  display: none !important;
-}
-
 .carousel::-webkit-scrollbar {
   display: none;
 }
@@ -3334,6 +3302,13 @@ html {
   margin-top: 1.5rem;
 }
 
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .flex {
   display: flex;
 }
@@ -3366,12 +3341,12 @@ html {
   height: 1.5rem;
 }
 
-.min-h-96 {
-  min-height: 24rem;
+.h-full {
+  height: 100%;
 }
 
-.min-h-screen {
-  min-height: 100vh;
+.min-h-96 {
+  min-height: 24rem;
 }
 
 .w-10 {
@@ -3394,10 +3369,6 @@ html {
   width: 1.5rem;
 }
 
-.w-80 {
-  width: 20rem;
-}
-
 .w-auto {
   width: auto;
 }
@@ -3414,10 +3385,6 @@ html {
   max-width: 56rem;
 }
 
-.max-w-full {
-  max-width: 100%;
-}
-
 .max-w-md {
   max-width: 28rem;
 }
@@ -3428,6 +3395,10 @@ html {
 
 .max-w-sm {
   max-width: 24rem;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
 }
 
 .transform {
@@ -3490,18 +3461,6 @@ html {
 
 .gap-8 {
   gap: 2rem;
-}
-
-.space-x-2 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-x-reverse: 0;
-  margin-right: calc(0.5rem * var(--tw-space-x-reverse));
-  margin-left: calc(0.5rem * calc(1 - var(--tw-space-x-reverse)));
-}
-
-.space-x-4 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-x-reverse: 0;
-  margin-right: calc(1rem * var(--tw-space-x-reverse));
-  margin-left: calc(1rem * calc(1 - var(--tw-space-x-reverse)));
 }
 
 .rounded-box {
@@ -3595,11 +3554,6 @@ html {
 .py-6 {
   padding-top: 1.5rem;
   padding-bottom: 1.5rem;
-}
-
-.py-8 {
-  padding-top: 2rem;
-  padding-bottom: 2rem;
 }
 
 .pt-6 {
@@ -3772,6 +3726,16 @@ html {
 .hover\:-translate-y-2:hover {
   --tw-translate-y: -0.5rem;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.hover\:border-primary:hover {
+  --tw-border-opacity: 1;
+  border-color: var(--fallback-p,oklch(var(--p)/var(--tw-border-opacity)));
+}
+
+.hover\:bg-primary:hover {
+  --tw-bg-opacity: 1;
+  background-color: var(--fallback-p,oklch(var(--p)/var(--tw-bg-opacity)));
 }
 
 .hover\:shadow-2xl:hover {
