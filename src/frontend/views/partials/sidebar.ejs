@@ -1,0 +1,38 @@
+<aside class="w-52 bg-base-200 shadow-lg hidden lg:block">
+    <div class="p-4">
+        <h2 class="text-lg font-bold mb-4">Featured Games</h2>
+        <div class="space-y-3">
+            <% games.forEach(game => { %>
+                <a href="/game/<%= game.id %>"
+                   class="card card-compact <%= (typeof currentGame !== 'undefined' && currentGame && currentGame.id === game.id) ? 'bg-primary text-primary-content' : 'bg-base-100' %> shadow hover:shadow-lg transition-all duration-300 cursor-pointer">
+                    <div class="card-body">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                <span class="text-lg"><%= game.icon %></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-semibold text-sm truncate"><%= game.name %></h3>
+                                <p class="text-xs opacity-70 truncate"><%= game.description.substring(0, 20) %>...</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            <% }); %>
+
+            <!-- More Games Link -->
+            <a href="/games" class="card card-compact bg-base-300 shadow hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-dashed border-base-content border-opacity-20">
+                <div class="card-body">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-base-content bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <span class="text-lg">➕</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold text-sm truncate">More Games</h3>
+                            <p class="text-xs opacity-70 truncate">Browse all games</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</aside>

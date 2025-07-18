@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="abyss">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - AI Game Hub</title>
+    <link rel="stylesheet" href="/css/output.css">
+</head>
+<body class="bg-base-100 min-h-screen">
+<!-- Navbar Container -->
+<div id="navbar-container"></div>
+
+<!-- Main Layout -->
+<div class="flex min-h-screen">
+    <!-- Sidebar Container -->
+    <div id="sidebar-container" class="hidden lg:block"></div>
+
+    <!-- Mobile Menu Button -->
+    <div class="lg:hidden">
+        <button class="btn btn-square btn-ghost m-4" onclick="toggleMobileSidebar()">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobile-sidebar" class="fixed inset-0 z-50 lg:hidden hidden">
+        <div class="fixed inset-0 bg-black bg-opacity-50" onclick="toggleMobileSidebar()"></div>
+        <div class="fixed top-0 left-0 h-full w-64 bg-base-200 shadow-xl transform transition-transform">
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold">Games</h2>
+                    <button class="btn btn-sm btn-circle btn-ghost" onclick="toggleMobileSidebar()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="mobile-game-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Content -->
+    <main class="flex-1 p-4 lg:p-6">
+        <!-- Game Header -->
+        <div class="mb-6">
+            <div class="breadcrumbs text-sm mb-4">
+                <ul>
+                    <li><a href="/" class="link">Home</a></li>
+                    <li><a href="/games" class="link">Games</a></li>
+                    <li class="opacity-70">Tic Tac Toe</li>
+                </ul>
+            </div>
+
+            <div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-accent to-secondary rounded-xl flex items-center justify-center">
+                        <span class="text-3xl">⭕</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold">Tic Tac Toe</h1>
+                        <p class="text-base-content opacity-70">Classic strategy game with adaptive AI</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 lg:ml-auto">
+                    <button class="btn btn-primary" onclick="startGame()">
+                        <span class="mr-2">🎮</span>
+                        New Game
+                    </button>
+                    <button class="btn btn-outline" onclick="showRules()">
+                        <span class="mr-2">❓</span>
+                        Rules
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="stat bg-base-200 rounded-lg">
+                <div class="stat-title">Games Played</div>
+                <div class="stat-value text-primary">12</div>
+                <div class="stat-desc">Total matches</div>
+            </div>
+            <div class="stat bg-base-200 rounded-lg">
+                <div class="stat-title">Win Rate</div>
+                <div class="stat-value text-secondary">67%</div>
+                <div class="stat-desc">Against AI</div>
+            </div>
+            <div class="stat bg-base-200 rounded-lg">
+                <div class="stat-title">Best Streak</div>
+                <div class="stat-value text-accent">5</div>
+                <div class="stat-desc">Consecutive wins</div>
+            </div>
+            <div class="stat bg-base-200 rounded-lg">
+                <div class="stat-title">AI Level</div>
+                <div class="stat-value text-success">3</div>
+                <div class="stat-desc">Adaptive difficulty</div>
+            </div>
+        </div>
+
+        <!-- Game Board Container -->
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Game Board -->
+            <div class="flex-1">
+                <div class="card bg-base-200 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title mb-4">Game Board</h2>
+
+                        <!-- Tic Tac Toe Board -->
+                        <div id="game-board" class="grid grid-cols-3 gap-2 max-w-md mx-auto">
+                            <!-- Board squares will be generated by JavaScript -->
+                        </div>
+
+                        <!-- Game Status -->
+                        <div class="text-center mt-6">
+                            <div id="game-status" class="text-lg font-semibold mb-4">Your turn! Choose a square.</div>
+                            <div class="flex justify-center gap-2">
+                                <button class="btn btn-outline btn-sm" onclick="restartGame()">Restart</button>
+                                <button class="btn btn-outline btn-sm" onclick="getHint()">Hint</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Info Sidebar -->
+            <div class="lg:w-80">
+                <div class="space-y-6">
+                    <!-- Current Player -->
+                    <div class="card bg-base-200 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="card-title text-base">Current Player</h3>
+                            <div class="flex items-center gap-3 mt-2">
+                                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                                    <span class="text-primary-content font-bold">X</span>
+                                </div>
+                                <span>Your Turn</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Thoughts -->
+                    <div class="card bg-base-200 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="card-title text-base">AI Analysis</h3>
+                            <div id="ai-thoughts" class="text-sm mt-2 opacity-70">
+                                Analyzing possible moves...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Move History -->
+                    <div class="card bg-base-200 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="card-title text-base">Move History</h3>
+                            <div id="move-history" class="space-y-1 mt-2 max-h-48 overflow-y-auto">
+                                <!-- Moves will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Rules Modal -->
+<div id="rules-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">How to Play Tic Tac Toe</h3>
+        <div class="space-y-4">
+            <p>🎯 <strong>Objective:</strong> Get three X's in a row (horizontal, vertical, or diagonal)</p>
+            <p>🎮 <strong>Your Turn:</strong> Click any empty square to place your X</p>
+            <p>🤖 <strong>AI Turn:</strong> The AI will automatically place its O</p>
+            <p>🏆 <strong>Winning:</strong> First to get three in a row wins!</p>
+            <p>🔄 <strong>Draw:</strong> If the board fills up with no winner, it's a tie</p>
+        </div>
+        <div class="modal-action">
+            <button class="btn" onclick="closeRulesModal()">Got it!</button>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="closeRulesModal()"></div>
+</div>
+
+<script src="/js/SharedComponents.js"></script>
+<script src="/js/tic-tac-toe.js"></script>
+<script>
+    // Initialize page with shared components
+    SharedComponents.initializePage('games', 'tic-tac-toe');
+
+    // Mobile sidebar functionality
+    function toggleMobileSidebar() {
+        const sidebar = document.getElementById('mobile-sidebar');
+        const gameList = document.getElementById('mobile-game-list');
+
+        if (sidebar.classList.contains('hidden')) {
+            // Populate mobile game list
+            gameList.innerHTML = SharedComponents.renderGameSidebar('tic-tac-toe').replace('<aside class="w-52 bg-base-200 shadow-lg">', '').replace('</aside>', '');
+            sidebar.classList.remove('hidden');
+        } else {
+            sidebar.classList.add('hidden');
+        }
+    }
+
+    function showRules() {
+        document.getElementById('rules-modal').classList.add('modal-open');
+    }
+
+    function closeRulesModal() {
+        document.getElementById('rules-modal').classList.remove('modal-open');
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="abyss">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/output.css">
+    <%- include('partials/head-extras') %>
+</head>
+<body class="bg-base-100 min-h-screen">
+<%- include('partials/navbar') %>
+
+<div class="flex min-h-screen">
+    <% if (typeof showSidebar === 'undefined' || showSidebar) { %>
+        <%- include('partials/sidebar') %>
+
+        <!-- Mobile Menu Button -->
+        <div class="lg:hidden fixed top-20 left-4 z-50">
+            <button class="btn btn-square btn-primary" onclick="document.getElementById('mobile-sidebar').classList.toggle('hidden')">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+
+        <%- include('partials/mobile-sidebar') %>
+    <% } %>
+
+    <!-- Main Content -->
+    <main class="<%= typeof showSidebar === 'undefined' || showSidebar ? 'flex-1' : 'w-full' %> p-4 lg:p-6">
+        <!-- This is where page content gets inserted -->
+        <% if (typeof body !== 'undefined') { %>
+            <%- body %>
+        <% } %>
+    </main>
+</div>
+
+<%- include('partials/modals') %>
+<%- include('partials/scripts') %>
+</body>
+</html>

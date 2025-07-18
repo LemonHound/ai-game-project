@@ -1,0 +1,25 @@
+<!-- Login Modal -->
+<div id="login-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Welcome Back!</h3>
+        <form>
+            <div class="form-control w-full mb-4">
+                <label class="label">
+                    <span class="label-text">Email</span>
+                </label>
+                <input type="email" placeholder="Enter your email" class="input input-bordered w-full" />
+            </div>
+            <div class="form-control w-full mb-6">
+                <label class="label">
+                    <span class="label-text">Password</span>
+                </label>
+                <input type="password" placeholder="Enter your password" class="input input-bordered w-full" />
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Login</button>
+                <button type="button" class="btn" onclick="document.getElementById('login-modal').classList.remove('modal-open')">Cancel</button>
+            </div>
+        </form>
+    </div>
+    <div class="modal-backdrop" onclick="document.getElementById('login-modal').classList.remove('modal-open')"></div>
+</div>

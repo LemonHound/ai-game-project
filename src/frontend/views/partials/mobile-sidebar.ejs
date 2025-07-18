@@ -1,0 +1,47 @@
+<!-- Mobile Sidebar Overlay -->
+<div id="mobile-sidebar" class="fixed inset-0 z-40 lg:hidden hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50" onclick="document.getElementById('mobile-sidebar').classList.add('hidden')"></div>
+    <div class="fixed top-0 left-0 h-full w-64 bg-base-200 shadow-xl">
+        <div class="p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">Games</h2>
+                <button class="btn btn-sm btn-circle btn-ghost" onclick="document.getElementById('mobile-sidebar').classList.add('hidden')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <% games.forEach(game => { %>
+                    <a href="/game/<%= game.id %>"
+                       class="card card-compact <%= (typeof currentGame !== 'undefined' && currentGame && currentGame.id === game.id) ? 'bg-primary text-primary-content' : 'bg-base-100' %> shadow hover:shadow-lg transition-all duration-300 cursor-pointer">
+                        <div class="card-body">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                    <span class="text-sm"><%= game.icon %></span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold text-sm truncate"><%= game.name %></h3>
+                                    <p class="text-xs opacity-70 truncate"><%= game.description.substring(0, 15) %>...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                <% }); %>
+
+                <a href="/games" class="card card-compact bg-base-300 shadow">
+                    <div class="card-body">
+                        <div class="flex items-center gap-3">
+                            <span class="text-lg">➕</span>
+                            <div>
+                                <h3 class="font-semibold text-sm">More Games</h3>
+                                <p class="text-xs opacity-70">Browse all</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
