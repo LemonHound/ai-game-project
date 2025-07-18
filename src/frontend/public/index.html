@@ -1,188 +1,162 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="abyss">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Game Website</title>
-    <link rel="stylesheet" href="/css/output.css">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body class="viewport-locked bg-base-100">
-<div class="main-layout">
-    <!-- Header Component Container -->
-    <div id="header-container"></div>
-
-    <!-- Main Content Container with Grid Layout -->
-    <div id="main-container" class="content-grid container mx-auto px-4">
-        <!-- Hero Section Component -->
-        <div id="hero-section"></div>
-
-        <!-- Games Section Component -->
-        <div id="games-section"></div>
-    </div>
-</div>
-
-<!-- Component Templates (Hidden) -->
-<script id="header-template" type="text/template">
-    <div class="navbar bg-base-100 shadow-lg">
-        <div class="navbar-start">
-            <div class="dropdown">
-                <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"></path>
-                    </svg>
-                </div>
-                <ul class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
-                    <li><a href="#" data-route="home" class="nav-link">Home</a></li>
-                    <li><a href="#" data-route="games" class="nav-link">Games</a></li>
-                    <li><a href="#" data-route="about" class="nav-link">About</a></li>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI Game Website</title>
+        <link rel="stylesheet" href="/css/output.css">
+    </head>
+    <body class="bg-base-100 min-h-full overflow-y-hidden p-4 m-4">
+        <!-- Header using DaisyUI navbar -->
+        <header class="navbar shadow-lg">
+            <div class="navbar-start">
+                <a class="btn btn-ghost text-xl" href="/">
+                    <span class="text-2xl mr-2">🎮</span>
+                    AI Game Hub
+                </a>
+            </div>
+            <div class="navbar-center lg:flex">
+                <ul class="menu menu-horizontal space-x-2">
+                    <li><a href="/" class="nav-link active">Home</a></li>
+                    <li><a href="/games" class="nav-link">Games</a></li>
+                    <li><a href="/about" class="nav-link">About</a></li>
                 </ul>
             </div>
-            <a class="btn btn-ghost text-xl" href="#" data-route="home">
-                <span class="text-2xl mr-2">🎮</span>
-                AI Game Hub
-            </a>
-        </div>
-        <div class="navbar-center hidden lg:flex">
-            <ul class="menu menu-horizontal px-1">
-                <li><a href="#" data-route="home" class="nav-link">Home</a></li>
-                <li><a href="#" data-route="games" class="nav-link">Games</a></li>
-                <li><a href="#" data-route="about" class="nav-link">About</a></li>
-            </ul>
-        </div>
-        <div class="navbar-end">
-            <div id="auth-component"></div>
-        </div>
-    </div>
-</script>
-
-<!-- Auth Pop-up -->
-<script id="auth-login-template" type="text/template">
-    <button class="btn btn-primary animate-pulse" id="login-btn">
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-        </svg>
-        Login
-    </button>
-</script>
-
-<!-- Auth Profile -->
-<script id="auth-profile-template" type="text/template">
-    <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-            <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-content font-bold">
-                {{initials}}
-            </div>
-        </div>
-        <ul class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
-            <li><a href="/profile">Profile</a></li>
-            <li><a href="/preferences">Preferences</a></li>
-            <li><a id="logout-btn">Logout</a></li>
-        </ul>
-    </div>
-</script>
-
-<!-- Hero Section -->
-<script id="hero-template" type="text/template">
-    <div class="hero bg-gradient-to-br from-primary to-secondary rounded-box shadow-2xl">
-        <div class="hero-overlay bg-opacity-20 rounded-box"></div>
-        <div class="hero-content text-center text-primary-content relative z-10">
-            <div class="max-w-md">
-                <h1 class="text-5xl font-bold mb-6">Welcome to AI Game Hub</h1>
-                <p class="py-6 text-lg opacity-90">Experience the future of gaming with AI that learns and adapts to your playing style. Every game makes our AI smarter.</p>
-                <button class="btn btn-lg btn-accent animate-bounce" id="get-started-btn">
-                    <span class="text-xl mr-2">🚀</span>
-                    Get Started
+            <div class="navbar-end">
+                <button class="btn btn-primary" id="login-btn">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                    </svg>
+                    Login
                 </button>
             </div>
-        </div>
-    </div>
-</script>
+        </header>
 
-<!-- Game Card Template -->
-<script id="game-card-template" type="text/template">
-    <div class="game-card-vertical">
-        <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 game-card w-full" data-game-id="{{id}}">
-            <figure class="px-6 pt-6">
-                <div class="w-full h-32 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center shadow-lg">
-                    <span class="text-4xl">{{icon}}</span>
+        <!-- Main container using Tailwind grid -->
+        <main class="container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+            <!-- Hero Section -->
+            <section class="flex lg:col-span-2 h-fit">
+                <div class="hero bg-gradient-to-br from-primary to-secondary rounded-box shadow-2xl">
+                    <div class="hero-overlay bg-opacity-20 rounded-box"></div>
+                    <div class="hero-content text-center text-primary-content">
+                        <div class="max-w-md">
+                            <h1 class="text-5xl font-bold mb-6">Welcome to AI Game Hub</h1>
+                            <p class="py-6 text-lg opacity-90">Experience the future of gaming with AI that learns and adapts to your playing style. Every game makes our AI smarter.</p>
+                            <button class="btn btn-lg btn-accent" id="get-started-btn">
+                                <span class="text-xl mr-2">🚀</span>
+                                Get Started
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </figure>
-            <div class="card-body">
-                <h2 class="card-title text-lg">{{name}}</h2>
-                <p class="text-sm opacity-70 line-clamp-2">{{description}}</p>
-                <div class="card-actions justify-end mt-4">
-                    <button class="btn btn-primary btn-sm interactive-scale" data-game-id="{{id}}">
-                        <span class="mr-1">🎯</span>
-                        Play Now
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</script>
+            </section>
 
-<!-- Games Section Template -->
-<script id="games-section-template" type="text/template">
-    <div class="games-section">
-        <div class="text-center mb-6">
-            <h2 class="text-3xl font-bold mb-2">Available Games</h2>
-            <p class="text-base-content/70">Choose your adventure and help train our AI</p>
-        </div>
-
-        <!-- Scrollable Games Container -->
-        <div class="bg-base-200 rounded-box shadow-inner p-4 flex-1">
-            <div class="games-scrollable" id="games-container">
-                <!-- Game cards will be inserted here -->
-            </div>
-        </div>
-    </div>
-</script>
-
-<!-- Links Section Template (for other pages) -->
-<script id="links-section-template" type="text/template">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-            <div class="card-body text-center">
-                <div class="text-4xl mb-4">🧠</div>
-                <h2 class="card-title justify-center">How It Works</h2>
-                <p class="text-sm opacity-70">Learn about our AI learning and reinforcement model.</p>
-                <div class="card-actions justify-center mt-4">
-                    <button class="btn btn-outline btn-sm" data-route="how-it-works">
-                        Learn More
-                    </button>
+            <!-- Games Section (takes 1 column on desktop) -->
+            <section class="h-full">
+                <div class="mb-4">
+                    <h2 class="text-2xl font-bold text-center">Featured Games</h2>
                 </div>
-            </div>
-        </div>
-        <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-            <div class="card-body text-center">
-                <div class="text-4xl mb-4">👥</div>
-                <h2 class="card-title justify-center">About Us</h2>
-                <p class="text-sm opacity-70">Meet the team behind the AI revolution in gaming.</p>
-                <div class="card-actions justify-center mt-4">
-                    <button class="btn btn-outline btn-sm" data-route="about">
-                        About
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-            <div class="card-body text-center">
-                <div class="text-4xl mb-4">💖</div>
-                <h2 class="card-title justify-center">Support Us</h2>
-                <p class="text-sm opacity-70">Help us continue developing cutting-edge AI games.</p>
-                <div class="card-actions justify-center mt-4">
-                    <button class="btn btn-outline btn-sm" data-route="support">
-                        Support
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</script>
 
-<!-- Scripts -->
-<script src="js/components.js"></script>
-<script src="js/main.js"></script>
-</body>
+                <!-- Games container with custom scrollbar hiding -->
+                <div class="flex-1 overflow-y-hidden games-scroll" id="games-container">
+                    <!-- Game Card 1 -->
+                    <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 mb-4">
+                        <figure class="px-4 pt-4">
+                            <div class="w-full h-24 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                <span class="text-3xl">⭕</span>
+                            </div>
+                        </figure>
+                        <div class="card-body px-4 py-3">
+                            <h2 class="card-title text-base">Tic Tac Toe</h2>
+                            <p class="text-sm opacity-70">Classic game with an AI that learns your strategies</p>
+                            <div class="card-actions justify-end mt-2">
+                                <button class="btn btn-primary btn-sm">
+                                    <span class="mr-1">🎯</span>
+                                    Play Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Game Card 2 -->
+                    <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 mb-4">
+                        <figure class="px-4 pt-4">
+                            <div class="w-full h-24 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                <span class="text-3xl">🔴</span>
+                            </div>
+                        </figure>
+                        <div class="card-body px-4 py-3">
+                            <h2 class="card-title text-base">Connect Four</h2>
+                            <p class="text-sm opacity-70">Strategic gameplay with adaptive AI opponent</p>
+                            <div class="card-actions justify-end mt-2">
+                                <button class="btn btn-primary btn-sm">
+                                    <span class="mr-1">🎯</span>
+                                    Play Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Game Card 3 -->
+                    <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 mb-4">
+                        <figure class="px-4 pt-4">
+                            <div class="w-full h-24 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                <span class="text-3xl">🎲</span>
+                            </div>
+                        </figure>
+                        <div class="card-body px-4 py-3">
+                            <h2 class="card-title text-base">Memory Game</h2>
+                            <p class="text-sm opacity-70">Test your memory against an AI that remembers everything</p>
+                            <div class="card-actions justify-end mt-2">
+                                <button class="btn btn-primary btn-sm">
+                                    <span class="mr-1">🎯</span>
+                                    Play Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Game Card 4 -->
+                    <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 mb-4">
+                        <figure class="px-4 pt-4">
+                            <div class="w-full h-24 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                <span class="text-3xl">🎯</span>
+                            </div>
+                        </figure>
+                        <div class="card-body px-4 py-3">
+                            <h2 class="card-title text-base">Word Battle</h2>
+                            <p class="text-sm opacity-70">Challenge the AI's growing vocabulary</p>
+                            <div class="card-actions justify-end mt-2">
+                                <button class="btn btn-primary btn-sm">
+                                    <span class="mr-1">🎯</span>
+                                    Play Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Game Card 5 -->
+                    <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 mb-4">
+                        <figure class="px-4 pt-4">
+                            <div class="w-full h-24 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                <span class="text-3xl">🧩</span>
+                            </div>
+                        </figure>
+                        <div class="card-body px-4 py-3">
+                            <h2 class="card-title text-base">Puzzle Master</h2>
+                            <p class="text-sm opacity-70">Solve puzzles while AI learns your patterns</p>
+                            <div class="card-actions justify-end mt-2">
+                                <button class="btn btn-primary btn-sm">
+                                    <span class="mr-1">🎯</span>
+                                    Play Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <script src="js/main.js"></script>
+    </body>
 </html>

@@ -2,4 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles can go here */
+/* Hide scrollbar for games section while keeping scroll functionality */
+.games-scroll {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+/* Navigation active state */
+.nav-link.active {
+    @apply bg-primary bg-opacity-10 text-primary;
+}
+
+/* Optional: Smooth hover animations that enhance DaisyUI */
+@layer components {
+    .card {
+        @apply hover:-translate-y-1;
+    }
+}

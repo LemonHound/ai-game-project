@@ -23,7 +23,7 @@ app.use(express.static(path.join(__dirname, '../frontend/public')));
 // Import route modules
 const aiRoutes = require('./routes/ai');
 const gameRoutes = require('./routes/game');
-const authRoutes = require('./routes/auth'); // We'll create this
+const authRoutes = require('./routes/auth');
 
 // API Routes
 app.use('/api/ai', aiRoutes);
@@ -59,113 +59,96 @@ app.get('/api/test-db', async (req, res) => {
 // Games endpoint to support your frontend
 app.get('/api/games', async (req, res) => {
     try {
-        // For now, return mock data. Later this would come from database
+        // Mock game data for now
         const games = [
             {
                 id: 'tic-tac-toe',
                 name: 'Tic Tac Toe',
-                description: 'Classic game with adaptive AI opponent',
+                description: 'Classic game with an AI that learns your strategies',
                 icon: '⭕',
                 difficulty: 'Easy',
-                players: 1,
-                status: 'active'
+                players: 2
             },
             {
-                id: 'snake',
-                name: 'Snake AI',
-                description: 'Snake game with predictive AI assistance',
-                icon: '🐍',
+                id: 'connect-four',
+                name: 'Connect Four',
+                description: 'Strategic gameplay with adaptive AI opponent',
+                icon: '🔴',
                 difficulty: 'Medium',
-                players: 1,
-                status: 'active'
+                players: 2
             },
             {
-                id: 'puzzle',
-                name: 'AI Puzzle',
-                description: 'Dynamic puzzles that adapt to your skill',
+                id: 'memory-game',
+                name: 'Memory Game',
+                description: 'Test your memory against an AI that remembers everything',
+                icon: '🎲',
+                difficulty: 'Hard',
+                players: 1
+            },
+            {
+                id: 'word-battle',
+                name: 'Word Battle',
+                description: 'Challenge the AI\'s growing vocabulary',
+                icon: '🎯',
+                difficulty: 'Medium',
+                players: 2
+            },
+            {
+                id: 'puzzle-master',
+                name: 'Puzzle Master',
+                description: 'Solve puzzles while AI learns your patterns',
                 icon: '🧩',
                 difficulty: 'Hard',
-                players: 1,
-                status: 'active'
-            },
-            {
-                id: 'chess',
-                name: 'Chess Master',
-                description: 'Chess with AI that learns your style',
-                icon: '♟️',
-                difficulty: 'Expert',
-                players: 1,
-                status: 'coming-soon'
-            },
-            {
-                id: 'trivia',
-                name: 'Smart Trivia',
-                description: 'Trivia questions tailored to your knowledge',
-                icon: '🧠',
-                difficulty: 'Variable',
-                players: 1,
-                status: 'coming-soon'
+                players: 1
             }
         ];
 
         res.json(games);
     } catch (error) {
+        console.error('Games API error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Handle favicon
-app.get('/favicon.ico', (req, res) => {
-    res.status(204).end();
-});
-
-// Frontend SPA routes - serve index.html for all frontend routes
-const frontendRoutes = ['/', '/games', '/about', '/profile', '/how-it-works', '/support', '/contact', '/privacy', '/terms'];
-
-frontendRoutes.forEach(route => {
-    app.get(route, (req, res) => {
-        res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
-    });
-});
-
-// Handle game routes dynamically
-app.get('/game/:gameId', (req, res) => {
+// Specific route handlers for different pages
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
 });
 
-// 404 handler for API routes only
-app.use('/api', (req, res, next) => {
-    res.status(404).json({
-        error: 'API endpoint not found',
-        path: req.path,
-        method: req.method
-    });
+app.get('/games', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/public/games.html'));
 });
 
-// Global error handler
+app.get('/about', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/public/about.html'));
+});
+
+app.get('/game/:gameId', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/public/game.html'));
+});
+
+// Error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Global error handler:', err);
+    console.error(err.stack);
     res.status(500).json({
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+        error: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message
     });
 });
 
-// Catch-all for any other routes - serve index.html (SPA behavior)
-// Use a middleware approach instead of app.get('*')
-app.use((req, res, next) => {
-    // Only handle GET requests that aren't API calls
-    if (req.method === 'GET' && !req.path.startsWith('/api')) {
-        res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
-    } else {
-        next();
-    }
+// 404 handler for any unmatched routes
+app.use((req, res) => {
+    res.status(404).json({ error: 'Route not found' });
 });
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Database: ${process.env.DB_NAME}`);
-    console.log(`🎮 Available API endpoints:`);
+    console.log(`🎮 Available routes:`);
+    console.log(`   - GET  /              (Home page)`);
+    console.log(`   - GET  /games         (Games page)`);
+    console.log(`   - GET  /about         (About page)`);
+    console.log(`   - GET  /game/:gameId  (Individual game)`);
+    console.log(`🔌 Available API endpoints:`);
     console.log(`   - GET  /api/health`);
     console.log(`   - GET  /api/test-db`);
     console.log(`   - GET  /api/games`);
