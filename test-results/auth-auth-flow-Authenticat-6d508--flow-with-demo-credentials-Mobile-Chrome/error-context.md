@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - link "🎮 AI Game Hub":
+    - /url: /
+  - list:
+    - listitem:
+      - link "Home":
+        - /url: /
+    - listitem:
+      - link "Games":
+        - /url: /games
+    - listitem:
+      - link "About":
+        - /url: /about
+  - button "Login":
+    - img
+    - text: Login
+- button:
+  - img
+- main:
+  - heading "Welcome to AI Game Hub" [level=1]
+  - paragraph: Experience the future of gaming with AI that learns and adapts to your playing style. Every game makes our AI smarter.
+  - link "🚀 Get Started":
+    - /url: /games
+  - text: 🤖
+  - heading "Adaptive AI" [level=3]
+  - paragraph: Our AI learns from every move you make, creating unique challenges tailored to your skill level.
+  - text: 📊
+  - heading "Progress Tracking" [level=3]
+  - paragraph: Monitor your improvement across all games with detailed statistics and performance analytics.
+  - text: 🏆
+  - heading "Achievements" [level=3]
+  - paragraph: Unlock achievements and compete on leaderboards as you master each game.
+- heading "Welcome Back!" [level=3]
+- text: Email
+- textbox "Enter your email": demo@aigamehub.com
+- text: Password
+- textbox "Enter your password": password123
+- button "Login"
+- button "Cancel"
+```

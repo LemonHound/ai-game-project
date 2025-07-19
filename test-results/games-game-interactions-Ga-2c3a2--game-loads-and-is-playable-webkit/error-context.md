@@ -1,0 +1,120 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - link "🎮 AI Game Hub":
+    - /url: /
+  - list:
+    - listitem:
+      - link "Home":
+        - /url: /
+    - listitem:
+      - link "Games":
+        - /url: /games
+    - listitem:
+      - link "About":
+        - /url: /about
+  - button "Login":
+    - img
+    - text: Login
+- complementary:
+  - heading "Featured Games" [level=2]
+  - link "⭕ Tic Tac Toe Classic 3x3 grid gam...":
+    - /url: /game/tic-tac-toe
+    - text: ⭕
+    - heading "Tic Tac Toe" [level=3]
+    - paragraph: Classic 3x3 grid gam...
+  - link "⬜ Dots and Boxes Connect dots to comp...":
+    - /url: /game/dots-and-boxes
+    - text: ⬜
+    - heading "Dots and Boxes" [level=3]
+    - paragraph: Connect dots to comp...
+  - link "🔴 Connect 4 Drop pieces to conne...":
+    - /url: /game/connect4
+    - text: 🔴
+    - heading "Connect 4" [level=3]
+    - paragraph: Drop pieces to conne...
+  - link "♟️ Chess Master Chess with AI that l...":
+    - /url: /game/chess
+    - text: ♟️
+    - heading "Chess Master" [level=3]
+    - paragraph: Chess with AI that l...
+  - link "⚫ Smart Checkers Classic checkers wit...":
+    - /url: /game/checkers
+    - text: ⚫
+    - heading "Smart Checkers" [level=3]
+    - paragraph: Classic checkers wit...
+  - link "➕ More Games Browse all games":
+    - /url: /games
+    - text: ➕
+    - heading "More Games" [level=3]
+    - paragraph: Browse all games
+- main:
+  - list:
+    - listitem:
+      - link "Home":
+        - /url: /
+    - listitem:
+      - link "Games":
+        - /url: /games
+    - listitem: Tic Tac Toe
+  - text: ⭕
+  - heading "Tic Tac Toe" [level=1]
+  - paragraph: Classic strategy game with adaptive AI
+  - button "🎮 New Game"
+  - button "🔄 Restart"
+  - button "💡 Hint"
+  - button "❓ Rules"
+  - text: Games Played 12 Total matches Win Rate 67% Against AI Best Streak 5 Consecutive wins AI Level 3 Adaptive difficulty
+  - heading "Your turn! Choose a square." [level=2]
+  - text: X Your Turn
+  - button "X"
+  - button
+  - button
+  - button
+  - button "O"
+  - button
+  - button
+  - button
+  - button
+  - button "🔄 Reset"
+  - button "💡 Hint"
+  - heading "🤖 AI Thoughts" [level=3]
+  - text: I chose square 5 to counter your strategy.
+  - heading "📋 Move History" [level=3]
+  - text: 1. Player → Square 1 2. AI → Square 5
+  - heading "🎯 Tic Tac Toe Rules" [level=3]
+  - paragraph:
+    - strong: "Objective:"
+    - text: Get three of your marks (X or O) in a row - horizontally, vertically, or diagonally.
+  - paragraph:
+    - strong: "How to Play:"
+  - list:
+    - listitem: You are X, AI is O
+    - listitem: Click any empty square to place your mark
+    - listitem: AI will make its move automatically
+    - listitem: First to get 3 in a row wins!
+  - paragraph:
+    - strong: "Strategy Tips:"
+  - list:
+    - listitem:
+      - strong: "Center:"
+      - text: Control the center for better position
+    - listitem:
+      - strong: "Corners:"
+      - text: Corner squares offer more winning paths
+    - listitem:
+      - strong: "Block:"
+      - text: Always block opponent's winning moves
+    - listitem:
+      - strong: "Think ahead:"
+      - text: AI learns your playing style
+  - button "Got it!"
+- heading "Welcome Back!" [level=3]
+- text: Email
+- textbox "Enter your email"
+- text: Password
+- textbox "Enter your password"
+- button "Login"
+- button "Cancel"
+```

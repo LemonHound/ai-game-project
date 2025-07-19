@@ -1,39 +1,39 @@
-# Dependencies
-node_modules/
-venv/
-__pycache__/
-*.pyc
-
-# Environment files
-.env
-.env.local
-.env.production
-
-# Logs
-logs/
-*.log
-
-# Runtime data
-pids/
-*.pid
-*.seed
-
-# Coverage
+# Test outputs and reports
+test-results/
+playwright-report/
 coverage/
-
-# IDE
-.vscode/
-.idea/workspace.xml
-.idea/tasks.xml
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Database
-*.db
-*.sqlite
+*.png
+*.webm
+*.xml
 
 # Build outputs
 dist/
 build/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.test
+.env.production
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock

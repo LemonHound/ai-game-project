@@ -1,0 +1,62 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - link "🎮 AI Game Hub":
+    - /url: /
+  - list:
+    - listitem:
+      - link "Home":
+        - /url: /
+    - listitem:
+      - link "Games":
+        - /url: /games
+    - listitem:
+      - link "About":
+        - /url: /about
+  - button "Login":
+    - img
+    - text: Login
+- complementary:
+  - heading "Featured Games" [level=2]
+  - link "⭕ Tic Tac Toe Classic 3x3 grid gam...":
+    - /url: /game/tic-tac-toe
+    - text: ⭕
+    - heading "Tic Tac Toe" [level=3]
+    - paragraph: Classic 3x3 grid gam...
+  - link "⬜ Dots and Boxes Connect dots to comp...":
+    - /url: /game/dots-and-boxes
+    - text: ⬜
+    - heading "Dots and Boxes" [level=3]
+    - paragraph: Connect dots to comp...
+  - link "🔴 Connect 4 Drop pieces to conne...":
+    - /url: /game/connect4
+    - text: 🔴
+    - heading "Connect 4" [level=3]
+    - paragraph: Drop pieces to conne...
+  - link "♟️ Chess Master Chess with AI that l...":
+    - /url: /game/chess
+    - text: ♟️
+    - heading "Chess Master" [level=3]
+    - paragraph: Chess with AI that l...
+  - link "⚫ Smart Checkers Classic checkers wit...":
+    - /url: /game/checkers
+    - text: ⚫
+    - heading "Smart Checkers" [level=3]
+    - paragraph: Classic checkers wit...
+  - link "➕ More Games Browse all games":
+    - /url: /games
+    - text: ➕
+    - heading "More Games" [level=3]
+    - paragraph: Browse all games
+- main:
+  - heading "404 ERROR" [level=1]
+  - paragraph: We aren't really sure why you ended up here, either...
+- heading "Welcome Back!" [level=3]
+- text: Email
+- textbox "Enter your email"
+- text: Password
+- textbox "Enter your password"
+- button "Login"
+- button "Cancel"
+```

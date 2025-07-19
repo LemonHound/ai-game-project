@@ -1,0 +1,68 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - link "🎮 AI Game Hub":
+    - /url: /
+  - list:
+    - listitem:
+      - link "Home":
+        - /url: /
+    - listitem:
+      - link "Games":
+        - /url: /games
+    - listitem:
+      - link "About":
+        - /url: /about
+  - button "Login":
+    - img
+    - text: Login
+- button:
+  - img
+- main:
+  - heading "About AI Game Hub" [level=1]
+  - paragraph: Discover the future of gaming where artificial intelligence creates personalized, adaptive experiences that evolve with your skills.
+  - heading "🎯 Our Mission" [level=2]
+  - paragraph: At AI Game Hub, we believe gaming should be more than entertainment—it should be a personalized journey of growth and discovery. Our intelligent game platform learns from every move you make, creating unique challenges tailored specifically to your playing style.
+  - paragraph: Whether you're a casual player looking for fun or a competitive gamer seeking the ultimate challenge, our AI adapts to provide the perfect experience for you.
+  - heading "🧠 How Our AI Works" [level=3]
+  - text: "1"
+  - heading "Learning Phase" [level=4]
+  - paragraph: AI observes your playing patterns and decision-making
+  - text: "2"
+  - heading "Adaptation" [level=4]
+  - paragraph: Algorithms adjust difficulty and strategy in real-time
+  - text: "3"
+  - heading "Evolution" [level=4]
+  - paragraph: Continuous learning creates increasingly engaging experiences
+  - heading "✨ What Makes Us Different" [level=2]
+  - text: 🎮
+  - heading "Adaptive Gameplay" [level=3]
+  - paragraph: AI opponents that learn your strategies and counter with increasingly sophisticated moves.
+  - text: 📊
+  - heading "Smart Analytics" [level=3]
+  - paragraph: Detailed insights into your playing patterns help you improve and understand your growth.
+  - text: 🚀
+  - heading "Continuous Learning" [level=3]
+  - paragraph: Every game session contributes to a more personalized and challenging experience.
+  - text: 🎯
+  - heading "Personalized Difficulty" [level=3]
+  - paragraph: Dynamic difficulty adjustment ensures games are always engaging, never too easy or impossible.
+  - text: 🏆
+  - heading "Achievement System" [level=3]
+  - paragraph: Unlock achievements and track your progress across all games in one unified system.
+  - text: 🌟
+  - heading "Future-Ready" [level=3]
+  - paragraph: Built with cutting-edge technology to support new games and features as AI evolves.
+  - heading "Ready to Experience AI Gaming?" [level=2]
+  - paragraph: Join thousands of players who have discovered the future of intelligent gaming.
+  - link "🎮 Start Playing Now":
+    - /url: /games
+- heading "Welcome Back!" [level=3]
+- text: Email
+- textbox "Enter your email"
+- text: Password
+- textbox "Enter your password"
+- button "Login"
+- button "Cancel"
+```
