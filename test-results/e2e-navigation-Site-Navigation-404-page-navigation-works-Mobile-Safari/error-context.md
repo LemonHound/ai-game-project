@@ -1,5 +1,0 @@
-# Page snapshot
-
-```yaml
-- text: "TypeError: res.status is not a function at C:\\Website Development\\AIGameWebsite\\src\\backend\\server.js:219:9 at Layer.handleRequest (C:\\Website Development\\AIGameWebsite\\node_modules\\router\\lib\\layer.js:152:17) at trimPrefix (C:\\Website Development\\AIGameWebsite\\node_modules\\router\\index.js:342:13) at C:\\Website Development\\AIGameWebsite\\node_modules\\router\\index.js:297:9 at processParams (C:\\Website Development\\AIGameWebsite\\node_modules\\router\\index.js:582:12) at next (C:\\Website Development\\AIGameWebsite\\node_modules\\router\\index.js:291:5) at SendStream.error (C:\\Website Development\\AIGameWebsite\\node_modules\\serve-static\\index.js:120:7) at SendStream.emit (node:events:518:28) at SendStream.error (C:\\Website Development\\AIGameWebsite\\node_modules\\send\\index.js:168:17) at SendStream.onStatError (C:\\Website Development\\AIGameWebsite\\node_modules\\send\\index.js:315:12)"
-```

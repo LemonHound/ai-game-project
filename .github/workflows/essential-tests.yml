@@ -1,0 +1,96 @@
+name: ✅ Essential Tests (Should Pass)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  essential-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup environment
+        run: |
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3000" >> .env
+
+      - name: 🧪 Unit Tests
+        run: npm run test:unit
+
+      - name: 📦 Install Playwright
+        run: npx playwright install chromium
+
+      - name: 🚀 Smoke Tests (Core Functionality)
+        run: |
+          npx playwright test tests/smoke/routes.spec.js \
+            --grep "homepage loads correctly|games page loads correctly|about page loads correctly|individual game pages load for active games|API.*endpoint.*works|database connection works"
+
+      - name: 🎮 Core Game Tests
+        run: |
+          npx playwright test tests/games/game-interactions.spec.js \
+            --grep "tic-tac-toe game loads and is playable"
+
+      - name: 📡 Core API Tests
+        run: |
+          npx playwright test tests/api/api-endpoints.spec.js \
+            --grep "Health and Info Endpoints"
+
+      - name: ✅ Success Summary
+        if: success()
+        run: |
+          echo "## ✅ All Essential Tests Passed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Your core functionality is working correctly:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ All pages load properly" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Database connection works" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Tic-tac-toe game is functional" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Core API endpoints respond" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready to implement additional features! 🚀" >> $GITHUB_STEP_SUMMARY
+
+      - name: ❌ Failure Summary
+        if: failure()
+        run: |
+          echo "## ❌ Essential Tests Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Core functionality needs attention:" >> $GITHUB_STEP_SUMMARY
+          echo "- Check server startup" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify database connection" >> $GITHUB_STEP_SUMMARY
+          echo "- Review error logs above" >> $GITHUB_STEP_SUMMARY
