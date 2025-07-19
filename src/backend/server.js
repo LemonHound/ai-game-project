@@ -34,12 +34,12 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/auth', authRoutes);
 
-// Game data (in production, this would come from database)
+// Updated game data with new games
 const games = [
     {
         id: 'tic-tac-toe',
         name: 'Tic Tac Toe',
-        description: 'Classic game with adaptive AI opponent that learns your strategies',
+        description: 'Classic 3x3 grid game with adaptive AI opponent that learns your strategies',
         icon: '⭕',
         difficulty: 'Easy',
         players: 1,
@@ -48,26 +48,26 @@ const games = [
         tags: ['Strategy', '1 Player', 'Quick Play']
     },
     {
-        id: 'snake',
-        name: 'Snake AI',
-        description: 'Navigate the snake with AI assistance that predicts optimal paths',
-        icon: '🐍',
+        id: 'dots-and-boxes',
+        name: 'Dots and Boxes',
+        description: 'Connect dots to complete boxes and claim territory in this strategic paper game',
+        icon: '⬜',
         difficulty: 'Medium',
         players: 1,
-        status: 'coming-soon',
-        category: 'arcade',
-        tags: ['Arcade', '1 Player', 'High Score']
+        status: 'active',
+        category: 'strategy',
+        tags: ['Strategy', '1 Player', 'Territory']
     },
     {
-        id: 'puzzle',
-        name: 'AI Puzzle',
-        description: 'Dynamic puzzles that adapt to your skill level and create unique challenges',
-        icon: '🧩',
-        difficulty: 'Hard',
+        id: 'connect4',
+        name: 'Connect 4',
+        description: 'Drop pieces to connect four in a row - vertically, horizontally, or diagonally',
+        icon: '🔴',
+        difficulty: 'Medium',
         players: 1,
-        status: 'coming-soon',
-        category: 'puzzle',
-        tags: ['Puzzle', '1 Player', 'Adaptive']
+        status: 'active',
+        category: 'strategy',
+        tags: ['Strategy', '1 Player', 'Classic']
     },
     {
         id: 'chess',
@@ -81,15 +81,15 @@ const games = [
         tags: ['Strategy', '1 Player', 'Coming Soon']
     },
     {
-        id: 'trivia',
-        name: 'Smart Trivia',
-        description: 'Trivia questions tailored to your knowledge level across multiple categories',
-        icon: '🧠',
-        difficulty: 'Variable',
+        id: 'checkers',
+        name: 'Smart Checkers',
+        description: 'Classic checkers with an AI that adapts to your tactical preferences',
+        icon: '⚫',
+        difficulty: 'Hard',
         players: 1,
         status: 'coming-soon',
-        category: 'knowledge',
-        tags: ['Knowledge', '1 Player', 'Coming Soon']
+        category: 'strategy',
+        tags: ['Strategy', '1 Player', 'Coming Soon']
     }
 ];
 
@@ -155,8 +155,8 @@ app.get('/about', (req, res) => {
     });
 });
 
-// Individual game routes
-const validGames = ['tic-tac-toe', 'snake', 'puzzle', 'chess', 'trivia'];
+// Individual game routes - updated with new games
+const validGames = ['tic-tac-toe', 'dots-and-boxes', 'connect4', 'chess', 'checkers'];
 
 app.get('/game/:gameId', (req, res) => {
     const { gameId } = req.params;
@@ -188,7 +188,7 @@ app.get('/game/:gameId', (req, res) => {
     res.render('layout', {
         title: `${currentGame.name} - AI Game Hub`,
         currentPage: 'games',
-        currentTemplate: gameId, // This will load 'tic-tac-toe.ejs'
+        currentTemplate: gameId, // This will load 'tic-tac-toe.ejs', 'dots-and-boxes.ejs', etc.
         games: games.slice(0, 5),
         currentGame: currentGame,
         gameStats: {
@@ -197,7 +197,7 @@ app.get('/game/:gameId', (req, res) => {
             bestStreak: 5,
             aiLevel: 3
         },
-        pageScripts: [`${gameId}.js`] // This loads 'tic-tac-toe.js'
+        pageScripts: [`${gameId}.js`] // This loads the corresponding JS file
     });
 });
 

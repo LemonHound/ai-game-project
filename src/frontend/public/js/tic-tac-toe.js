@@ -1,4 +1,4 @@
-// tic-tac-toe.js - Game logic for Tic Tac Toe
+// tic-tac-toe.js - Fixed Game logic for Tic Tac Toe
 class TicTacToeGame {
     constructor() {
         this.board = Array(9).fill(null);
@@ -7,10 +7,19 @@ class TicTacToeGame {
         this.winner = null;
         this.moveHistory = [];
         this.gameSessionId = null;
+        this.playerStarts = true; // Track who starts - can be toggled
 
         this.initializeBoard();
         this.updateGameStatus();
         this.updateAIThoughts("Ready for a new game! Make your first move.");
+
+        // If AI should start, make AI move after short delay
+        if (!this.playerStarts) {
+            this.currentPlayer = 'O';
+            this.updateGameStatus();
+            this.updateAIThoughts("I'll start this game!");
+            setTimeout(() => this.makeAIMove(), 500);
+        }
     }
 
     initializeBoard() {
@@ -85,7 +94,7 @@ class TicTacToeGame {
         for (let i = 0; i < 9; i++) {
             if (!this.board[i]) {
                 this.board[i] = 'O';
-                if (this.checkWinner() === 'O') {
+                if (this.checkWinner(true) === 'O') {
                     this.board[i] = null;
                     return i;
                 }
@@ -97,7 +106,7 @@ class TicTacToeGame {
         for (let i = 0; i < 9; i++) {
             if (!this.board[i]) {
                 this.board[i] = 'X';
-                if (this.checkWinner() === 'X') {
+                if (this.checkWinner(true) === 'X') {
                     this.board[i] = null;
                     return i;
                 }
@@ -130,17 +139,17 @@ class TicTacToeGame {
     updateSquare(index, player) {
         const square = document.querySelector(`[data-index="${index}"]`);
         square.textContent = player;
+        // Fixed: Remove btn-active to prevent styling conflicts
         if (player === 'X') {
-            square.classList.remove('btn-neutral');
-            square.classList.add('btn-success', 'btn-active');
+            square.classList.remove('btn-neutral', 'hover:btn-primary');
+            square.classList.add('btn-success');
         } else {
-            square.classList.remove('btn-neutral');
-            square.classList.add('btn-error', 'btn-active');
+            square.classList.remove('btn-neutral', 'hover:btn-primary');
+            square.classList.add('btn-error');
         }
-        square.disabled = true;
     }
 
-    checkWinner() {
+    checkWinner(aiLogic = false) {
         const winLines = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
             [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
@@ -151,151 +160,117 @@ class TicTacToeGame {
             const [a, b, c] = line;
             if (this.board[a] && this.board[a] === this.board[b] && this.board[a] === this.board[c]) {
                 this.winner = this.board[a];
-                this.highlightWinningLine(line);
+                if(!aiLogic) this.highlightWinningLine(line);
                 return this.board[a];
             }
         }
         return null;
     }
 
-    checkDraw() {
-        return this.board.every(square => square !== null) && !this.winner;
-    }
-
     highlightWinningLine(line) {
         line.forEach(index => {
             const square = document.querySelector(`[data-index="${index}"]`);
-            square.classList.remove('btn-success', 'btn-error', 'btn-neutral');
-            square.classList.add('btn-warning');
+            square.classList.add('ring-4', 'ring-warning');
         });
+    }
+
+    checkDraw() {
+        return this.board.every(cell => cell !== null) && !this.winner;
     }
 
     endGame() {
         this.gameOver = true;
-        this.updateGameStatus();
-        this.updateAIThoughts(this.getEndGameMessage());
+        let statusMessage = '';
 
-        // Disable all squares
-        for (let i = 0; i < 9; i++) {
-            const square = document.querySelector(`[data-index="${i}"]`);
-            if (square) {
-                square.disabled = true;
-            }
-        }
-    }
-
-    getEndGameMessage() {
         if (this.winner === 'X') {
-            return "Congratulations! You won this round. I'll learn from this game and get better!";
+            statusMessage = '🎉 You Won! Great job!';
+            this.updateAIThoughts("Well played! You outmaneuvered me this time. 🏆");
         } else if (this.winner === 'O') {
-            return "I won this time! Good game. I'm learning your strategies. Ready for another round?";
+            statusMessage = '🤖 AI Wins! Better luck next time!';
+            this.updateAIThoughts("Victory! That was a strategic game. 🎯");
         } else {
-            return "It's a draw! Well played. That was a strategic game. Want to try again?";
+            statusMessage = '🤝 It\'s a Draw! Good game!';
+            this.updateAIThoughts("A well-fought draw! Neither of us could gain the advantage. ⚖️");
         }
+
+        this.updateGameStatus(statusMessage);
     }
 
-    updateGameStatus() {
+    updateGameStatus(message = null) {
         const statusElement = document.getElementById('game-status');
-        const currentPlayerElement = document.querySelector('.card-body .flex.items-center.gap-3');
-
-        if (this.gameOver) {
-            if (this.winner === 'X') {
-                statusElement.textContent = "🎉 You won! Great job!";
-                statusElement.className = "text-lg font-semibold mb-4 text-success";
-            } else if (this.winner === 'O') {
-                statusElement.textContent = "🤖 AI wins this round!";
-                statusElement.className = "text-lg font-semibold mb-4 text-error";
-            } else {
-                statusElement.textContent = "🤝 It's a draw!";
-                statusElement.className = "text-lg font-semibold mb-4 text-warning";
-            }
+        if (message) {
+            statusElement.textContent = message;
+        } else if (this.gameOver) {
+            statusElement.textContent = 'Game Over!';
+        } else if (this.currentPlayer === 'X') {
+            statusElement.textContent = 'Your turn! Choose a square.';
         } else {
-            if (this.currentPlayer === 'X') {
-                statusElement.textContent = "Your turn! Choose a square.";
-                statusElement.className = "text-lg font-semibold mb-4 text-primary";
-            } else {
-                statusElement.textContent = "AI is thinking...";
-                statusElement.className = "text-lg font-semibold mb-4 text-secondary";
-            }
-        }
-
-        // Update current player indicator
-        if (currentPlayerElement) {
-            const playerIcon = currentPlayerElement.querySelector('.w-8.h-8');
-            const playerText = currentPlayerElement.querySelector('span');
-
-            if (playerIcon && playerText) {
-                if (this.gameOver) {
-                    playerIcon.innerHTML = '<span class="text-primary-content font-bold">🏁</span>';
-                    playerText.textContent = 'Game Over';
-                } else if (this.currentPlayer === 'X') {
-                    playerIcon.innerHTML = '<span class="text-primary-content font-bold">X</span>';
-                    playerText.textContent = 'Your Turn';
-                } else {
-                    playerIcon.innerHTML = '<span class="text-primary-content font-bold">O</span>';
-                    playerText.textContent = 'AI Turn';
-                }
-            }
+            statusElement.textContent = 'AI is thinking...';
         }
     }
 
-    updateAIThoughts(message) {
+    updateAIThoughts(thought) {
         const aiThoughtsElement = document.getElementById('ai-thoughts');
         if (aiThoughtsElement) {
-            aiThoughtsElement.textContent = message;
+            aiThoughtsElement.textContent = thought;
         }
     }
 
     addMoveToHistory(player, index) {
-        this.moveHistory.push({ player, index, turn: this.moveHistory.length + 1 });
+        this.moveHistory.push({ player, square: index + 1, timestamp: new Date() });
         this.updateMoveHistory();
     }
 
     updateMoveHistory() {
         const historyElement = document.getElementById('move-history');
-        if (!historyElement) return;
-
-        if (this.moveHistory.length === 0) {
-            historyElement.innerHTML = '<div class="text-sm opacity-70">No moves yet</div>';
-            return;
+        if (historyElement) {
+            if (this.moveHistory.length === 0) {
+                historyElement.innerHTML = '<div class="text-sm opacity-70">No moves yet</div>';
+            } else {
+                historyElement.innerHTML = this.moveHistory.map((move, index) =>
+                    `<div class="text-sm">
+                        <span class="font-semibold">${index + 1}.</span> 
+                        ${move.player} → Square ${move.square}
+                    </div>`
+                ).join('');
+            }
         }
-
-        historyElement.innerHTML = '';
-        this.moveHistory.forEach(move => {
-            const moveDiv = document.createElement('div');
-            moveDiv.className = 'text-sm flex justify-between items-center py-1';
-            const icon = move.player === 'Player' ? '❌' : '⭕';
-            moveDiv.innerHTML = `
-                <span>${move.turn}. ${move.player} ${icon}</span>
-                <span class="badge badge-outline badge-sm">Square ${move.index + 1}</span>
-            `;
-            historyElement.appendChild(moveDiv);
-        });
-
-        // Scroll to bottom
-        historyElement.scrollTop = historyElement.scrollHeight;
     }
 
     restart() {
         this.board = Array(9).fill(null);
-        this.currentPlayer = 'X';
+        this.currentPlayer = this.playerStarts ? 'X' : 'O';
         this.gameOver = false;
         this.winner = null;
         this.moveHistory = [];
+
         this.initializeBoard();
         this.updateGameStatus();
-        this.updateAIThoughts("Ready for a new game! Make your first move.");
         this.updateMoveHistory();
+        this.updateAIThoughts("Game restarted! Ready for another round!");
+
+        // If AI should start, make AI move after short delay
+        if (!this.playerStarts) {
+            this.updateAIThoughts("I'll start this round!");
+            setTimeout(() => this.makeAIMove(), 500);
+        }
+    }
+
+    // Toggle who starts the game
+    toggleStarter() {
+        this.playerStarts = !this.playerStarts;
+        this.restart();
+        const starterText = this.playerStarts ? "You'll start next game!" : "AI will start next game!";
+        this.updateAIThoughts(starterText);
     }
 
     getHint() {
-        if (this.gameOver || this.currentPlayer !== 'X') {
-            this.updateAIThoughts("🤔 I can only give hints during your turn!");
+        if (this.gameOver || this.currentPlayer === 'O') {
+            this.updateAIThoughts("No hints available right now!");
             return;
         }
 
-        // Simple hint: suggest a strategic move
-        let hintMessage = "💡 ";
+        let hintMessage = "💡 Hint: ";
 
         // Check if player can win
         for (let i = 0; i < 9; i++) {
@@ -303,7 +278,7 @@ class TicTacToeGame {
                 this.board[i] = 'X';
                 if (this.checkWinner() === 'X') {
                     this.board[i] = null;
-                    hintMessage += `You can win by playing square ${i + 1}! Go for it! 🎯`;
+                    hintMessage += `You can win by playing square ${i + 1}! 🎯`;
                     this.updateAIThoughts(hintMessage);
                     return;
                 }
@@ -317,7 +292,7 @@ class TicTacToeGame {
                 this.board[i] = 'O';
                 if (this.checkWinner() === 'O') {
                     this.board[i] = null;
-                    hintMessage += `Careful! Block me by playing square ${i + 1}! 🛡️`;
+                    hintMessage += `Block the AI by playing square ${i + 1}! 🛡️`;
                     this.updateAIThoughts(hintMessage);
                     return;
                 }
@@ -325,9 +300,9 @@ class TicTacToeGame {
             }
         }
 
-        // General strategic hints
+        // General strategy hints
         if (!this.board[4]) {
-            hintMessage += "The center (square 5) is usually a good strategic choice! 🎯";
+            hintMessage += "Try the center square (5) for maximum strategic advantage! 🎯";
         } else {
             const corners = [0, 2, 6, 8];
             const availableCorners = corners.filter(i => !this.board[i]);
@@ -358,6 +333,12 @@ function startGame() {
 function restartGame() {
     if (game) {
         game.restart();
+    }
+}
+
+function toggleStarter() {
+    if (game) {
+        game.toggleStarter();
     }
 }
 

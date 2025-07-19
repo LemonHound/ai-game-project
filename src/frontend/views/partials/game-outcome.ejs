@@ -1,0 +1,81 @@
+<!-- Game Outcome Modal -->
+<div id="game-outcome-modal" class="modal">
+    <div class="modal-box">
+        <div class="text-center">
+            <div id="outcome-icon" class="text-6xl mb-4">🎉</div>
+            <h3 id="outcome-title" class="font-bold text-2xl mb-4">You Win!</h3>
+            <p id="outcome-message" class="text-lg mb-6">Congratulations on your victory!</p>
+
+            <!-- Game Stats Summary -->
+            <div class="stats stats-vertical lg:stats-horizontal shadow mb-6">
+                <div class="stat">
+                    <div class="stat-title">Final Score</div>
+                    <div class="stat-value text-primary" id="final-score">3 - 2</div>
+                    <div class="stat-desc">You vs AI</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Total Moves</div>
+                    <div class="stat-value text-secondary" id="total-moves">15</div>
+                    <div class="stat-desc">This game</div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 justify-center">
+                <button class="btn btn-primary" onclick="startGame(); closeModal('game-outcome-modal')">
+                    <span class="mr-2">🎮</span>
+                    Play Again
+                </button>
+                <button class="btn btn-outline" onclick="closeModal('game-outcome-modal')">
+                    <span class="mr-2">📊</span>
+                    View Stats
+                </button>
+                <button class="btn btn-outline" onclick="closeModal('game-outcome-modal'); window.location.href='/games'">
+                    <span class="mr-2">🎯</span>
+                    Try Another Game
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop" onclick="closeModal('game-outcome-modal')"></div>
+</div>
+
+<script>
+    // Function to show game outcome modal
+    function showGameOutcome(result, score = null, moves = null) {
+        const modal = document.getElementById('game-outcome-modal');
+        const icon = document.getElementById('outcome-icon');
+        const title = document.getElementById('outcome-title');
+        const message = document.getElementById('outcome-message');
+        const finalScore = document.getElementById('final-score');
+        const totalMoves = document.getElementById('total-moves');
+
+        // Configure based on result
+        if (result === 'win') {
+            icon.textContent = '🎉';
+            title.textContent = 'You Win!';
+            message.textContent = 'Congratulations on your victory!';
+            title.className = 'font-bold text-2xl mb-4 text-success';
+        } else if (result === 'lose') {
+            icon.textContent = '🤖';
+            title.textContent = 'AI Wins!';
+            message.textContent = 'Good game! Try again to beat the AI.';
+            title.className = 'font-bold text-2xl mb-4 text-error';
+        } else if (result === 'draw') {
+            icon.textContent = '🤝';
+            title.textContent = "It's a Draw!";
+            message.textContent = 'Well played! Neither player could win.';
+            title.className = 'font-bold text-2xl mb-4 text-warning';
+        }
+
+        // Update score and moves if provided
+        if (score) {
+            finalScore.textContent = score;
+        }
+        if (moves) {
+            totalMoves.textContent = moves;
+        }
+
+        // Show modal
+        modal.classList.add('modal-open');
+    }
+</script>

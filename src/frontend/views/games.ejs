@@ -6,15 +6,6 @@
     </p>
 </div>
 
-<!-- Game Categories -->
-<div class="flex flex-wrap justify-center gap-2 mb-8">
-    <button class="btn btn-sm btn-primary" onclick="filterGames('all')" data-filter="all">All Games</button>
-    <button class="btn btn-sm btn-outline" onclick="filterGames('strategy')" data-filter="strategy">Strategy</button>
-    <button class="btn btn-sm btn-outline" onclick="filterGames('arcade')" data-filter="arcade">Arcade</button>
-    <button class="btn btn-sm btn-outline" onclick="filterGames('puzzle')" data-filter="puzzle">Puzzle</button>
-    <button class="btn btn-sm btn-outline" onclick="filterGames('knowledge')" data-filter="knowledge">Knowledge</button>
-</div>
-
 <!-- Featured Games Grid -->
 <section class="mb-12">
     <h2 class="text-2xl font-bold mb-6">🌟 Featured Games</h2>
@@ -39,7 +30,7 @@
                     <div class="flex items-center gap-2 my-2">
                         <% if (game.tags) { %>
                             <% game.tags.forEach(tag => { %>
-                                <div class="badge badge-outline badge-xs"><%= tag %></div>
+                                <div class="badge badge-outline badge-md"><%= tag %></div>
                             <% }); %>
                         <% } %>
                     </div>
@@ -153,32 +144,6 @@
 </section>
 
 <script>
-    // Filter functionality - minimal JavaScript for behavior only
-    function filterGames(category) {
-        const games = document.querySelectorAll('#featured-games .card');
-        const buttons = document.querySelectorAll('[data-filter]');
-
-        // Update button states using CSS classes
-        buttons.forEach(btn => {
-            btn.classList.remove('btn-primary');
-            btn.classList.add('btn-outline');
-        });
-        document.querySelector(`[data-filter="${category}"]`).classList.remove('btn-outline');
-        document.querySelector(`[data-filter="${category}"]`).classList.add('btn-primary');
-
-        // Filter games using CSS
-        games.forEach(game => {
-            const gameCategory = game.dataset.category;
-            if (category === 'all' || gameCategory === category) {
-                game.style.display = 'block';
-                game.classList.remove('hidden');
-            } else {
-                game.style.display = 'none';
-                game.classList.add('hidden');
-            }
-        });
-    }
-
     // Highlight game if specified in URL
     <% if (highlight) { %>
     document.addEventListener('DOMContentLoaded', function() {

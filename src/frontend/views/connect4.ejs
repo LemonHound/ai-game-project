@@ -4,18 +4,18 @@
         <ul>
             <li><a href="/" class="link">Home</a></li>
             <li><a href="/games" class="link">Games</a></li>
-            <li class="opacity-70">Tic Tac Toe</li>
+            <li class="opacity-70">Connect 4</li>
         </ul>
     </div>
 
     <div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
         <div class="flex items-center gap-4">
             <div class="w-16 h-16 bg-gradient-to-br from-accent to-secondary rounded-xl flex items-center justify-center">
-                <span class="text-3xl">⭕</span>
+                <span class="text-3xl">🔴</span>
             </div>
             <div>
-                <h1 class="text-3xl font-bold">Tic Tac Toe</h1>
-                <p class="text-base-content opacity-70">Classic strategy game with adaptive AI</p>
+                <h1 class="text-3xl font-bold">Connect 4</h1>
+                <p class="text-base-content opacity-70">Connect four pieces in a row to win!</p>
             </div>
         </div>
 
@@ -27,6 +27,10 @@
             <button class="btn btn-outline" onclick="restartGame()">
                 <span class="mr-2">🔄</span>
                 Restart
+            </button>
+            <button class="btn btn-outline" onclick="toggleStarter()">
+                <span class="mr-2">🔀</span>
+                Switch Starter
             </button>
             <button class="btn btn-outline" onclick="getHint()">
                 <span class="mr-2">💡</span>
@@ -68,25 +72,30 @@
 <div class="flex flex-col lg:flex-row gap-6">
     <!-- Game Board -->
     <div class="flex-1">
-        <div class="bg-base-200 shadow-xl rounded-xl">
+        <div class="card bg-base-200 shadow-xl">
             <div class="card-body">
                 <!-- Game Status -->
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h2 id="game-status" class="text-lg font-semibold mb-4 text-primary">
-                            Your turn! Choose a square.
+                        <h2 id="game-status" class="text-lg font-semibold mb-2 text-primary">
+                            Your turn! Choose a column to drop your red piece.
                         </h2>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                            <span class="text-primary-content font-bold">X</span>
+                        <!-- Player indicators -->
+                        <div class="flex items-center gap-6">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 bg-error rounded-full"></div>
+                                <span>You (Red)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 bg-warning rounded-full"></div>
+                                <span>AI (Yellow)</span>
+                            </div>
                         </div>
-                        <span>Your Turn</span>
                     </div>
                 </div>
 
-                <!-- Tic Tac Toe Grid -->
-                <div class="grid grid-cols-3 gap-2 max-w-md mx-auto mb-4" id="game-board">
+                <!-- Connect 4 Board -->
+                <div id="game-board" class="mb-4">
                     <!-- Game board will be populated by JavaScript -->
                 </div>
 
@@ -112,7 +121,7 @@
             <div class="card-body">
                 <h3 class="card-title text-lg">🤖 AI Thoughts</h3>
                 <div class="text-sm opacity-70" id="ai-thoughts">
-                    Ready for a new game! Make your first move.
+                    Ready to play Connect 4! Drop your red piece in any column.
                 </div>
             </div>
         </div>
@@ -132,24 +141,25 @@
 <!-- Rules Modal -->
 <div id="rules-modal" class="modal">
     <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">🎯 Tic Tac Toe Rules</h3>
+        <h3 class="font-bold text-lg mb-4">🔴 Connect 4 Rules</h3>
         <div class="space-y-3 text-sm">
-            <p><strong>Objective:</strong> Get three of your marks (X or O) in a row - horizontally, vertically, or diagonally.</p>
+            <p><strong>Objective:</strong> Be the first to connect four of your pieces in a row - horizontally, vertically, or diagonally.</p>
 
             <p><strong>How to Play:</strong></p>
             <ul class="list-disc list-inside space-y-1 ml-4">
-                <li>You are X, AI is O</li>
-                <li>Click any empty square to place your mark</li>
-                <li>AI will make its move automatically</li>
-                <li>First to get 3 in a row wins!</li>
+                <li>You are red pieces, AI is yellow pieces</li>
+                <li>Click the ↓ button above any column to drop your piece</li>
+                <li>Pieces fall to the lowest available spot in that column</li>
+                <li>First to get 4 in a row wins!</li>
             </ul>
 
             <p><strong>Strategy Tips:</strong></p>
             <ul class="list-disc list-inside space-y-1 ml-4">
-                <li><strong>Center:</strong> Control the center for better position</li>
-                <li><strong>Corners:</strong> Corner squares offer more winning paths</li>
-                <li><strong>Block:</strong> Always block opponent's winning moves</li>
-                <li><strong>Think ahead:</strong> AI learns your playing style</li>
+                <li><strong>Control the center:</strong> Center columns offer more winning opportunities</li>
+                <li><strong>Think vertically:</strong> Watch for vertical connections as well as horizontal</li>
+                <li><strong>Block and build:</strong> Always block opponent's three-in-a-row while building your own</li>
+                <li><strong>Create threats:</strong> Set up multiple ways to win on your next turn</li>
+                <li><strong>Watch diagonals:</strong> Diagonal wins are often overlooked but powerful</li>
             </ul>
         </div>
         <div class="modal-action">
