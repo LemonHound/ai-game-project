@@ -213,17 +213,20 @@ app.get('/api/game/:gameId/info', (req, res) => {
     res.json(game);
 });
 
-// Error handling middleware
-app.use((err, req, res) => {
-    console.error(err.stack);
-    res.status(500).render('layout', {
-        title: 'Server Error - AI Game Hub',
-        currentPage: '404',
-        error: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message
-    });
+// API 404 handler - for routes starting with /api (Express 5 compatible)
+app.use((req, res, next) => {
+    if (req.originalUrl.startsWith('/api')) {
+        res.status(404).json({
+            error: 'API endpoint not found',
+            path: req.originalUrl,
+            method: req.method
+        });
+    } else {
+        next();
+    }
 });
 
-// 404 handler for any unmatched routes
+// Regular 404 handler for all other routes (pages)
 app.use((req, res) => {
     res.status(404).render('layout', {
         title: 'Page Not Found - AI Game Hub',
@@ -231,6 +234,28 @@ app.use((req, res) => {
         currentTemplate: '404',
         games: games.slice(0, 5)
     });
+});
+
+// Error handling middleware (must have 4 parameters!)
+app.use((err, req, res, next) => {
+    console.error('Server Error:', err.stack);
+
+    // Check if this is an API request
+    if (req.originalUrl.startsWith('/api')) {
+        res.status(500).json({
+            error: 'Internal server error',
+            message: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message
+        });
+    } else {
+        // Render error page for regular requests
+        res.status(500).render('layout', {
+            title: 'Server Error - AI Game Hub',
+            currentPage: 'error',
+            currentTemplate: '404', // You could create a separate 500.ejs if desired
+            games: games.slice(0, 5),
+            error: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message
+        });
+    }
 });
 
 app.listen(PORT, () => {
