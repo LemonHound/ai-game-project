@@ -14,7 +14,16 @@
       <assistant-state connection-id="482f00c1-004d-4341-b0ce-961a520c7858" default-profile-name="" selected-conversation-id="" assistant-type="GENERIC" availability="UNAVAILABLE" acknowledgement="NONE">
         <conversations />
       </assistant-state>
+      <assistant-state connection-id="virtual-oracle-connection" default-profile-name="" selected-conversation-id="" assistant-type="GENERIC" availability="UNAVAILABLE" acknowledgement="NONE">
+        <conversations />
+      </assistant-state>
     </assistants>
+  </component>
+  <component name="DBNavigator.Project.DatabaseBrowserManager">
+    <autoscroll-to-editor value="false" />
+    <autoscroll-from-editor value="true" />
+    <show-object-properties value="true" />
+    <loaded-nodes />
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="482f00c1-004d-4341-b0ce-961a520c7858">
@@ -34,6 +43,7 @@
     <retain-sticky-names value="false" />
   </component>
   <component name="DBNavigator.Project.FileConnectionMappingManager">
+    <mapping file-url="file://$PROJECT_DIR$/scripts/database-update.sql" connection-id="482f00c1-004d-4341-b0ce-961a520c7858" session-id="MAIN" current-schema="public" />
     <mapping file-url="file://$PROJECT_DIR$/scripts/setup-database.sql" connection-id="482f00c1-004d-4341-b0ce-961a520c7858" session-id="MAIN" current-schema="public" />
   </component>
   <component name="DBNavigator.Project.ObjectQuickFilterManager">
@@ -49,7 +59,7 @@
     <connections>
       <connection source-id="" id="482f00c1-004d-4341-b0ce-961a520c7858" active="true" signed="true">
         <database>
-          <name value="Local DB" />
+          <name value="ai_game_db" />
           <description value="" />
           <database-type value="POSTGRES" />
           <config-type value="BASIC" />
@@ -60,7 +70,7 @@
           <url-type value="DATABASE" />
           <host value="localhost" />
           <port value="5432" />
-          <database value="postgres" />
+          <database value="ai_game_db" />
           <tns-folder value="" />
           <tns-profile value="" />
           <server-type value="" />
@@ -92,7 +102,7 @@
         </ssl-settings>
         <details>
           <charset value="UTF-8" />
-          <session-management value="true" />
+          <session-management value="false" />
           <ddl-file-binding value="true" />
           <database-logging value="true" />
           <connect-automatically value="true" />

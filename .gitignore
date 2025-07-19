@@ -36,4 +36,4 @@ logs/
 # Runtime files
 *.pid
 *.seed
-*.pid.lock
+GameAIWebsite_google_credentials.json
