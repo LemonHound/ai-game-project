@@ -54,12 +54,6 @@ jobs:
       - name: 🧪 Unit Tests Only
         run: npm run test:unit
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-
       - name: 📦 Install Playwright (Chromium Only)
         run: npx playwright install chromium
 

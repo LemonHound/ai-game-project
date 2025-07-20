@@ -58,12 +58,6 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-
       - name: 📦 Install Playwright browsers (with caching)
         run: |
           # Only install what we need
@@ -109,7 +103,7 @@ jobs:
           NODE_ENV: test
 
       - name: 📊 Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: comprehensive-test-results
