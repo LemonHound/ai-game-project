@@ -27,6 +27,7 @@ const fallbackUsers = [
         username: 'demo',
         email: 'demo@aigamehub.com',
         display_name: 'Demo Player',
+        password_hash: '$2b$12$5hKQbDKdI6IaN9VJq8.4TOr4lAgOVGhzVyywtdhJMcGff8mFJK8V2', // password123
         auth_provider: 'local',
         created_at: new Date(),
         last_login: new Date()
@@ -36,6 +37,7 @@ const fallbackUsers = [
         username: 'test',
         email: 'test@example.com',
         display_name: 'Test User',
+        password_hash: '$2b$12$5hKQbDKdI6IaN9VJq8.4TOr4lAgOVGhzVyywtdhJMcGff8mFJK8V2', // password123
         auth_provider: 'local',
         created_at: new Date(),
         last_login: new Date()

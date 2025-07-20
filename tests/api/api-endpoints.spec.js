@@ -31,17 +31,16 @@ test.describe('API Endpoints', () => {
 
         test('GET /api/games returns games list', async ({ request }) => {
             const response = await request.get('/api/games');
-
             expect(response.ok()).toBeTruthy();
 
-            const games = await response.json();
-            expect(Array.isArray(games)).toBeTruthy();
-            expect(games.length).toBeGreaterThan(0);
+            const data = await response.json();
+            expect(data).toHaveProperty('games');
+            expect(Array.isArray(data.games)).toBeTruthy();
+            expect(data.games.length).toBeGreaterThan(0);
 
-            // Verify game structure
-            const firstGame = games[0];
+            // Verify first game structure
+            const firstGame = data.games[0];
             verifyApiResponse(firstGame, ['id', 'name', 'description', 'status']);
-
             expect(['active', 'coming-soon']).toContain(firstGame.status);
         });
     });
@@ -51,9 +50,9 @@ test.describe('API Endpoints', () => {
             const response = await request.get('/api/game/tic-tac-toe/info');
 
             if (response.ok()) {
-                const gameInfo = await response.json();
-                verifyApiResponse(gameInfo, ['id', 'name']);
-                expect(gameInfo.id).toBe('tic-tac-toe');
+                const data = await response.json();
+                verifyApiResponse(data.game, ['id', 'name']); // Changed: data.game instead of data
+                expect(data.game.id).toBe('tic-tac-toe'); // Changed: data.game.id instead of data.id
             } else {
                 // If endpoint doesn't exist, that's also valid
                 expect([200, 404]).toContain(response.status());
@@ -89,7 +88,7 @@ test.describe('API Endpoints', () => {
             expect(response.status()).toBe(401);
 
             const data = await response.json();
-            expect(data.error).toContain('Not authenticated');
+            expect(data.error).toContain('No session provided');
         });
 
         test('POST /api/auth/login with valid credentials', async ({ request }) => {
@@ -141,6 +140,7 @@ test.describe('API Endpoints', () => {
         test('POST /api/auth/register with existing email returns conflict', async ({ request }) => {
             const response = await request.post('/api/auth/register', {
                 data: {
+                    username: 'demo@aigamehub.com',
                     email: 'demo@aigamehub.com', // This should already exist
                     password: 'password123',
                     displayName: 'Test User'
@@ -150,7 +150,7 @@ test.describe('API Endpoints', () => {
             expect(response.status()).toBe(409);
 
             const data = await response.json();
-            expect(data.error).toContain('User already exists');
+            expect(data.error).toContain('Email already exists');
         });
 
         test('authenticated requests work with session ID', async ({ request }) => {

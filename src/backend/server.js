@@ -247,6 +247,17 @@ app.get('/settings', (req, res) => {
     });
 });
 
+// Stats page (requires authentication)
+app.get('/api/auth/stats', (req, res) => {
+    res.json({
+        status: 'OK',
+        message: 'Here are your stats',
+        gamesPlayed: 4,
+        winRate: 34,
+        aiContributions: 944
+    });
+});
+
 // Individual game routes - updated with new games
 const validGames = ['tic-tac-toe', 'dots-and-boxes', 'connect4', 'chess', 'checkers'];
 
