@@ -14,7 +14,7 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_PASSWORD: testpassword
+          POSTGRES_PASSWORD: 'testpassword'
           POSTGRES_USER: testuser
           POSTGRES_DB: test_ai_game_db
         options: >-
@@ -57,7 +57,7 @@ jobs:
           NODE_ENV: test
 
       - name: 📦 Install Playwright browsers (with caching)
-        run: npx playwright install
+        run: npx playwright install --with-deps
 
       - name: 🚀 Smoke Tests
         run: npm run test:smoke --project=chromium
