@@ -110,12 +110,12 @@ test.describe('Site Navigation', () => {
         await page.goto('/game/tic-tac-toe');
 
         // Look for breadcrumbs or back links
-        const breadcrumbs = page.locator('.breadcrumb, .breadcrumbs, nav[aria-label="breadcrumb"]');
+        const breadcrumbs = page.locator('[data-testid="breadcrumbs"]');
         const backLink = page.locator('a:has-text("Back"), button:has-text("Back"), [data-testid="back-btn"]');
 
         if (await breadcrumbs.count() > 0) {
             // Test breadcrumb navigation
-            const homecrumb = breadcrumbs.locator('a[href="/"], a:has-text("Home")').first();
+            const homecrumb = breadcrumbs.locator('Home').first();
             if (await homecrumb.isVisible()) {
                 await homecrumb.click();
                 await expect(page).toHaveURL('/');

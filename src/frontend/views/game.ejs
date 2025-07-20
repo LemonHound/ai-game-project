@@ -1,6 +1,6 @@
 <!-- Game Header -->
 <div class="mb-6">
-    <div class="breadcrumbs text-sm mb-4">
+    <div class="breadcrumbs text-sm mb-4" data-testid="breadcrumbs">
         <ul>
             <li><a href="/" class="link">Home</a></li>
             <li><a href="/games" class="link">Games</a></li>
@@ -120,7 +120,7 @@
             <div class="card bg-base-200 shadow-lg">
                 <div class="card-body">
                     <h3 class="card-title text-base">AI Analysis</h3>
-                    <div id="ai-thoughts" class="text-sm mt-2 opacity-70">
+                    <div id="ai-thoughts" data-testid="ai-thoughts" class="text-sm mt-2 opacity-70">
                         <% if (currentGame.id === 'tic-tac-toe') { %>
                             Ready for a new game! Make your first move.
                         <% } else { %>
