@@ -49,13 +49,13 @@ test.describe('Performance Tests', () => {
         });
 
         await page.goto('/');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // All resources should load successfully
         const failedResources = resources.filter(r => r.status >= 400);
         expect(failedResources.length).toBe(0);
 
-        console.log(`Loaded ${resources.length} static resources`);
+        console.log("Loaded", resources.length, "static resources");
     });
 
     test('API endpoints respond quickly', async ({ request }) => {
