@@ -95,7 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_training_data_created_at ON ai_training_data(c
 
 -- Demo user (password is 'demo123')
 INSERT INTO users (username, email, password_hash, display_name, email_verified, auth_provider)
-VALUES ('demo', 'demo@aigamehub.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeSTtCdJa/0Z1lk6G', 'Demo Player', true, 'local')
+VALUES ('demo', 'demo@aigamehub.com', '$2b$12$KrfU4z6FgEFr8dK8qK/RSOKMS560sO1Pd2OtSWBGamypeMaYsJj3W', 'Demo Player', true, 'local')
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     display_name = EXCLUDED.display_name,
@@ -105,7 +105,7 @@ ON CONFLICT (email) DO UPDATE SET
 
 -- Test user (password is 'test123')
 INSERT INTO users (username, email, password_hash, display_name, email_verified, auth_provider)
-VALUES ('test', 'test@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeSTtCdJa/0Z1lk6G', 'Test User', true, 'local')
+VALUES ('test', 'test@example.com', '$2b$12$KrfU4z6FgEFr8dK8qK/RSOKMS560sO1Pd2OtSWBGamypeMaYsJj3W', 'Test User', true, 'local')
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     display_name = EXCLUDED.display_name,
@@ -115,7 +115,7 @@ ON CONFLICT (email) DO UPDATE SET
 
 -- Player1 user (password is 'player123')
 INSERT INTO users (username, email, password_hash, display_name, email_verified, auth_provider)
-VALUES ('player1', 'player1@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeSTtCdJa/0Z1lk6G', 'Player One', true, 'local')
+VALUES ('player1', 'player1@example.com', '$2b$12$KrfU4z6FgEFr8dK8qK/RSOKMS560sO1Pd2OtSWBGamypeMaYsJj3W', 'Player One', true, 'local')
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     display_name = EXCLUDED.display_name,
