@@ -15,7 +15,8 @@
     "test:api": "playwright test tests/api",
     "test:navigation": "playwright test tests/e2e",
     "test:performance": "playwright test tests/performance",
-    "test:all": "npm run test:unit && npm run test:smoke && npm run test:e2e",
+    "test:all": "npm run test:unit && npm run test:e2e",
+    "test:all:categories": "npm run test:unit && npm run test:smoke && npm run test:games && npm run test:auth && npm run test:api && npm run test:navigation && npm run test:performance",
     "build-css": "tailwindcss -i ./src/frontend/public/css/input.css -o ./src/frontend/public/css/output.css --minify",
     "build-css:watch": "tailwindcss -i ./src/frontend/public/css/input.css -o ./src/frontend/public/css/output.css --watch"
   },

@@ -54,8 +54,8 @@ jobs:
       - name: 🧪 Unit Tests
         run: npm run test:unit
 
-      - name: 📦 Install Playwright
-        run: npx playwright install chromium
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps
 
       - name: 🚀 Smoke Tests (Core Functionality)
         run: |

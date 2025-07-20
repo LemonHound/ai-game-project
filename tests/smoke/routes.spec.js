@@ -104,14 +104,14 @@ test.describe('Route Smoke Tests', () => {
         const response = await page.request.get('/api/games');
         expect(response.ok()).toBeTruthy();
 
-        const games = await response.json();
-        expect(Array.isArray(games)).toBeTruthy();
-        expect(games.length).toBeGreaterThan(0);
+        const data = await response.json();
+        expect(Array.isArray(data.games)).toBeTruthy();
+        expect(data.games.length).toBeGreaterThan(0);
 
         // Check first game has expected structure
-        expect(games[0]).toHaveProperty('id');
-        expect(games[0]).toHaveProperty('name');
-        expect(games[0]).toHaveProperty('status');
+        expect(data.games[0]).toHaveProperty('id');
+        expect(data.games[0]).toHaveProperty('name');
+        expect(data.games[0]).toHaveProperty('status');
     });
 
     test('database connection works', async ({ page }) => {

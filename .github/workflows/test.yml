@@ -65,7 +65,7 @@ jobs:
           NODE_ENV: test
 
       - name: 📦 Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps
 
       - name: 🚀 Run smoke tests
         run: npm run test:smoke
@@ -77,8 +77,8 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: 🔐 Run auth tests (expect failures)
-        run: npm run test:auth || true
+      - name: 🔐 Run auth tests
+        run: npm run test:auth
         env:
           NODE_ENV: test
 
@@ -192,17 +192,13 @@ jobs:
         run: |
           echo "## 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ✅ Expected to Pass:" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ All Tests Should Pass:" >> $GITHUB_STEP_SUMMARY
           echo "- Unit Tests" >> $GITHUB_STEP_SUMMARY
           echo "- Smoke Tests (basic page loading)" >> $GITHUB_STEP_SUMMARY
           echo "- Game Tests (tic-tac-toe functionality)" >> $GITHUB_STEP_SUMMARY
           echo "- API Tests (backend endpoints)" >> $GITHUB_STEP_SUMMARY
-          echo "- Basic Navigation Tests" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ⚠️ Expected to Fail (Until Features Built):" >> $GITHUB_STEP_SUMMARY
-          echo "- Authentication Tests (no login/register UI yet)" >> $GITHUB_STEP_SUMMARY
-          echo "- Some Navigation Tests (game links on homepage)" >> $GITHUB_STEP_SUMMARY
-          echo "- Advanced Game Features (rules modals, etc.)" >> $GITHUB_STEP_SUMMARY
+          echo "- Authentication Tests (login/logout functionality)" >> $GITHUB_STEP_SUMMARY
+          echo "- Navigation Tests" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📈 Progress Tracking:" >> $GITHUB_STEP_SUMMARY
           echo "As you implement features, tests will automatically turn green!" >> $GITHUB_STEP_SUMMARY
