@@ -50,13 +50,16 @@ jobs:
           echo "DB_PASSWORD=testpassword" >> .env
           echo "NODE_ENV=test" >> .env
           echo "PORT=3001" >> .env
+          
+          # Setup database schema
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
 
       - name: 🧪 Unit Tests
         run: npm run test:unit
         env:
           NODE_ENV: test
 
-      - name: 📦 Install Playwright browsers (with caching)
+      - name: 📦 Install Playwright browsers and dependencies
         run: npx playwright install --with-deps
 
       - name: 🚀 Smoke Tests
