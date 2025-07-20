@@ -63,31 +63,37 @@ jobs:
         run: npm run test:smoke --project=chromium
         env:
           NODE_ENV: test
+          CI: true
 
       - name: 🔐 Authentication Tests
         run: npm run test:auth --project=chromium
         env:
           NODE_ENV: test
+          CI: true
 
       - name: 🎮 Game Tests
         run: npm run test:games --project=chromium
         env:
           NODE_ENV: test
+          CI: true
 
       - name: 📡 API Tests
         run: npm run test:api --project=chromium
         env:
           NODE_ENV: test
+          CI: true
 
       - name: 🧭 Navigation Tests
         run: npm run test:navigation --project=chromium
         env:
           NODE_ENV: test
+          CI: true
 
       - name: ⚡ Performance Tests
         run: npm run test:performance --project=chromium
         env:
           NODE_ENV: test
+          CI: true
 
       - name: 🔄 Cross-browser Tests (Firefox)
         run: |
@@ -95,6 +101,7 @@ jobs:
             --grep "homepage loads correctly|games page loads correctly"
         env:
           NODE_ENV: test
+          CI: true
 
       - name: 📊 Upload test results
         uses: actions/upload-artifact@v4
