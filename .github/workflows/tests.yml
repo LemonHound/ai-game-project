@@ -9,12 +9,10 @@ on:
 jobs:
   comprehensive-tests:
     runs-on: ubuntu-latest
-    # Only run if essential tests pass
-    needs: []  # Remove dependency for now
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: testpassword
           POSTGRES_USER: testuser
@@ -59,11 +57,7 @@ jobs:
           NODE_ENV: test
 
       - name: 📦 Install Playwright browsers (with caching)
-        run: |
-          # Only install what we need
-          npx playwright install chromium firefox
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: ~/.cache/playwright
+        run: npx playwright install
 
       - name: 🚀 Smoke Tests
         run: npm run test:smoke --project=chromium
