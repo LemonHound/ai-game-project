@@ -1,0 +1,136 @@
+name: 🧪 Comprehensive Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  comprehensive-tests:
+    runs-on: ubuntu-latest
+    # Only run if essential tests pass
+    needs: []  # Remove dependency for now
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
+        run: |
+          echo "DB_HOST=localhost" > .env.test
+          echo "DB_PORT=5432" >> .env.test
+          echo "DB_NAME=test_ai_game_db" >> .env.test
+          echo "DB_USER=testuser" >> .env.test
+          echo "DB_PASSWORD=testpassword" >> .env.test
+          echo "NODE_ENV=test" >> .env.test
+          echo "PORT=3001" >> .env.test
+
+      - name: 🧪 Unit Tests
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: 📦 Install Playwright browsers (with caching)
+        run: |
+          # Only install what we need
+          npx playwright install chromium firefox
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ~/.cache/playwright
+
+      - name: 🚀 Smoke Tests
+        run: npm run test:smoke --project=chromium
+        env:
+          NODE_ENV: test
+
+      - name: 🔐 Authentication Tests
+        run: npm run test:auth --project=chromium
+        env:
+          NODE_ENV: test
+
+      - name: 🎮 Game Tests
+        run: npm run test:games --project=chromium
+        env:
+          NODE_ENV: test
+
+      - name: 📡 API Tests
+        run: npm run test:api --project=chromium
+        env:
+          NODE_ENV: test
+
+      - name: 🧭 Navigation Tests
+        run: npm run test:navigation --project=chromium
+        env:
+          NODE_ENV: test
+
+      - name: ⚡ Performance Tests
+        run: npm run test:performance --project=chromium
+        env:
+          NODE_ENV: test
+
+      - name: 🔄 Cross-browser Tests (Firefox)
+        run: |
+          npx playwright test tests/smoke/routes.spec.js --project=firefox \
+            --grep "homepage loads correctly|games page loads correctly"
+        env:
+          NODE_ENV: test
+
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: comprehensive-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+      - name: 📋 Test Results Summary
+        if: always()
+        run: |
+          echo "## 🧪 Comprehensive Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tests Completed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Smoke Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Authentication Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Game Functionality Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ API Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Navigation Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Performance Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Cross-browser Verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See uploaded artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY

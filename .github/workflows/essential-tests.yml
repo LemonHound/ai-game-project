@@ -1,4 +1,4 @@
-name: ✅ Essential Tests (Should Pass)
+name: ✅ Essential Tests (Fast Smoke)
 
 on:
   push:
@@ -51,46 +51,37 @@ jobs:
           echo "NODE_ENV=test" >> .env
           echo "PORT=3000" >> .env
 
-      - name: 🧪 Unit Tests
+      - name: 🧪 Unit Tests Only
         run: npm run test:unit
 
-      - name: 📦 Install Playwright browsers
-        run: npx playwright install --with-deps
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
 
-      - name: 🚀 Smoke Tests (Core Functionality)
-        run: |
-          npx playwright test tests/smoke/routes.spec.js \
-            --grep "homepage loads correctly|games page loads correctly|about page loads correctly|individual game pages load for active games|API.*endpoint.*works|database connection works"
+      - name: 📦 Install Playwright (Chromium Only)
+        run: npx playwright install chromium
 
-      - name: 🎮 Core Game Tests
+      - name: 🚀 Critical Smoke Tests Only
         run: |
-          npx playwright test tests/games/game-interactions.spec.js \
-            --grep "tic-tac-toe game loads and is playable"
-
-      - name: 📡 Core API Tests
-        run: |
-          npx playwright test tests/api/api-endpoints.spec.js \
-            --grep "Health and Info Endpoints"
+          npx playwright test tests/smoke/routes.spec.js --project=chromium \
+            --grep "homepage loads correctly|API health endpoint works|database connection works"
 
       - name: ✅ Success Summary
         if: success()
         run: |
-          echo "## ✅ All Essential Tests Passed!" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Essential Tests Passed!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Your core functionality is working correctly:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ All pages load properly" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Database connection works" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Tic-tac-toe game is functional" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Core API endpoints respond" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Ready to implement additional features! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "Core functionality verified:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Homepage loads" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Database connects" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ API responds" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Unit tests pass" >> $GITHUB_STEP_SUMMARY
 
       - name: ❌ Failure Summary
         if: failure()
         run: |
           echo "## ❌ Essential Tests Failed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Core functionality needs attention:" >> $GITHUB_STEP_SUMMARY
-          echo "- Check server startup" >> $GITHUB_STEP_SUMMARY
-          echo "- Verify database connection" >> $GITHUB_STEP_SUMMARY
-          echo "- Review error logs above" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs above for details" >> $GITHUB_STEP_SUMMARY
