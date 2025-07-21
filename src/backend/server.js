@@ -115,18 +115,18 @@ const games = [
     },
     {
         id: 'chess',
-        name: 'Chess Master',
+        name: 'Chess',
         description: 'Chess with AI that learns your playing style and adapts its strategy',
         icon: '♟️',
         difficulty: 'Expert',
         players: 1,
-        status: 'coming-soon',
+        status: 'active',
         category: 'strategy',
         tags: ['Strategy', '1 Player', 'Coming Soon']
     },
     {
         id: 'checkers',
-        name: 'Smart Checkers',
+        name: 'Checkers',
         description: 'Classic checkers with an AI that adapts to your tactical preferences',
         icon: '⚫',
         difficulty: 'Hard',
@@ -291,7 +291,7 @@ app.get('/game/:gameId', (req, res) => {
     res.render('layout', {
         title: `${currentGame.name} - AI Game Hub`,
         currentPage: 'games',
-        currentTemplate: gameId, // This will load 'tic-tac-toe.ejs', 'dots-and-boxes.ejs', etc.
+        currentTemplate: 'game',
         currentGame: currentGame,
         gameStats: {
             gamesPlayed: req.isAuthenticated ? 12 : 0,
@@ -299,7 +299,7 @@ app.get('/game/:gameId', (req, res) => {
             bestStreak: req.isAuthenticated ? 5 : 0,
             aiLevel: 3
         },
-        pageScripts: [`${gameId}.js`], // This loads the corresponding JS file
+        pageScripts: [`${gameId}.js`], // This loads the corresponding JS file - NAME MUST MATCH
         ...getTemplateData(req)
     });
 });
