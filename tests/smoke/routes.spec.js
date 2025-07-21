@@ -69,7 +69,7 @@ test.describe('Route Smoke Tests', () => {
     });
 
     test('coming soon games redirect to games page', async ({ page }) => {
-        const comingSoonGames = ['chess', 'checkers'];
+        const comingSoonGames = ['checkers'];
 
         for (const gameId of comingSoonGames) {
             await page.goto(`/game/${gameId}`);
