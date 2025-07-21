@@ -1,0 +1,36 @@
+<!-- Game Status -->
+<div class="flex items-center justify-between mb-4">
+    <div>
+        <h2 id="game-status" class="text-lg font-semibold mb-2 text-primary">
+            Your turn! Choose a column to drop your red piece.
+        </h2>
+        <!-- Player indicators -->
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 bg-error rounded-full"></div>
+                <span>You (Red)</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 bg-warning rounded-full"></div>
+                <span>AI (Yellow)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connect 4 Board -->
+<div id="game-board" class="mb-4">
+    <!-- Game board will be populated by JavaScript -->
+</div>
+
+<!-- Game Controls -->
+<div class="flex justify-center gap-2">
+    <button class="btn btn-outline btn-sm" onclick="restartGame()">
+        <span class="mr-1">🔄</span>
+        Reset
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="getHint()">
+        <span class="mr-1">💡</span>
+        Hint
+    </button>
+</div>

@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
             },
             {
                 id: 'chess',
-                name: 'Chess Master',
+                name: 'Chess',
                 description: 'Chess with AI that learns your style',
                 icon: '♟️',
                 difficulty: 'Expert',

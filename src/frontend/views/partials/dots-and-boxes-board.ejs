@@ -1,0 +1,36 @@
+<!-- Game Status -->
+<div class="flex items-center justify-between mb-4">
+    <div>
+        <h2 id="game-status" class="text-lg font-semibold mb-2 text-primary">
+            Your turn! Click on any line to start.
+        </h2>
+        <!-- Player indicators -->
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-primary rounded"></div>
+                <span>You</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-secondary rounded"></div>
+                <span>AI</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dots and Boxes Board -->
+<div id="game-board" class="mb-4">
+    <!-- Game board will be populated by JavaScript -->
+</div>
+
+<!-- Game Controls -->
+<div class="flex justify-center gap-2">
+    <button class="btn btn-outline btn-sm" onclick="restartGame()">
+        <span class="mr-1">🔄</span>
+        Reset
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="getHint()">
+        <span class="mr-1">💡</span>
+        Hint
+    </button>
+</div>
