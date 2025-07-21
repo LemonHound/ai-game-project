@@ -1,40 +1,65 @@
-<aside class="w-52 bg-base-200 shadow-lg hidden lg:block">
-    <div class="p-4">
-        <h2 class="text-lg font-bold mb-4">Featured Games</h2>
-        <div class="space-y-3">
-            <% games.forEach(game => { %>
-                <a href="/game/<%= game.id %>"
-                   class="card card-compact <%= (typeof currentGame !== 'undefined' && currentGame && currentGame.id === game.id) ? 'bg-primary text-primary-content' : 'bg-base-100' %> shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
-                   data-test-id="game-card-<%=game.id%>"
-                >
+<aside class="w-64 bg-base-200 shadow-lg hidden lg:block">
+    <div class="h-full games-scroll">
+        <div class="p-4">
+            <h2 class="text-lg font-bold mb-4">Featured Games</h2>
+            <div class="space-y-3">
+                <% games.forEach(game => { %>
+                    <a href="/game/<%= game.id %>"
+                       class="card card-compact card-game-link <%= (typeof currentGame !== 'undefined' && currentGame && currentGame.id === game.id) ? 'bg-primary text-primary-content' : 'bg-base-100' %> shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
+                       data-test-id="game-card-<%=game.id%>"
+                    >
+                        <div class="card-body">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <span class="text-lg"><%= game.icon %></span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold text-sm truncate"><%= game.name %></h3>
+                                    <div class="mt-1">
+                                        <span class="badge badge-xs <%= game.status === 'active' ? 'badge-success' : game.status === 'beta' ? 'badge-warning' : 'badge-neutral' %>">
+                                            <%= game.status %>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                <% }); %>
+
+                <!-- More Games Link -->
+                <a href="/games" class="card card-compact bg-base-300 shadow hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-dashed border-base-content border-opacity-20">
                     <div class="card-body">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
-                                <span class="text-lg"><%= game.icon %></span>
+                            <div class="w-10 h-10 bg-base-content bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <span class="text-lg">➕</span>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h3 class="font-semibold text-sm truncate"><%= game.name %></h3>
-                                <p class="text-xs opacity-70 truncate"><%= game.description.substring(0, 20) %>...</p>
+                                <h3 class="font-semibold text-sm truncate">More Games</h3>
+                                <p class="text-xs opacity-70 truncate">Browse all games</p>
                             </div>
                         </div>
                     </div>
                 </a>
-            <% }); %>
+            </div>
 
-            <!-- More Games Link -->
-            <a href="/games" class="card card-compact bg-base-300 shadow hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-dashed border-base-content border-opacity-20">
-                <div class="card-body">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-base-content bg-opacity-20 rounded-lg flex items-center justify-center">
-                            <span class="text-lg">➕</span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-semibold text-sm truncate">More Games</h3>
-                            <p class="text-xs opacity-70 truncate">Browse all games</p>
-                        </div>
-                    </div>
+            <!-- Navigation Links -->
+            <div class="mt-8 pt-4 border-t border-base-content border-opacity-10">
+                <h3 class="text-sm font-semibold mb-3 opacity-80">Navigation</h3>
+                <div class="space-y-1">
+                    <a href="/" class="btn btn-ghost btn-sm w-full justify-start">
+                        <span class="mr-2">🏠</span>
+                        Home
+                    </a>
+                    <a href="/games" class="btn btn-ghost btn-sm w-full justify-start">
+                        <span class="mr-2">🎮</span>
+                        All Games
+                    </a>
+                    <a href="/about" class="btn btn-ghost btn-sm w-full justify-start">
+                        <span class="mr-2">ℹ️</span>
+                        About
+                    </a>
                 </div>
-            </a>
+            </div>
         </div>
     </div>
 </aside>
