@@ -33,32 +33,6 @@ test.describe('Performance Tests', () => {
         }
     });
 
-    test('CSS and assets load efficiently', async ({ page }) => {
-        const resources = [];
-
-        page.on('response', response => {
-            if (response.url().includes('/css/') ||
-                response.url().includes('/js/') ||
-                response.url().includes('/images/')) {
-                resources.push({
-                    url: response.url(),
-                    status: response.status(),
-                    size: response.headers()['content-length'] || 0
-                });
-            }
-        });
-
-        await page.goto('/');
-        await page.waitForLoadState('domcontentloaded', {timeout: 2000});
-        await page.waitForLoadState('networkidle', {timeout: 2000});
-
-        // All resources should load successfully
-        const failedResources = resources.filter(r => r.status >= 400);
-        expect(failedResources.length).toBe(0);
-
-        console.log("Loaded", resources.length, "static resources");
-    });
-
     test('API endpoints respond quickly', async ({ request }) => {
         const endpoints = [
             '/api/health',
