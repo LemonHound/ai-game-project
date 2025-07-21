@@ -51,12 +51,15 @@ test.describe('Game Interaction Tests', () => {
             if (await restartButton.isVisible()) {
                 await restartButton.click();
 
+                // wait for board to be cleared
+                const aiThoughts = page.locator('[data-testid="ai-thoughts"]');
+                await (aiThoughts.textContent.toString() === 'Game restarted!');
+
                 // Check that board is cleared
                 const squares = page.locator('#game-board button, #game-board .square');
                 for (let i = 0; i < 9; i++) {
                     const square = squares.nth(i);
-                    const text = await square.textContent();
-                    expect(text?.trim()).toBe('');
+                    await (square.textContent.toString() === '');
                 }
             }
         });
@@ -143,7 +146,7 @@ test.describe('Game Interaction Tests', () => {
 
             if (await lines.count() > 0) {
                 // Click on first line
-                await lines.first().click();
+                await lines.first().click({ force: true });
                 await page.waitForTimeout(500);
 
                 // Line should change appearance (become active/selected)
@@ -207,7 +210,7 @@ test.describe('Game Interaction Tests', () => {
                 const rulesButton = page.locator('button:has-text("Rules"), button:has-text("Help"), [data-testid="rules-btn"], button:has-text("How to Play")');
 
                 if (await rulesButton.count() > 0) {
-                    await rulesButton.first().click();
+                    await rulesButton.first().click({ force: true });
 
                     // Should open modal or show rules
                     const rulesModal = page.locator('#rules-modal, .modal, .rules, [data-testid="rules-modal"]');

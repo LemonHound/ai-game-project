@@ -40,14 +40,23 @@ CREATE INDEX IF NOT EXISTS idx_ai_training_data_user_id ON ai_training_data(user
 CREATE INDEX IF NOT EXISTS idx_ai_training_data_game_state_id ON ai_training_data(game_state_id);
 CREATE INDEX IF NOT EXISTS idx_ai_training_data_created_at ON ai_training_data(created_at);
 
--- Insert sample data for testing (only if not exists)
-INSERT INTO users (username, email, password_hash)
-SELECT 'testuser', 'test@example.com', '$2a$10$example.hash.here'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'testuser');
+-- Insert demo user (password is 'password123')
+INSERT INTO users (username, email, password_hash, display_name, email_verified, auth_provider)
+VALUES ('demo', 'demo@aigamehub.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeSTtCdJa/0Z1lk6G', 'Demo Player', true, 'local')
+ON CONFLICT (email) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    display_name = EXCLUDED.display_name,
+    email_verified = EXCLUDED.email_verified,
+    auth_provider = EXCLUDED.auth_provider;
 
-INSERT INTO users (username, email, password_hash)
-SELECT 'player1', 'player1@example.com', '$2a$10$example.hash.here'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'player1');
+-- Insert test user (password is 'password123')
+INSERT INTO users (username, email, password_hash, display_name, email_verified, auth_provider)
+VALUES ('test', 'test@example.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeSTtCdJa/0Z1lk6G', 'Test User', true, 'local')
+ON CONFLICT (email) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    display_name = EXCLUDED.display_name,
+    email_verified = EXCLUDED.email_verified,
+    auth_provider = EXCLUDED.auth_provider;
 
 INSERT INTO game_states (user_id, game_data, score)
 SELECT 1, '{"board": {"state": "initial"}, "moves": []}', 0

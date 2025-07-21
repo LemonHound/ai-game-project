@@ -4,7 +4,9 @@
         <div class="space-y-3">
             <% games.forEach(game => { %>
                 <a href="/game/<%= game.id %>"
-                   class="card card-compact <%= (typeof currentGame !== 'undefined' && currentGame && currentGame.id === game.id) ? 'bg-primary text-primary-content' : 'bg-base-100' %> shadow hover:shadow-lg transition-all duration-300 cursor-pointer">
+                   class="card card-compact <%= (typeof currentGame !== 'undefined' && currentGame && currentGame.id === game.id) ? 'bg-primary text-primary-content' : 'bg-base-100' %> shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
+                   data-test-id="game-card-<%=game.id%>"
+                >
                     <div class="card-body">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">

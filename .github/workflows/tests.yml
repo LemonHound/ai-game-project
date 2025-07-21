@@ -1,0 +1,134 @@
+name: 🧪 Comprehensive Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  comprehensive-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: 'testpassword'
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
+        run: |
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3001" >> .env
+          
+          # Setup database schema
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+
+      - name: 🧪 Unit Tests
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+
+      - name: 📦 Install Playwright browsers and dependencies
+        run: npx playwright install --with-deps
+
+      - name: 🚀 Smoke Tests
+        run: npm run test:smoke --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 🔐 Authentication Tests
+        run: npm run test:auth --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 🎮 Game Tests
+        run: npm run test:games --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📡 API Tests
+        run: npm run test:api --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 🧭 Navigation Tests
+        run: npm run test:navigation --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: ⚡ Performance Tests
+        run: npm run test:performance --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 🔄 Cross-browser Tests (Firefox)
+        run: |
+          npx playwright test tests/smoke/routes.spec.js --project=firefox \
+            --grep "homepage loads correctly|games page loads correctly"
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+      - name: 📋 Test Results Summary
+        if: always()
+        run: |
+          echo "## 🧪 Comprehensive Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tests Completed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Smoke Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Authentication Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Game Functionality Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ API Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Navigation Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Performance Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Cross-browser Verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See uploaded artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY

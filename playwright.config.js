@@ -78,9 +78,15 @@ module.exports = defineConfig({
 
     /* Run your local dev server before starting the tests */
     webServer: {
-        command: 'npm run start',
+        // Use different command for CI vs local development
+        command: process.env.CI ? 'node src/backend/server.js' : 'npm run start',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000, // 2 minutes to start server
+        // Add environment variables for the server process
+        env: {
+            NODE_ENV: 'test',
+            PORT: '3000'
+        }
     },
 });

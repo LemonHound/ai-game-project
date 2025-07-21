@@ -44,10 +44,10 @@ test.describe('Site Navigation', () => {
 
     test('game navigation from homepage', async ({ page }) => {
         // Look for game cards or links on homepage
-        const gameLinks = page.locator('a[href*="/game/"], [data-testid="game-link"], .game-card a, .game a');
+        const gameLinks = page.locator('[data-testid*="game-link"]');
 
         // Also check sidebar games since that's where your game links are
-        const sidebarGameLinks = page.locator('aside a[href*="/game/"], .sidebar a[href*="/game/"]');
+        const sidebarGameLinks = page.locator('[data-testid*="game-card"]');
 
         const allGameLinks = await gameLinks.count() + await sidebarGameLinks.count();
 
@@ -110,12 +110,12 @@ test.describe('Site Navigation', () => {
         await page.goto('/game/tic-tac-toe');
 
         // Look for breadcrumbs or back links
-        const breadcrumbs = page.locator('.breadcrumb, .breadcrumbs, nav[aria-label="breadcrumb"]');
+        const breadcrumbs = page.locator('[data-testid="breadcrumbs"]');
         const backLink = page.locator('a:has-text("Back"), button:has-text("Back"), [data-testid="back-btn"]');
 
         if (await breadcrumbs.count() > 0) {
             // Test breadcrumb navigation
-            const homecrumb = breadcrumbs.locator('a[href="/"], a:has-text("Home")').first();
+            const homecrumb = breadcrumbs.locator('Home').first();
             if (await homecrumb.isVisible()) {
                 await homecrumb.click();
                 await expect(page).toHaveURL('/');
@@ -231,7 +231,7 @@ test.describe('Site Navigation', () => {
         await expect(page.locator('h1')).toContainText(/404|Not Found|Error/);
 
         // Look for navigation back to home
-        const homeLink = page.locator('a[href="/"], a:has-text("Home"), button:has-text("Home")');
+        const homeLink = page.locator('[data-testid="home-button"]');
         if (await homeLink.count() > 0) {
             await homeLink.first().click();
             await expect(page).toHaveURL('/');
