@@ -49,7 +49,8 @@ test.describe('Performance Tests', () => {
         });
 
         await page.goto('/');
-        await page.waitForLoadState('domcontentloaded');
+        await page.waitForLoadState('domcontentloaded', {timeout: 2000});
+        await page.waitForLoadState('networkidle', {timeout: 2000});
 
         // All resources should load successfully
         const failedResources = resources.filter(r => r.status >= 400);
