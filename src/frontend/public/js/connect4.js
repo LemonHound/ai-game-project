@@ -129,8 +129,8 @@ class Connect4Game {
                 cell.classList.add('bg-error');
                 cell.textContent = '🔴';
             } else if (piece === 'ai') {
-                cell.classList.add('bg-warning');
-                cell.textContent = '🟡';
+                cell.classList.add('bg-blue-400');
+                cell.textContent = '🔵';
             }
         });
     }

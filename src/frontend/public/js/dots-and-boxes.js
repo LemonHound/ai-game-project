@@ -11,6 +11,8 @@ class DotsAndBoxesGame {
         this.moveHistory = [];
         this.playerStarts = true;
 
+        this.maxAIWaitTime = 2500;
+
         this.initializeBoard();
         this.updateGameStatus();
         this.updateScores();
@@ -128,7 +130,8 @@ class DotsAndBoxesGame {
             this.currentPlayer = 'ai';
             this.updateGameStatus();
             this.updateAIThoughts("My turn! Let me analyze the board...");
-            setTimeout(() => this.makeAIMove(), 1000);
+            const randWaitTime = Math.trunc((1 + Math.random()) * this.maxAIWaitTime);
+            setTimeout(() => this.makeAIMove(), randWaitTime);
         } else {
             // Boxes completed, player gets another turn
             this.updateAIThoughts(`You completed ${completedBoxes.length} box${completedBoxes.length > 1 ? 'es' : ''}! Go again!`);
@@ -165,7 +168,8 @@ class DotsAndBoxesGame {
         } else {
             // Boxes completed, AI gets another turn
             this.updateAIThoughts(`I completed ${completedBoxes.length} box${completedBoxes.length > 1 ? 'es' : ''}! My turn again.`);
-            setTimeout(() => this.makeAIMove(), 1000);
+            const randWaitTime = Math.trunc((1 + Math.random()) * this.maxAIWaitTime);
+            setTimeout(() => this.makeAIMove(), randWaitTime);
         }
 
         this.updateScores();
