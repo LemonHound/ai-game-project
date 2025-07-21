@@ -8,14 +8,33 @@
     -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
+.games-scroll::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+}
+
 /* Navigation active state */
 .nav-link.active {
     @apply bg-primary bg-opacity-10 text-primary;
 }
 
-/* Optional: Smooth hover animations that enhance DaisyUI */
+/* Fixed navbar positioning - Cannot be done with pure DaisyUI */
+.navbar-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: 4rem;
+}
+
+/* Viewport height adjustments - Required for proper no-scroll layout */
+.content-below-navbar {
+    padding-top: 4rem;
+}
+
+/* Game card hover animations - ONLY for cards that link to games */
 @layer components {
-    .card {
-        @apply hover:-translate-y-1;
+    .card-game-link {
+        @apply hover:-translate-y-1 transition-all duration-300;
     }
 }

@@ -8,10 +8,12 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <%- include('partials/head-extras') %>
 </head>
-<body class="bg-base-100 h-full rounded-2xl">
-<%- include('partials/navbar') %>
+<body class="bg-base-100 h-screen overflow-hidden">
+<div class="navbar-fixed">
+    <%- include('partials/navbar') %>
+</div>
 
-<div class="flex h-full rounded-2xl">
+<div class="flex h-screen content-below-navbar overflow-hidden">
     <% if (typeof showSidebar === 'undefined' || showSidebar) { %>
         <%- include('partials/sidebar') %>
 
@@ -27,9 +29,12 @@
         <%- include('partials/mobile-sidebar') %>
     <% } %>
 
-    <!-- Main Content -->
-    <main class="<%= typeof showSidebar === 'undefined' || showSidebar ? 'flex-1' : 'w-full' %> p-4 lg:p-6 rounded-2xl">
-        <%- include(currentTemplate) %>
+    <!-- Main Content Container -->
+    <main class="<%= typeof showSidebar === 'undefined' || showSidebar ? 'flex-1' : 'w-full' %> overflow-hidden flex flex-col">
+        <!-- Content Area -->
+        <div class="flex-1 overflow-hidden">
+            <%- include(currentTemplate) %>
+        </div>
     </main>
 </div>
 

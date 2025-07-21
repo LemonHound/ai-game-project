@@ -1,36 +1,125 @@
-<!-- Game Status -->
-<div class="flex items-center justify-between mb-4">
-    <div>
-        <h2 id="game-status" class="text-lg font-semibold mb-2 text-primary">
-            Your turn! Choose a column to drop your red piece.
-        </h2>
-        <!-- Player indicators -->
-        <div class="flex items-center gap-6">
-            <div class="flex items-center gap-2">
-                <div class="w-6 h-6 bg-error rounded-full"></div>
-                <span>You (Red)</span>
+<!-- 3-Column Layout to keep board centered -->
+<div class="flex items-start gap-4 justify-between">
+    <!-- Left Column: Game Status and Player Info -->
+    <div class="w-48 flex-shrink-0">
+        <div class="card bg-base-200 shadow-sm p-4">
+            <h2 id="game-status" class="text-lg font-semibold mb-3 text-primary">
+                Your turn! Choose a column to drop your red piece.
+            </h2>
+
+            <!-- Player indicators -->
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-error rounded-full"></div>
+                    <span class="text-sm">You (Red)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-warning rounded-full"></div>
+                    <span class="text-sm">AI (Yellow)</span>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <div class="w-6 h-6 bg-warning rounded-full"></div>
-                <span>AI (Yellow)</span>
+
+            <!-- Score Display -->
+            <div class="divider my-4"></div>
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span>You:</span>
+                    <span id="player-score" class="font-bold text-error">0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span>AI:</span>
+                    <span id="ai-score" class="font-bold text-warning">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Center Column: Column Buttons + Game Board (Fixed Size) -->
+    <div class="flex-shrink-0">
+        <!-- Column Drop Buttons -->
+        <div id="column-buttons" class="flex justify-center gap-1 mb-2">
+            <!-- Column buttons will be populated by JavaScript -->
+        </div>
+
+        <!-- Game Board -->
+        <div id="game-board">
+            <!-- Game board will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Right Column: Game Controls -->
+    <div class="w-48 flex-shrink-0">
+        <div class="card bg-base-200 shadow-sm p-4">
+            <h3 class="font-semibold mb-3">Game Controls</h3>
+
+            <div class="space-y-2">
+                <button class="btn btn-outline btn-sm w-full" onclick="restartGame()">
+                    <span class="mr-1">🔄</span>
+                    Reset Game
+                </button>
+                <button class="btn btn-outline btn-sm w-full" onclick="getHint()">
+                    <span class="mr-1">💡</span>
+                    Get Hint
+                </button>
+            </div>
+
+            <!-- Game Tips -->
+            <div class="divider my-4"></div>
+            <div class="text-xs opacity-70">
+                <p class="mb-2"><strong>Goal:</strong> Connect four pieces in a row</p>
+                <p class="mb-2"><strong>Tip:</strong> Control center columns</p>
+                <p><strong>Strategy:</strong> Set up multiple threats</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Connect 4 Board -->
-<div id="game-board" class="mb-4">
-    <!-- Game board will be populated by JavaScript -->
-</div>
+<!-- Mobile Layout (Stack vertically on small screens) -->
+<div class="lg:hidden">
+    <div class="space-y-4">
+        <!-- Mobile Status -->
+        <div class="card bg-base-200 shadow-sm p-4">
+            <div class="flex justify-between items-center mb-2">
+                <h2 id="mobile-game-status" class="text-lg font-semibold text-primary">
+                    Your turn!
+                </h2>
+                <div class="flex gap-4 text-sm">
+                    <span>You: <span id="mobile-player-score" class="font-bold text-error">0</span></span>
+                    <span>AI: <span id="mobile-ai-score" class="font-bold text-warning">0</span></span>
+                </div>
+            </div>
 
-<!-- Game Controls -->
-<div class="flex justify-center gap-2">
-    <button class="btn btn-outline btn-sm" onclick="restartGame()">
-        <span class="mr-1">🔄</span>
-        Reset
-    </button>
-    <button class="btn btn-outline btn-sm" onclick="getHint()">
-        <span class="mr-1">💡</span>
-        Hint
-    </button>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1">
+                        <div class="w-4 h-4 bg-error rounded-full"></div>
+                        <span class="text-xs">You</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-4 h-4 bg-warning rounded-full"></div>
+                        <span class="text-xs">AI</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-1">
+                    <button class="btn btn-outline btn-xs" onclick="restartGame()">
+                        🔄
+                    </button>
+                    <button class="btn btn-outline btn-xs" onclick="getHint()">
+                        💡
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Column Buttons + Board -->
+        <div class="flex flex-col items-center">
+            <div id="mobile-column-buttons" class="flex justify-center gap-1 mb-2">
+                <!-- Mobile column buttons will be populated by JavaScript -->
+            </div>
+            <div id="mobile-game-board">
+                <!-- Mobile game board will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
 </div>

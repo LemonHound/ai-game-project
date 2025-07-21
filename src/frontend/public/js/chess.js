@@ -17,6 +17,10 @@ class ChessGame {
         };
         this.kingPositions = { white: [7, 4], black: [0, 4] };
 
+        // import AI - replace with real AI once it's ready
+        this.ai = new BasicChessAI(this);
+        this.vsAI = true; // Add this flag
+
         this.initializeBoard();
         this.updateGameStatus();
     }
@@ -36,17 +40,28 @@ class ChessGame {
     }
 
     initializeBoard() {
-        const boardElement = document.getElementById('chess-board');
-        boardElement.innerHTML = '';
+        // Clear existing boards
+        const desktopBoard = document.getElementById('chess-board');
+        const mobileBoard = document.getElementById('mobile-chess-board');
 
+        [desktopBoard, mobileBoard].forEach(boardElement => {
+            if (boardElement) {
+                boardElement.innerHTML = '';
+                this.createChessBoard(boardElement);
+            }
+        });
+
+        this.renderBoard();
+    }
+
+    createChessBoard(boardElement) {
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const square = document.createElement('div');
                 const isLight = (row + col) % 2 === 0;
 
-                // Apply DaisyUI classes for chess board colors
                 square.className = `chess-square w-12 h-12 flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 ${
-                    isLight ? 'bg-primary hover:bg-amber-200' : 'bg-neutral hover:bg-amber-700'
+                    isLight ? 'bg-amber-100 hover:bg-amber-200' : 'bg-amber-600 hover:bg-amber-700'
                 }`;
 
                 square.setAttribute('data-row', row);
@@ -56,45 +71,49 @@ class ChessGame {
                 boardElement.appendChild(square);
             }
         }
-
-        this.renderBoard();
     }
 
     renderBoard() {
-        const boardElement = document.getElementById('chess-board');
-        const squares = boardElement.children;
+        const boardElements = [
+            document.getElementById('chess-board'),
+            document.getElementById('mobile-chess-board')
+        ].filter(Boolean);
 
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-                const displayRow = this.boardFlipped ? 7 - row : row;
-                const displayCol = this.boardFlipped ? 7 - col : col;
-                const squareIndex = displayRow * 8 + displayCol;
-                const square = squares[squareIndex];
-                const piece = this.board[row][col];
+        boardElements.forEach(boardElement => {
+            const squares = boardElement.children;
 
-                // Clear previous styling
-                square.classList.remove('ring-4', 'ring-primary', 'ring-success', 'ring-warning', 'bg-green-300', 'bg-red-300');
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const displayRow = this.boardFlipped ? 7 - row : row;
+                    const displayCol = this.boardFlipped ? 7 - col : col;
+                    const squareIndex = displayRow * 8 + displayCol;
+                    const square = squares[squareIndex];
+                    const piece = this.board[row][col];
 
-                // Restore original colors
-                const isLight = (displayRow + displayCol) % 2 === 0;
-                square.className = `chess-square w-12 h-12 flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 ${
-                    isLight ? 'bg-amber-100 hover:bg-amber-200' : 'bg-amber-600 hover:bg-amber-700'
-                }`;
+                    // Clear previous styling
+                    square.classList.remove('ring-4', 'ring-primary', 'ring-success', 'ring-warning', 'bg-green-300', 'bg-red-300');
 
-                // Add piece
-                square.textContent = piece ? this.getPieceSymbol(piece) : '';
+                    // Restore original colors
+                    const isLight = (displayRow + displayCol) % 2 === 0;
+                    square.className = `chess-square w-12 h-12 flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 ${
+                        isLight ? 'bg-amber-100 hover:bg-amber-200' : 'bg-amber-600 hover:bg-amber-700'
+                    }`;
 
-                // Highlight selected square
-                if (this.selectedSquare && this.selectedSquare[0] === row && this.selectedSquare[1] === col) {
-                    square.classList.add('ring-4', 'ring-primary');
-                }
+                    // Add piece
+                    square.textContent = piece ? this.getPieceSymbol(piece) : '';
 
-                // Highlight valid moves
-                if (this.validMoves.some(move => move[0] === row && move[1] === col)) {
-                    square.classList.add('bg-green-300');
+                    // Highlight selected square
+                    if (this.selectedSquare && this.selectedSquare[0] === row && this.selectedSquare[1] === col) {
+                        square.classList.add('ring-4', 'ring-primary');
+                    }
+
+                    // Highlight valid moves
+                    if (this.validMoves.some(move => move[0] === row && move[1] === col)) {
+                        square.classList.add('bg-green-300');
+                    }
                 }
             }
-        }
+        });
     }
 
     getPieceSymbol(piece) {
@@ -108,18 +127,22 @@ class ChessGame {
     handleSquareClick(row, col) {
         if (this.gameOver) return;
 
-        const piece = this.board[row][col];
+        // Convert display coordinates to board coordinates when flipped
+        const actualRow = this.boardFlipped ? 7 - row : row;
+        const actualCol = this.boardFlipped ? 7 - col : col;
+
+        const piece = this.board[actualRow][actualCol];
         const isPlayerTurn = this.currentPlayer === this.playerColor;
 
         // If clicking on a valid move
-        if (this.selectedSquare && this.validMoves.some(move => move[0] === row && move[1] === col)) {
-            this.makeMove(this.selectedSquare[0], this.selectedSquare[1], row, col);
+        if (this.selectedSquare && this.validMoves.some(move => move[0] === actualRow && move[1] === actualCol)) {
+            this.makeMove(this.selectedSquare[0], this.selectedSquare[1], actualRow, actualCol);
             return;
         }
 
         // If clicking on own piece
         if (piece && this.isPlayerPiece(piece) && isPlayerTurn) {
-            this.selectSquare(row, col);
+            this.selectSquare(actualRow, actualCol);
         } else {
             this.clearSelection();
         }
@@ -182,8 +205,12 @@ class ChessGame {
         } else {
             // Switch turns
             this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-            console.log("current player", this.currentPlayer);
             this.updateGameStatus();
+
+            // Add AI move if playing against AI
+            if (this.vsAI && this.currentPlayer !== this.playerColor) {
+                this.ai.makeMove(this.currentPlayer);
+            }
         }
     }
 
@@ -538,11 +565,14 @@ class ChessGame {
 
     setPlayerColor(isWhite) {
         this.playerColor = isWhite ? 'white' : 'black';
-
-        // Flip board so player always plays from bottom
         this.boardFlipped = !isWhite;
         this.renderBoard();
         this.updateGameStatus();
+
+        // If player chose black, AI makes first move
+        if (!isWhite && this.vsAI) {
+            this.ai.makeMove('white');
+        }
     }
 
     addMoveToHistory(piece, fromRow, fromCol, toRow, toCol, captured) {
@@ -578,20 +608,24 @@ class ChessGame {
     }
 
     updateCapturedPieces() {
-        const whiteElement = document.getElementById('captured-by-white');
-        const blackElement = document.getElementById('captured-by-black');
+        const whiteContainers = document.querySelectorAll('#captured-by-white, #mobile-captured-by-white');
+        const blackContainers = document.querySelectorAll('#captured-by-black, #mobile-captured-by-black');
 
-        if (whiteElement) {
-            whiteElement.innerHTML = this.capturedPieces.white
-                .map(piece => `<span class="text-lg">${this.getPieceSymbol(piece)}</span>`)
-                .join('');
-        }
+        whiteContainers.forEach(container => {
+            if (container) {
+                container.innerHTML = this.capturedPieces.white.map(piece =>
+                    `<span class="text-lg">${this.getPieceSymbol(piece)}</span>`
+                ).join('');
+            }
+        });
 
-        if (blackElement) {
-            blackElement.innerHTML = this.capturedPieces.black
-                .map(piece => `<span class="text-lg">${this.getPieceSymbol(piece)}</span>`)
-                .join('');
-        }
+        blackContainers.forEach(container => {
+            if (container) {
+                container.innerHTML = this.capturedPieces.black.map(piece =>
+                    `<span class="text-lg">${this.getPieceSymbol(piece)}</span>`
+                ).join('');
+            }
+        });
     }
 
     endGame(winner) {
@@ -609,24 +643,26 @@ class ChessGame {
     }
 
     updateGameStatus(message = null) {
-        const statusElement = document.getElementById('game-status');
-        const turnElement = document.getElementById('current-player-text');
+        const statusElements = document.querySelectorAll('#game-status, #mobile-game-status');
+        const turnElements = document.querySelectorAll('#current-player-text, #mobile-current-player-text');
+        const turnIndicators = document.querySelectorAll('#turn-indicator, #mobile-turn-indicator');
 
-        if (message) {
-            statusElement.textContent = message;
-        } else if (this.gameOver) {
-            statusElement.textContent = 'Game Over!';
-        } else {
-            const currentPlayerText = this.currentPlayer === 'white' ? 'White' : 'Black';
-            statusElement.textContent = `${currentPlayerText}'s turn to move.`;
+        // Your existing logic, but update all matching elements
+        statusElements.forEach(el => {
+            if (el && message) el.textContent = message;
+        });
 
-            if (turnElement) {
-                turnElement.textContent = `${currentPlayerText}'s Turn`;
-                turnElement.parentElement.className = `badge badge-lg ${
-                    this.currentPlayer === 'white' ? 'badge-primary' : 'badge-secondary'
-                }`;
+        // Update turn indicators for both desktop and mobile
+        const currentPlayerText = this.currentPlayer === 'white' ? 'White' : 'Black';
+        turnElements.forEach(el => {
+            if (el) el.textContent = `${currentPlayerText}'s Turn`;
+        });
+
+        turnIndicators.forEach(el => {
+            if (el) {
+                el.className = `badge badge-lg ${this.currentPlayer === 'white' ? 'badge-primary' : 'badge-secondary'}`;
             }
-        }
+        });
     }
 
     restart() {

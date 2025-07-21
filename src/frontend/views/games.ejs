@@ -1,156 +1,107 @@
-<!-- Page Header -->
-<div class="text-center mb-8">
-    <h1 class="text-4xl font-bold mb-4">🎮 All Games</h1>
-    <p class="text-lg opacity-70 max-w-2xl mx-auto">
-        Explore our collection of AI-powered games. Each game features adaptive AI that learns from your playing style.
-    </p>
-</div>
+<div class="h-full overflow-hidden flex flex-col p-4 lg:p-6">
+    <!-- Scrollable Content Area -->
+    <div class="flex-1 overflow-y-auto games-scroll pr-2">
 
-<!-- Featured Games Grid -->
-<section class="mb-12">
-    <h2 class="text-2xl font-bold mb-6">🌟 Featured Games</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="featured-games">
-        <% allGames.forEach(game => { %>
-            <div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 <%= highlight === game.id ? 'ring-2 ring-primary' : '' %>"
-                 data-category="<%= game.category %>"
-                 data-status="<%= game.status %>">
-                <figure class="px-6 pt-6">
-                    <div class="w-full h-32 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
-                        <span class="text-5xl"><%= game.icon %></span>
-                    </div>
-                </figure>
-                <div class="card-body">
-                    <h3 class="card-title">
-                        <%= game.name %>
-                        <div class="badge badge-<%= game.difficulty === 'Easy' ? 'primary' : game.difficulty === 'Medium' ? 'secondary' : game.difficulty === 'Hard' ? 'accent' : game.difficulty === 'Expert' ? 'error' : 'warning' %> badge-sm">
-                            <%= game.difficulty %>
+        <!-- Fixed Header Section -->
+        <div class="flex-shrink-0 mb-8">
+            <!-- Page Header -->
+            <div class="text-center">
+                <h1 class="text-4xl font-bold mb-4">🎮 All Games</h1>
+                <p class="text-lg opacity-70 max-w-2xl mx-auto">
+                    Explore our collection of AI-powered games. Each game features adaptive AI that learns from your playing style.
+                </p>
+            </div>
+        </div>
+
+        <!-- Featured Games Grid -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6">🌟 Featured Games</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="featured-games">
+                <% allGames.forEach(game => { %>
+                    <div class="card bg-base-200 shadow-xl hover:shadow-2xl transition-all duration-300 card-game-link <%= highlight === game.id ? 'ring-2 ring-primary' : '' %>"
+                         data-category="<%= game.category %>"
+                         data-status="<%= game.status %>">
+                        <figure class="px-6 pt-6">
+                            <div class="w-full h-32 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                                <span class="text-5xl"><%= game.icon %></span>
+                            </div>
+                        </figure>
+                        <div class="card-body">
+                            <h3 class="card-title">
+                                <%= game.name %>
+                                <div class="badge badge-<%= game.difficulty === 'Easy' ? 'primary' : game.difficulty === 'Medium' ? 'secondary' : game.difficulty === 'Hard' ? 'accent' : 'neutral' %>">
+                                    <%= game.difficulty %>
+                                </div>
+                            </h3>
+                            <p class="opacity-70 text-sm"><%= game.description %></p>
+
+                            <!-- Game Stats -->
+                            <div class="flex justify-between text-xs opacity-60 mt-2">
+                                <span>🎯 <%= game.category %></span>
+                                <span>⚡ <%= game.status %></span>
+                            </div>
+
+                            <div class="card-actions justify-end mt-4">
+                                <% if (game.status === 'active') { %>
+                                    <a href="/game/<%= game.id %>" class="btn btn-primary btn-sm">
+                                        Play Now
+                                    </a>
+                                <% } else if (game.status === 'beta') { %>
+                                    <a href="/game/<%= game.id %>" class="btn btn-secondary btn-sm">
+                                        Try Beta
+                                    </a>
+                                <% } else { %>
+                                    <button class="btn btn-disabled btn-sm" disabled>
+                                        Coming Soon
+                                    </button>
+                                <% } %>
+                            </div>
                         </div>
-                    </h3>
-                    <p class="text-sm opacity-70"><%= game.description %></p>
-                    <div class="flex items-center gap-2 my-2">
-                        <% if (game.tags) { %>
-                            <% game.tags.forEach(tag => { %>
-                                <div class="badge badge-outline badge-md"><%= tag %></div>
-                            <% }); %>
-                        <% } %>
                     </div>
-                    <div class="card-actions justify-end">
-                        <% if (game.status === 'active') { %>
-                            <a href="/game/<%= game.id %>" class="btn btn-primary btn-sm" data-testid="game-link-<%= game.id %>">
-                                <span class="mr-1">🎯</span>
-                                Play Now
-                            </a>
-                        <% } else { %>
-                            <button class="btn btn-disabled btn-sm">
-                                <span class="mr-1">🔒</span>
-                                Coming Soon
-                            </button>
-                        <% } %>
+                <% }); %>
+            </div>
+        </section>
+
+        <!-- Game Statistics -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-6">📊 Game Statistics</h2>
+            <div class="stats stats-horizontal shadow-lg bg-base-200 w-full">
+                <div class="stat">
+                    <div class="stat-figure text-primary">
+                        <span class="text-3xl">🎮</span>
                     </div>
+                    <div class="stat-title">Total Games</div>
+                    <div class="stat-value text-primary"><%= allGames.length %></div>
+                    <div class="stat-desc">Available to play</div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-figure text-secondary">
+                        <span class="text-3xl">⚡</span>
+                    </div>
+                    <div class="stat-title">Active Games</div>
+                    <div class="stat-value text-secondary"><%= allGames.filter(g => g.status === 'active').length %></div>
+                    <div class="stat-desc">Ready to play</div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-figure text-accent">
+                        <span class="text-3xl">🧪</span>
+                    </div>
+                    <div class="stat-title">Beta Games</div>
+                    <div class="stat-value text-accent"><%= allGames.filter(g => g.status === 'beta').length %></div>
+                    <div class="stat-desc">In testing</div>
+                </div>
+
+                <div class="stat">
+                    <div class="stat-figure text-info">
+                        <span class="text-3xl">🚀</span>
+                    </div>
+                    <div class="stat-title">Coming Soon</div>
+                    <div class="stat-value text-info"><%= allGames.filter(g => g.status === 'coming-soon').length %></div>
+                    <div class="stat-desc">In development</div>
                 </div>
             </div>
-        <% }); %>
+        </section>
     </div>
-</section>
-
-<!-- Game Stats -->
-<section class="mb-12">
-    <h2 class="text-2xl font-bold mb-6">📊 Gaming Statistics</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="stat bg-base-200 rounded-lg">
-            <div class="stat-figure text-primary">
-                <span class="text-3xl">🎮</span>
-            </div>
-            <div class="stat-title">Total Games</div>
-            <div class="stat-value text-primary"><%= allGames.length %></div>
-            <div class="stat-desc">Available to play</div>
-        </div>
-
-        <div class="stat bg-base-200 rounded-lg">
-            <div class="stat-figure text-secondary">
-                <span class="text-3xl">🏆</span>
-            </div>
-            <div class="stat-title">Your Wins</div>
-            <div class="stat-value text-secondary">24</div>
-            <div class="stat-desc">Across all games</div>
-        </div>
-
-        <div class="stat bg-base-200 rounded-lg">
-            <div class="stat-figure text-accent">
-                <span class="text-3xl">🧠</span>
-            </div>
-            <div class="stat-title">AI Learning</div>
-            <div class="stat-value text-accent">156</div>
-            <div class="stat-desc">Data points collected</div>
-        </div>
-
-        <div class="stat bg-base-200 rounded-lg">
-            <div class="stat-figure text-success">
-                <span class="text-3xl">⏱️</span>
-            </div>
-            <div class="stat-title">Play Time</div>
-            <div class="stat-value text-success">2.5h</div>
-            <div class="stat-desc">This week</div>
-        </div>
-    </div>
-</section>
-
-<!-- Coming Soon Section -->
-<section>
-    <h2 class="text-2xl font-bold mb-6">🚀 Coming Soon</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Multiplayer Chess -->
-        <div class="card bg-base-300 shadow-lg opacity-75">
-            <div class="card-body">
-                <h3 class="card-title text-base">
-                    Multiplayer Chess
-                    <div class="badge badge-ghost badge-sm">Q2 2025</div>
-                </h3>
-                <p class="text-sm opacity-70">Play chess against other players with AI analysis and coaching.</p>
-                <div class="card-actions justify-end">
-                    <button class="btn btn-disabled btn-sm">Coming Soon</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Poker -->
-        <div class="card bg-base-300 shadow-lg opacity-75">
-            <div class="card-body">
-                <h3 class="card-title text-base">
-                    AI Poker
-                    <div class="badge badge-ghost badge-sm">Q3 2025</div>
-                </h3>
-                <p class="text-sm opacity-70">Texas Hold'em with AI opponents that have unique playing styles.</p>
-                <div class="card-actions justify-end">
-                    <button class="btn btn-disabled btn-sm">Coming Soon</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Word Builder -->
-        <div class="card bg-base-300 shadow-lg opacity-75">
-            <div class="card-body">
-                <h3 class="card-title text-base">
-                    Word Builder
-                    <div class="badge badge-ghost badge-sm">Q4 2025</div>
-                </h3>
-                <p class="text-sm opacity-70">Collaborative word games with AI that learns your vocabulary.</p>
-                <div class="card-actions justify-end">
-                    <button class="btn btn-disabled btn-sm">Coming Soon</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<script>
-    // Highlight game if specified in URL
-    <% if (highlight) { %>
-    document.addEventListener('DOMContentLoaded', function() {
-        const highlightedGame = document.querySelector('[data-category]');
-        if (highlightedGame) {
-            highlightedGame.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    });
-    <% } %>
-</script>
+</div>

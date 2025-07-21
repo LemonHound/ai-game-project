@@ -1,257 +1,219 @@
-<!-- Game Header -->
-<div class="mb-6">
-    <div class="breadcrumbs text-sm mb-4" data-testid="breadcrumbs">
+<div class="h-full overflow-hidden flex flex-col p-4 lg:p-6">
+    <!-- Breadcrumbs - Fixed at top -->
+    <div class="breadcrumbs text-sm mb-4 flex-shrink-0">
         <ul>
-            <li><a href="/" class="link">Home</a></li>
-            <li><a href="/games" class="link">Games</a></li>
-            <li class="opacity-70"><%= currentGame.name %></li>
+            <li><a href="/">Home</a></li>
+            <li><a href="/games">Games</a></li>
+            <li class="text-primary font-semibold"><%= currentGame.name %></li>
         </ul>
     </div>
 
-    <div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
-        <div class="flex items-center gap-4">
-            <div class="w-16 h-16 bg-gradient-to-br from-accent to-secondary rounded-xl flex items-center justify-center">
-                <span class="text-3xl"><%= currentGame.icon %></span>
+    <!-- Game Header - Fixed -->
+    <div class="flex-shrink-0 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-gradient-to-br from-accent to-secondary rounded-lg flex items-center justify-center">
+                    <span class="text-3xl"><%= currentGame.icon %></span>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold"><%= currentGame.name %></h1>
+                    <p class="opacity-70 text-sm"><%= currentGame.description %></p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-3xl font-bold"><%= currentGame.name %></h1>
-                <p class="text-base-content opacity-70"><%= currentGame.description %></p>
+
+            <!-- Game Controls -->
+            <div class="flex gap-2">
+                <button class="btn btn-outline btn-sm" onclick="openModal('rules-modal')">
+                    📋 Rules
+                </button>
+                <% if (currentGame.id !== 'chess') { %>
+                    <button class="btn btn-secondary btn-sm" onclick="restartGame()" data-testid="restart-btn">
+                        🔄 Restart
+                    </button>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Content Area - Flexible -->
+    <div class="flex-1 overflow-hidden flex flex-col lg:flex-row gap-6">
+        <!-- Game Board Container -->
+        <div class="flex-1 overflow-hidden flex flex-col">
+            <div class="card bg-base-200 shadow-xl h-full">
+                <div class="card-body h-full flex flex-col">
+                    <h2 class="card-title mb-4 flex-shrink-0">Game Board</h2>
+
+                    <!-- Game Board - Takes remaining space -->
+                    <div class="flex-1 flex items-center justify-center overflow-hidden">
+                        <!-- Game-specific content will be inserted here -->
+                        <% if (currentGame.id === 'tic-tac-toe') { %>
+                            <!-- Tic Tac Toe Board -->
+                            <%- include('partials/tic-tac-toe-board') %>
+                        <% } else if (currentGame.id === 'chess') { %>
+                            <!-- Chess Board -->
+                            <%- include('partials/chess-board') %>
+                        <% } else if (currentGame.id === 'connect4') { %>
+                            <!-- Connect 4 Board -->
+                            <%- include('partials/connect4-board') %>
+                        <% } else if (currentGame.id === 'dots-and-boxes') { %>
+                            <!-- Dots and Boxes Board -->
+                            <%- include('partials/dots-and-boxes-board') %>
+                        <% } else { %>
+                            <!-- Placeholder for other games -->
+                            <div class="text-center">
+                                <div class="text-6xl mb-4"><%= currentGame.icon %></div>
+                                <h3 class="text-xl font-bold mb-2">Coming Soon!</h3>
+                                <p class="opacity-70 mb-4"><%= currentGame.name %> is currently in development.</p>
+                                <a href="/games" class="btn btn-primary">Browse Other Games</a>
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Game Status - Fixed at bottom -->
+                    <div class="text-center mt-4 flex-shrink-0">
+                        <div id="game-status" class="text-lg font-semibold mb-2">
+                            <% if (currentGame.id === 'tic-tac-toe') { %>
+                                Your turn! Choose a square.
+                            <% } else if (currentGame.id === 'chess') { %>
+                                Choose your color to start playing!
+                            <% } else if (currentGame.id === 'connect4') { %>
+                                Your turn! Choose a column to drop your red piece.
+                            <% } else if (currentGame.id === 'dots-and-boxes') { %>
+                                Your turn! Click on any line to start.
+                            <% } else { %>
+                                Game will start when available.
+                            <% } %>
+                        </div>
+                        <div id="game-info" class="text-sm opacity-70">
+                            <% if (currentGame.id === 'tic-tac-toe') { %>
+                                Make your first move.
+                            <% } else if (currentGame.id === 'chess') { %>
+                                Click a piece to see valid moves. This is a practice board - no AI opponent.
+                            <% } else if (currentGame.id === 'connect4') { %>
+                                Drop pieces to connect four in a row!
+                            <% } else if (currentGame.id === 'dots-and-boxes') { %>
+                                Complete boxes by drawing their fourth side.
+                            <% } else { %>
+                                AI analysis will be available when the game launches.
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="flex gap-2 lg:ml-auto">
-            <button class="btn btn-primary" onclick="startGame()">
-                <span class="mr-2">🎮</span>
-                New Game
-            </button>
-            <% if (currentGame.id === 'chess') { %>
-                <button id="flip-board-btn" class="btn btn-outline" onclick="chessGame && chessGame.flipBoard()">
-                    <span class="mr-2">🔄</span>
-                    Flip Board
-                </button>
-                <button id="play-as-white-btn" class="btn btn-primary btn-sm" onclick="startGame(true)">
-                    <span class="mr-2">⚪</span>
-                    Play as White
-                </button>
-                <button id="play-as-black-btn" class="btn btn-secondary btn-sm" onclick="startGame(false)">
-                    <span class="mr-2">⚫</span>
-                    Play as Black
-                </button>
-            <% } else { %>
-                <button class="btn btn-outline" onclick="restartGame()">
-                    <span class="mr-2">🔄</span>
-                    Restart
-                </button>
-                <% if (currentGame.id === 'dots-and-boxes' || currentGame.id === 'connect4') { %>
-                    <button class="btn btn-outline" onclick="toggleStarter()">
-                        <span class="mr-2">🔀</span>
-                        Switch Starter
-                    </button>
-                    <button class="btn btn-outline" onclick="getHint()">
-                        <span class="mr-2">💡</span>
-                        Hint
-                    </button>
-                <% } %>
+        <!-- Game Info Panel - Scrollable if needed -->
+        <div class="w-full lg:w-80 overflow-y-auto">
+            <!-- AI Thoughts / Game Status -->
+            <div class="card bg-base-200 shadow-lg mb-4">
+                <div class="card-body">
+                    <h3 class="card-title text-base">
+                        <% if (currentGame.id === 'chess') { %>
+                            <span class="text-lg">♟️ Game Status</span>
+                        <% } else { %>
+                            <span class="text-lg">🤖 AI Thoughts</span>
+                        <% } %>
+                    </h3>
+                    <!-- Fixed height content area to prevent bouncing -->
+                    <div id="ai-thoughts" class="h-20 flex items-start mt-2">
+                        <div class="text-sm opacity-70">
+                            <% if (currentGame.id === 'tic-tac-toe') { %>
+                                Ready for a new game! Make your first move.
+                            <% } else if (currentGame.id === 'chess') { %>
+                                Select your color and start practicing!
+                            <% } else if (currentGame.id === 'connect4') { %>
+                                Ready to play Connect 4! Drop your red piece in any column.
+                            <% } else if (currentGame.id === 'dots-and-boxes') { %>
+                                Ready to play! Click on any line to draw it.
+                            <% } else { %>
+                                This game is currently in development. Stay tuned for AI-powered gameplay!
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Statistics -->
+            <div class="card bg-base-200 shadow-lg mb-4">
+                <div class="card-body">
+                    <h3 class="card-title text-base">📊 Game Stats</h3>
+                    <!-- Fixed height content area -->
+                    <div class="h-16 mt-2">
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span>Games Played:</span>
+                                <span id="games-played">0</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span>Wins:</span>
+                                <span id="wins">0</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span>Win Rate:</span>
+                                <span id="win-rate">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Tips -->
+            <div class="card bg-base-200 shadow-lg mb-4">
+                <div class="card-body">
+                    <h3 class="card-title text-base">💡 Pro Tips</h3>
+                    <!-- Fixed height content area -->
+                    <div class="h-20 mt-2">
+                        <div class="text-sm opacity-80 space-y-1">
+                            <% if (currentGame.id === 'tic-tac-toe') { %>
+                                <p>• Control the center square early</p>
+                                <p>• Watch for two-in-a-row opportunities</p>
+                                <p>• Block your opponent's winning moves</p>
+                            <% } else if (currentGame.id === 'chess') { %>
+                                <p>• Control the center of the board</p>
+                                <p>• Develop your pieces early</p>
+                                <p>• Castle early to protect your king</p>
+                            <% } else if (currentGame.id === 'connect4') { %>
+                                <p>• Control the center columns</p>
+                                <p>• Look for diagonal opportunities</p>
+                                <p>• Set up multiple threat options</p>
+                            <% } else if (currentGame.id === 'dots-and-boxes') { %>
+                                <p>• Avoid giving away boxes to your opponent</p>
+                                <p>• Count the chains to plan ahead</p>
+                                <p>• Force your opponent into bad positions</p>
+                            <% } else { %>
+                                <p>• Tips will be available when the game launches</p>
+                                <p>• Stay tuned for AI-powered strategies</p>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score Display (for supported games) -->
+            <% if (currentGame.id === 'tic-tac-toe' || currentGame.id === 'connect4' || currentGame.id === 'dots-and-boxes') { %>
+                <div class="card bg-base-200 shadow-lg">
+                    <div class="card-body">
+                        <h3 class="card-title text-base">🏆 Score</h3>
+                        <!-- Fixed height content area -->
+                        <div class="h-16 flex items-center justify-center mt-2">
+                            <div class="flex justify-between items-center w-full">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-primary" id="player-score">0</div>
+                                    <div class="text-sm opacity-70">You</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-lg opacity-50">VS</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-secondary" id="ai-score">0</div>
+                                    <div class="text-sm opacity-70">AI</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             <% } %>
-            <button class="btn btn-outline" onclick="openModal('rules-modal')">
-                <span class="mr-2">❓</span>
-                Rules
-            </button>
         </div>
-    </div>
-</div>
-
-<!-- Game Stats -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">Games Played</div>
-        <div class="stat-value text-primary"><%= gameStats.gamesPlayed %></div>
-        <div class="stat-desc">Total matches</div>
-    </div>
-    <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">Win Rate</div>
-        <div class="stat-value text-secondary"><%= gameStats.winRate %>%</div>
-        <div class="stat-desc">Against AI</div>
-    </div>
-    <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">Best Streak</div>
-        <div class="stat-value text-accent"><%= gameStats.bestStreak %></div>
-        <div class="stat-desc">Consecutive wins</div>
-    </div>
-    <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">AI Level</div>
-        <div class="stat-value text-success"><%= gameStats.aiLevel %></div>
-        <div class="stat-desc">Adaptive difficulty</div>
-    </div>
-</div>
-
-<!-- Game Board Container -->
-<div class="flex flex-col lg:flex-row gap-6">
-    <!-- Game Board -->
-    <div class="flex-1">
-        <div class="card bg-base-200 shadow-xl">
-            <div class="card-body">
-                <h2 class="card-title mb-4">Game Board</h2>
-
-                <!-- Game-specific content will be inserted here -->
-                <% if (currentGame.id === 'tic-tac-toe') { %>
-                    <!-- Tic Tac Toe Board -->
-                    <%- include('partials/tic-tac-toe-board') %>
-                <% } else if (currentGame.id === 'chess') { %>
-                    <!-- Chess Board -->
-                    <%- include('partials/chess-board') %>
-                <% } else if (currentGame.id === 'connect4') { %>
-                    <!-- Connect 4 Board -->
-                    <%- include('partials/connect4-board') %>
-                <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                    <!-- Dots and Boxes Board -->
-                    <%- include('partials/dots-and-boxes-board') %>
-                <% } else { %>
-                    <!-- Placeholder for other games -->
-                    <div class="text-center py-12">
-                        <div class="text-6xl mb-4"><%= currentGame.icon %></div>
-                        <h3 class="text-xl font-bold mb-2">Coming Soon!</h3>
-                        <p class="opacity-70"><%= currentGame.name %> is currently in development.</p>
-                        <a href="/games" class="btn btn-primary mt-4">Browse Other Games</a>
-                    </div>
-                <% } %>
-
-                <!-- Game Status -->
-                <div class="text-center mt-6">
-                    <div id="game-status" class="text-lg font-semibold mb-4">
-                        <% if (currentGame.id === 'tic-tac-toe') { %>
-                            Your turn! Choose a square.
-                        <% } else if (currentGame.id === 'chess') { %>
-                            Choose your color to start playing!
-                        <% } else if (currentGame.id === 'connect4') { %>
-                            Your turn! Choose a column to drop your red piece.
-                        <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                            Your turn! Click on any line to start.
-                        <% } else { %>
-                            Game will start when available.
-                        <% } %>
-                    </div>
-                    <div id="game-info" class="text-sm opacity-70">
-                        <% if (currentGame.id === 'tic-tac-toe') { %>
-                            Make your first move.
-                        <% } else if (currentGame.id === 'chess') { %>
-                            Click a piece to see valid moves. This is a practice board - no AI opponent.
-                        <% } else if (currentGame.id === 'connect4') { %>
-                            Drop pieces to connect four in a row!
-                        <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                            Complete boxes by drawing their fourth side.
-                        <% } else { %>
-                            AI analysis will be available when the game launches.
-                        <% } %>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Info Panel -->
-    <div class="lg:w-80">
-        <!-- AI Thoughts / Game Status -->
-        <div class="card bg-base-200 shadow-lg mb-4">
-            <div class="card-body">
-                <h3 class="card-title text-base">
-                    <% if (currentGame.id === 'chess') { %>
-                        <span class="text-lg">♟️ Game Status</span>
-                    <% } else { %>
-                        <span class="text-lg">🤖 AI Thoughts</span>
-                    <% } %>
-                </h3>
-                <div id="ai-thoughts" class="space-y-2 mt-2">
-                    <% if (currentGame.id === 'tic-tac-toe') { %>
-                        <div class="text-sm opacity-70">Ready for a new game! Make your first move.</div>
-                    <% } else if (currentGame.id === 'chess') { %>
-                        <div class="text-sm opacity-70">Select your color and start practicing!</div>
-                    <% } else if (currentGame.id === 'connect4') { %>
-                        <div class="text-sm opacity-70">Ready to play Connect 4! Drop your red piece in any column.</div>
-                    <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                        <div class="text-sm opacity-70">Ready to play! Click on any line to start.</div>
-                    <% } else { %>
-                        <div class="text-sm opacity-70">AI analysis will be available when the game launches.</div>
-                    <% } %>
-                </div>
-            </div>
-        </div>
-
-        <!-- Move History -->
-        <div class="card bg-base-200 shadow-lg">
-            <div class="card-body">
-                <h3 class="card-title text-base">
-                    <% if (currentGame.id === 'chess') { %>
-                        📝 Move History
-                    <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                        📋 Move History
-                    <% } else { %>
-                        📈 Move History
-                    <% } %>
-                </h3>
-                <div id="move-history" class="space-y-1 mt-2 max-h-48 overflow-y-auto">
-                    <div class="text-sm opacity-70">No moves yet</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Chess-specific captured pieces display -->
-        <% if (currentGame.id === 'chess') { %>
-            <div class="card bg-base-200 shadow-lg mt-4">
-                <div class="card-body">
-                    <h3 class="card-title text-base">🏆 Captured Pieces</h3>
-                    <div class="space-y-3 mt-2">
-                        <div>
-                            <h4 class="text-sm font-bold mb-1">Captured by White:</h4>
-                            <div id="captured-by-white" class="flex flex-wrap gap-1 min-h-[30px] p-2 bg-base-100 rounded">
-                                <!-- Captured pieces will appear here -->
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="text-sm font-bold mb-1">Captured by Black:</h4>
-                            <div id="captured-by-black" class="flex flex-wrap gap-1 min-h-[30px] p-2 bg-base-100 rounded">
-                                <!-- Captured pieces will appear here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        <% } %>
-
-        <!-- Connect4 and Dots&Boxes specific score display -->
-        <% if (currentGame.id === 'connect4' || currentGame.id === 'dots-and-boxes') { %>
-            <div class="card bg-base-200 shadow-lg mt-4">
-                <div class="card-body">
-                    <h3 class="card-title text-base">🏆 Current Score</h3>
-                    <div class="space-y-2 mt-2">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <% if (currentGame.id === 'connect4') { %>
-                                    <div class="w-4 h-4 bg-error rounded-full"></div>
-                                    <span class="text-sm">You (Red)</span>
-                                <% } else { %>
-                                    <div class="w-4 h-4 bg-primary rounded"></div>
-                                    <span class="text-sm">You</span>
-                                <% } %>
-                            </div>
-                            <span id="player-score" class="font-bold">0</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <% if (currentGame.id === 'connect4') { %>
-                                    <div class="w-4 h-4 bg-warning rounded-full"></div>
-                                    <span class="text-sm">AI (Yellow)</span>
-                                <% } else { %>
-                                    <div class="w-4 h-4 bg-secondary rounded"></div>
-                                    <span class="text-sm">AI</span>
-                                <% } %>
-                            </div>
-                            <span id="ai-score" class="font-bold">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        <% } %>
     </div>
 </div>
 
@@ -259,7 +221,7 @@
 <div id="rules-modal" class="modal">
     <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">How to Play <%= currentGame.name %></h3>
-        <div class="space-y-4">
+        <div class="space-y-4 overflow-y-auto">
             <% if (currentGame.id === 'tic-tac-toe') { %>
                 <p>🎯 <strong>Objective:</strong> Get three X's in a row (horizontal, vertical, or diagonal)</p>
                 <p>🎮 <strong>Your Turn:</strong> Click any empty square to place your X</p>
@@ -301,20 +263,16 @@
     <script>
         var pageScripts = ['tic-tac-toe.js'];
     </script>
-    <script src="/js/tic-tac-toe.js"></script>
 <% } else if (currentGame.id === 'chess') { %>
     <script>
         var pageScripts = ['chess.js'];
     </script>
-
 <% } else if (currentGame.id === 'connect4') { %>
     <script>
         var pageScripts = ['connect4.js'];
     </script>
-    <script src="/js/connect4.js"></script>
 <% } else if (currentGame.id === 'dots-and-boxes') { %>
     <script>
         var pageScripts = ['dots-and-boxes.js'];
     </script>
-    <script src="/js/dots-and-boxes.js"></script>
 <% } %>
