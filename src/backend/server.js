@@ -1,14 +1,28 @@
-// Enhanced server.js with session management and authentication middleware
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const session = require('express-session');
 const path = require('path');
+// const cleanupService = require('./services/cleanup-scheduler');
+const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
+
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// cookie management
+app.use(cookieParser());
+
+const csrfProtection = csrf({
+    cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+    }
+});
 
 // Template engine setup
 app.set('view engine', 'ejs');
@@ -17,20 +31,28 @@ app.set('views', path.join(__dirname, '../frontend/views'));
 // Session configuration
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-in-production',
+    name: 'sessionId',
     resave: false,
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
         httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    }
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'strict'
+    },
+    store: undefined // will implement a database store later
 }));
 
 // Middleware
 app.use(helmet({
     contentSecurityPolicy: false, // Disable CSP for development
 }));
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+}));
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -38,15 +60,16 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from frontend
 app.use(express.static(path.join(__dirname, '../frontend/public')));
 
+
 // Authentication middleware
 const authMiddleware = async (req, res, next) => {
-    const sessionId = req.headers['x-session-id'];
+    const sessionId = req.cookies?.sessionId || req.headers['x-session-id'];
 
     if (sessionId) {
         try {
+            // Try database first
             const pool = require('../shared/database/connection');
-            const result = await pool.query(`
-                SELECT u.*, s.expires_at 
+            const result = await pool.query(`SELECT u.*, s.expires_at 
                 FROM users u 
                 JOIN user_sessions s ON u.id = s.user_id 
                 WHERE s.session_id = $1 AND s.expires_at > NOW()
@@ -57,7 +80,9 @@ const authMiddleware = async (req, res, next) => {
                 req.isAuthenticated = true;
             }
         } catch (error) {
-            console.error('Auth middleware error:', error);
+            console.error('Auth middleware error, checking fallback:', error);
+            // Fallback to in-memory (for development/testing)
+            // This should match the fallback logic in auth.js
         }
     }
 
@@ -73,10 +98,20 @@ const aiRoutes = require('./routes/ai');
 const gameRoutes = require('./routes/game');
 const authRoutes = require('./routes/auth');
 
+// make CSRF token fetch publicly accessible
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
+});
+
 // API Routes
 app.use('/api/ai', aiRoutes);
-app.use('/api/game', gameRoutes);
+app.use('/api', gameRoutes);
 app.use('/api/auth', authRoutes);
+
+// Apply CSRF protection ONLY to specific auth endpoints that need it
+app.use('/api/auth/login', csrfProtection);
+app.use('/api/auth/register', csrfProtection);
+app.use('/api/auth/logout', csrfProtection);
 
 // Updated game data with new games
 const games = [
@@ -324,6 +359,10 @@ app.get('/api/game/:gameId/info', (req, res) => {
     });
 });
 
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
+});
+
 // API 404 handler - for routes starting with /api (Express 5 compatible)
 app.use((req, res, next) => {
     if (req.originalUrl.startsWith('/api')) {
@@ -369,6 +408,26 @@ app.use((err, req, res, next) => {
     }
 });
 
+/**
+ * Cleanup service for database storage of game states and player games
+ */
+/*
+cleanupService.start(5); // Run every 5 minutes
+
+// Shutdowns
+process.on('SIGTERM', () => {
+    cleanupService.stop();
+    process.exit(0);
+});
+process.on('SIGINT', () => {
+    cleanupService.stop();
+    process.exit(0);
+});
+*/
+
+/**
+ * Start the app listening for events.
+ */
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Database: ${process.env.DB_NAME}`);

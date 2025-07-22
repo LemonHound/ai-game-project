@@ -3,7 +3,6 @@
 
 class AuthManager {
     constructor() {
-        this.sessionId = localStorage.getItem('sessionId');
         this.currentUser = null;
         this.init();
     }
@@ -97,25 +96,17 @@ class AuthManager {
     }
 
     async checkAuthStatus() {
-        if (!this.sessionId) {
-            this.showNotAuthenticated();
-            return;
-        }
-
         try {
             const response = await fetch('/api/auth/me', {
-                headers: {
-                    'X-Session-ID': this.sessionId
-                }
+                credentials: 'include'
             });
 
             if (response.ok) {
                 this.currentUser = await response.json();
                 this.showAuthenticated(this.currentUser);
             } else {
-                // Session invalid, clear it
-                localStorage.removeItem('sessionId');
-                this.sessionId = null;
+                this.deleteCookie('loginProvider');
+                this.deleteCookie('userPrefs');
                 this.showNotAuthenticated();
             }
         } catch (error) {
@@ -129,32 +120,38 @@ class AuthManager {
 
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
+        const rememberMe = document.getElementById('remember-me')?.checked || false;
 
         this.hideError('login-error');
 
         try {
+            const csrfToken = await this.getCsrfToken();
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password, rememberMe })
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                this.sessionId = data.sessionId;
-                localStorage.setItem('sessionId', this.sessionId);
-                this.currentUser = data.user;
 
+                this.setCookie('loginProvider', 'email', rememberMe ? 30 : 7);
+                this.setCookie('rememberMe', rememberMe.toString(), 365);
+
+                // Store user preferences if available
+                if (data.user.preferences) {
+                    this.setCookie('userPrefs', JSON.stringify(data.user.preferences), 30);
+                }
+
+                this.currentUser = data.user;
                 this.showAuthenticated(this.currentUser);
                 this.closeModal('login-modal');
-
-                // Show success message
                 this.showSuccessMessage('Welcome back!');
-
-                // Clear form
                 document.getElementById('login-form').reset();
             } else {
                 this.showError('login-error', data.error || 'Login failed');
@@ -188,10 +185,14 @@ class AuthManager {
         }
 
         try {
+
+            const csrfToken = await this.getCsrfToken();
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
                 },
                 body: JSON.stringify({ username, email, password, displayName })
             });
@@ -199,17 +200,14 @@ class AuthManager {
             const data = await response.json();
 
             if (response.ok) {
-                this.sessionId = data.sessionId;
-                localStorage.setItem('sessionId', this.sessionId);
-                this.currentUser = data.user;
 
+                this.setCookie('loginProvider', 'email', 7);
+                this.setCookie('isNewUser', 'true', 1); // Expires in 1 day
+
+                this.currentUser = data.user;
                 this.showAuthenticated(this.currentUser);
                 this.closeModal('register-modal');
-
-                // Show success message
                 this.showSuccessMessage('Account created successfully!');
-
-                // Clear form
                 document.getElementById('register-form').reset();
             } else {
                 this.showError('register-error', data.error || 'Registration failed');
@@ -255,7 +253,6 @@ class AuthManager {
 
     async handleGoogleAuth(response) {
         console.log('=== Google Auth Callback Triggered ===');
-        console.log('Response received:', response);
 
         if (!response || !response.credential) {
             console.error('No credential in Google response:', response);
@@ -263,31 +260,24 @@ class AuthManager {
             return;
         }
 
-        console.log('Sending credential to server...');
-
         try {
             const result = await fetch('/api/auth/google', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ token: response.credential })
             });
 
-            console.log('Server response status:', result.status);
             const data = await result.json();
-            console.log('Server response data:', data);
 
             if (result.ok) {
-                this.sessionId = data.sessionId;
-                localStorage.setItem('sessionId', this.sessionId);
+                this.setCookie('loginProvider', 'google', 30);
                 this.currentUser = data.user;
-
                 this.showAuthenticated(this.currentUser);
                 this.closeModal('login-modal');
                 this.closeModal('register-modal');
-
-                // Show success message
                 this.showSuccessMessage('Welcome!');
             } else {
                 this.showError('login-error', data.error || 'Google authentication failed');
@@ -300,11 +290,14 @@ class AuthManager {
 
     async logout() {
         try {
+            const csrfToken = await this.getCsrfToken();
             if (this.sessionId) {
                 await fetch('/api/auth/logout', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
-                        'X-Session-ID': this.sessionId
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken // Add CSRF token for logout too
                     }
                 });
             }
@@ -312,8 +305,10 @@ class AuthManager {
             console.error('Logout error:', error);
         } finally {
             // Clear local data regardless of API result
-            localStorage.removeItem('sessionId');
-            this.sessionId = null;
+            this.deleteCookie('loginProvider');
+            this.deleteCookie('userPrefs');
+            this.deleteCookie('isNewUser');
+
             this.currentUser = null;
             this.showNotAuthenticated();
             this.showSuccessMessage('Logged out successfully');
@@ -390,6 +385,70 @@ class AuthManager {
         setTimeout(() => {
             notification.remove();
         }, 3000);
+    }
+
+    setCookie(name, value, days = 7, options = {}) {
+        const defaults = {
+            path: '/',
+            secure: window.location.protocol === 'https:',
+            sameSite: 'Strict'
+        };
+
+        const config = { ...defaults, ...options };
+
+        let cookieString = `${name}=${encodeURIComponent(value)}`;
+
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            cookieString += `; expires=${date.toUTCString()}`;
+        }
+
+        Object.entries(config).forEach(([key, val]) => {
+            if (val === true) {
+                cookieString += `; ${key}`;
+            } else if (val) {
+                cookieString += `; ${key}=${val}`;
+            }
+        });
+
+        document.cookie = cookieString;
+    }
+
+    getCookie(name) {
+        const nameEQ = `${name}=`;
+        const ca = document.cookie.split(';');
+
+        for (let c of ca) {
+            c = c.trim();
+            if (c.indexOf(nameEQ) === 0) {
+                return decodeURIComponent(c.substring(nameEQ.length));
+            }
+        }
+        return null;
+    }
+
+    deleteCookie(name, path = '/') {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path};`;
+    }
+
+    async getCsrfToken() {
+        try {
+            const response = await fetch('/api/csrf-token', {
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                console.error('Failed to get CSRF token:', response.status);
+                return null;
+            }
+
+            const data = await response.json();
+            return data.csrfToken;
+        } catch (error) {
+            console.error('Failed to get CSRF token:', error);
+            return null;
+        }
     }
 
     closeModal(modalId) {

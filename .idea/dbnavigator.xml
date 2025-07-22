@@ -43,9 +43,9 @@
     <retain-sticky-names value="false" />
   </component>
   <component name="DBNavigator.Project.FileConnectionMappingManager">
+    <mapping file-url="file://$PROJECT_DIR$/scripts/ad-hoc-queries.sql" connection-id="482f00c1-004d-4341-b0ce-961a520c7858" session-id="MAIN" current-schema="public" />
     <mapping file-url="file://$PROJECT_DIR$/scripts/test-setup.sql" connection-id="482f00c1-004d-4341-b0ce-961a520c7858" session-id="MAIN" current-schema="ai_game_db" />
-    <mapping file-url="file://$PROJECT_DIR$/scripts/database-update.sql" connection-id="482f00c1-004d-4341-b0ce-961a520c7858" session-id="MAIN" current-schema="public" />
-    <mapping file-url="file://$PROJECT_DIR$/scripts/setup-database.sql" connection-id="482f00c1-004d-4341-b0ce-961a520c7858" session-id="MAIN" current-schema="public" />
+    <mapping file-url="file://$PROJECT_DIR$/scripts/setup-database.sql" connection-id="482f00c1-004d-4341-b0ce-961a520c7858" session-id="MAIN" current-schema="ai_game_db" />
   </component>
   <component name="DBNavigator.Project.ObjectQuickFilterManager">
     <last-used-operator value="EQUAL" />
@@ -301,7 +301,6 @@
       <qualified-text-editor text-length-threshold="300">
         <content-types>
           <content-type name="Text" enabled="true" />
-          <content-type name="Properties" enabled="true" />
           <content-type name="XML" enabled="true" />
           <content-type name="DTD" enabled="true" />
           <content-type name="HTML" enabled="true" />

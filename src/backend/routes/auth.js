@@ -99,29 +99,15 @@ async function getUserBySession(sessionId) {
 async function findUserByEmail(email) {
     if (pool) {
         try {
-            console.log('=== FINDUSERBEEMAIL DEBUG ===');
-            console.log('Looking for email:', email);
-
-            // First, let's see what columns actually exist
-            const columnsResult = await pool.query(`
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'users' 
-                ORDER BY ordinal_position
-            `);
-            console.log('Available columns:', columnsResult.rows.map(r => r.column_name));
-
-            // Try a simple query first
-            const simpleResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-            console.log('Simple query result:', simpleResult.rows[0]);
-
-            return simpleResult.rows[0] || null;
+            const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+            return result.rows[0] || null;
         } catch (error) {
             console.error('Error finding user by email:', error.message);
-            console.error('Full error:', error);
+            console.error('checking for fallback users...');
             return fallbackUsers.find(u => u.email === email) || null;
         }
     } else {
+        console.log("!! no pool available for queries !! \n checking for fallback users...");
         return fallbackUsers.find(u => u.email === email) || null;
     }
 }
@@ -129,6 +115,7 @@ async function findUserByEmail(email) {
 async function createUser(userData) {
     if (pool) {
         try {
+            console.log("user data", userData);
             const result = await pool.query(`
                 INSERT INTO users (username, email, password_hash, display_name, auth_provider, email_verified)
                 VALUES ($1, $2, $3, $4, $5, $6)
@@ -163,7 +150,7 @@ async function createUser(userData) {
 // Check if user is authenticated
 router.get('/me', async (req, res) => {
     try {
-        const sessionId = req.headers['x-session-id'] || req.query.session;
+        const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] || req.query.session;
 
         if (!sessionId) {
             return res.status(401).json({ error: 'No session provided' });
@@ -172,6 +159,7 @@ router.get('/me', async (req, res) => {
         const user = await getUserBySession(sessionId);
 
         if (!user) {
+            res.clearCookie('sessionId');
             return res.status(401).json({ error: 'Invalid or expired session' });
         }
 
@@ -195,8 +183,8 @@ router.get('/me', async (req, res) => {
             emailVerified: user.email_verified,
             lastLogin: user.last_login
         };
-
         res.json(userData);
+
     } catch (error) {
         console.error('Auth check error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -240,6 +228,15 @@ router.post('/register', async (req, res) => {
         // Create session
         const sessionId = await createUserSession(newUser.id);
 
+        // Set session cookie
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        };
+        res.cookie('sessionId', sessionId, cookieOptions);
+
         res.status(201).json({
             message: 'User registered successfully',
             user: {
@@ -248,8 +245,7 @@ router.post('/register', async (req, res) => {
                 email: newUser.email,
                 displayName: newUser.display_name,
                 authProvider: newUser.auth_provider
-            },
-            sessionId
+            }
         });
 
     } catch (error) {
@@ -262,7 +258,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
 
     try {
-        const { email, password } = req.body;
+        const { email, password, rememberMe } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
@@ -286,6 +282,16 @@ router.post('/login', async (req, res) => {
         // Create session
         const sessionId = await createUserSession(user.id);
 
+        // set session cookie
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000 // 30 days if remember me, else 7 days
+        };
+
+        res.cookie('sessionId', sessionId, cookieOptions);
+
         // Update last login if using database
         if (pool) {
             try {
@@ -304,8 +310,7 @@ router.post('/login', async (req, res) => {
                 displayName: user.display_name,
                 profilePicture: user.profile_picture,
                 authProvider: user.auth_provider
-            },
-            sessionId
+            }
         });
 
     } catch (error) {
@@ -417,10 +422,20 @@ router.get('/google/callback', async (req, res) => {
 
         // Create session
         const sessionId = await createUserSession(user.id);
-        console.log('Session created for Google user');
+
+        // Set session cookie instead of URL parameter
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days for OAuth
+        };
+
+        res.cookie('sessionId', sessionId, cookieOptions);
+        console.log('Session cookie set for Google user');
 
         // Redirect back to the app with success
-        res.redirect(`/?login=success&provider=google&sessionId=${sessionId}`);
+        res.redirect(`/?login=success&provider=google`);
 
     } catch (error) {
         console.error('Google OAuth callback error:', error);
@@ -431,7 +446,7 @@ router.get('/google/callback', async (req, res) => {
 // Logout
 router.post('/logout', async (req, res) => {
     try {
-        const sessionId = req.headers['x-session-id'] || req.body.sessionId;
+        const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] || req.body.sessionId;
 
         if (sessionId) {
             if (pool) {
@@ -443,6 +458,9 @@ router.post('/logout', async (req, res) => {
             }
             fallbackSessions.delete(sessionId);
         }
+
+        // Clear the session cookie
+        res.clearCookie('sessionId');
 
         res.json({ message: 'Logout successful' });
     } catch (error) {
