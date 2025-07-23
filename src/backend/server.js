@@ -7,6 +7,7 @@ const path = require('path');
 // const cleanupService = require('./services/cleanup-scheduler');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
+const { authMiddleware, dynamicAuthMiddleware } = require('./middleware/auth');
 
 require('dotenv').config();
 
@@ -15,6 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 // cookie management
 app.use(cookieParser());
+app.use(authMiddleware);
 
 const csrfProtection = csrf({
     cookie: {
@@ -60,36 +62,6 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from frontend
 app.use(express.static(path.join(__dirname, '../frontend/public')));
 
-
-// Authentication middleware
-const authMiddleware = async (req, res, next) => {
-    const sessionId = req.cookies?.sessionId || req.headers['x-session-id'];
-
-    if (sessionId) {
-        try {
-            // Try database first
-            const pool = require('../shared/database/connection');
-            const result = await pool.query(`SELECT u.*, s.expires_at 
-                FROM users u 
-                JOIN user_sessions s ON u.id = s.user_id 
-                WHERE s.session_id = $1 AND s.expires_at > NOW()
-            `, [sessionId]);
-
-            if (result.rows.length > 0) {
-                req.user = result.rows[0];
-                req.isAuthenticated = true;
-            }
-        } catch (error) {
-            console.error('Auth middleware error, checking fallback:', error);
-            // Fallback to in-memory (for development/testing)
-            // This should match the fallback logic in auth.js
-        }
-    }
-
-    req.isAuthenticated = req.isAuthenticated || false;
-    next();
-};
-
 // Apply auth middleware to all routes
 app.use(authMiddleware);
 
@@ -107,11 +79,23 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
 app.use('/api/ai', aiRoutes);
 app.use('/api', gameRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api', dynamicAuthMiddleware);
+
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
+});
+
+// API Routes - now with conditional authentication
+app.use('/api/ai', aiRoutes);
+app.use('/api', gameRoutes);
+app.use('/api/auth', authRoutes);
 
 // Apply CSRF protection ONLY to specific auth endpoints that need it
 app.use('/api/auth/login', csrfProtection);
 app.use('/api/auth/register', csrfProtection);
 app.use('/api/auth/logout', csrfProtection);
+
+
 
 // Updated game data with new games
 const games = [

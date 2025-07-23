@@ -12,14 +12,6 @@ function generateSessionId() {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// validate the user is logged in before any game logic can be called
-router.use((req, res, next) => {
-    if (!req.user || !req.user.id) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-    next();
-});
-
 // Generic game initialization - no DB write until first move
 router.post('/:gameId/start', async (req, res) => {
     try {
