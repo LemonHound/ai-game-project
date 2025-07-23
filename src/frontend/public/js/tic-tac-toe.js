@@ -1,24 +1,62 @@
-// tic-tac-toe.js - Fixed Game logic for Tic Tac Toe
+// tic-tac-toe.js - Updated to use new backend game engine system
 class TicTacToeGame {
     constructor() {
-        this.board = Array(9).fill(null);
-        this.currentPlayer = 'X'; // Player is always X
-        this.gameOver = false;
-        this.winner = null;
-        this.moveHistory = [];
         this.gameSessionId = null;
-        this.playerStarts = true; // Track who starts - can be toggled
+        this.gameState = null;
+        this.gameName = 'tic-tac-toe';
+        this.isProcessingMove = false;
 
+        this.initializeGame();
+    }
+
+    async initializeGame() {
         this.initializeBoard();
-        this.updateGameStatus();
-        this.updateAIThoughts("Ready for a new game! Make your first move.");
+        this.updateGameStatus('Starting new game...');
+        this.updateAIThoughts("Starting new game...");
 
-        // If AI should start, make AI move after short delay
-        if (!this.playerStarts) {
-            this.currentPlayer = 'O';
-            this.updateGameStatus();
-            this.updateAIThoughts("I'll start this game!");
-            setTimeout(() => this.makeAIMove(), 500);
+        await this.startGameOnServer();
+    }
+
+    async startGameOnServer() {
+        try {
+            // Use the new generic game route
+            const response = await fetch(`/api/${this.gameName}/start`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    playerStarts: true,
+                    difficulty: 'medium'
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.gameSessionId = data.sessionId;
+                this.gameState = data.state;
+
+                console.log('Game session started:', this.gameSessionId);
+
+                // Update UI based on backend state
+                this.updateUIFromState();
+
+                // If AI should start first, it will be handled by the backend
+                if (!this.gameState.playerStarts) {
+                    this.updateAIThoughts("I'll start this game!");
+                    // The backend will handle AI's first move
+                    await this.makeAIMove();
+                } else {
+                    this.updateAIThoughts("Ready for a new game! Make your first move.");
+                }
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to start game session:', errorData);
+                this.updateAIThoughts("Something went wrong starting the game. Try again!");
+            }
+        } catch (error) {
+            console.error('Error starting game:', error);
+            this.updateAIThoughts("Connection error. Please check your internet and try again.");
         }
     }
 
@@ -30,329 +68,261 @@ class TicTacToeGame {
             const square = document.createElement('button');
             square.className = 'btn btn-lg btn-neutral w-20 h-20 text-3xl font-bold hover:btn-primary transition-all duration-200';
             square.setAttribute('data-index', i);
-            square.addEventListener('click', () => this.makeMove(i));
+            square.addEventListener('click', () => this.makePlayerMove(i));
             boardElement.appendChild(square);
         }
     }
 
-    async makeMove(index) {
-        if (this.board[index] || this.gameOver || this.currentPlayer === 'O') {
-            return; // Invalid move or not player's turn
-        }
-
-        // Make player move
-        this.board[index] = 'X';
-        this.updateSquare(index, 'X');
-        this.addMoveToHistory('Player', index);
-
-        // Check for game end
-        if (this.checkWinner() || this.checkDraw()) {
-            this.endGame();
+    async makePlayerMove(position) {
+        // Prevent moves during processing or if game is over
+        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
             return;
         }
 
-        // Switch to AI turn
-        this.currentPlayer = 'O';
-        this.updateGameStatus();
-        this.updateAIThoughts("Thinking...");
+        // Check if it's the player's turn
+        if (this.gameState.currentPlayer !== 'X') {
+            this.updateAIThoughts("It's my turn! Please wait...");
+            return;
+        }
 
-        // Simulate AI thinking delay
-        setTimeout(async () => {
-            await this.makeAIMove();
-        }, 1000);
+        // Check if position is valid (basic client-side validation)
+        if (this.gameState.board[position] !== null) {
+            this.updateAIThoughts("That square is already taken! Choose another one.");
+            return;
+        }
+
+        this.isProcessingMove = true;
+
+        try {
+            await this.sendMoveToServer(position, 'X');
+        } catch (error) {
+            console.error('Error making player move:', error);
+            this.updateAIThoughts("Something went wrong with your move. Try again!");
+        } finally {
+            this.isProcessingMove = false;
+        }
     }
 
     async makeAIMove() {
-        const aiMove = this.getBestAIMove();
+        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
+            return;
+        }
 
-        if (aiMove !== -1) {
-            this.board[aiMove] = 'O';
-            this.updateSquare(aiMove, 'O');
-            this.addMoveToHistory('AI', aiMove);
-            this.updateAIThoughts("I chose square " + (aiMove + 1) + " to counter your strategy.");
+        if (this.gameState.currentPlayer !== 'O') {
+            return; // Not AI's turn
+        }
 
-            // Check for game end
-            if (this.checkWinner() || this.checkDraw()) {
-                this.endGame();
-                return;
+        this.isProcessingMove = true;
+        this.updateAIThoughts("Thinking...");
+
+        try {
+            // The backend will automatically handle AI moves when it's AI's turn
+            // We just need to request the AI move
+            const response = await fetch(`/api/${this.gameName}/move`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sessionId: this.gameSessionId,
+                    move: { player: 'O', requestAIMove: true }
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.gameState = data.newState;
+                this.updateUIFromState();
+
+                if (data.aiMove) {
+                    this.updateAIThoughts(`I chose square ${data.aiMove.position + 1}. Your turn!`);
+                }
             }
-
-            // Switch back to player
-            this.currentPlayer = 'X';
-            this.updateGameStatus();
+        } catch (error) {
+            console.error('Error making AI move:', error);
+            this.updateAIThoughts("I had trouble making my move. Try restarting the game.");
+        } finally {
+            this.isProcessingMove = false;
         }
     }
 
-    getBestAIMove() {
-        // Simple "AI" strategy:
-        // 1. Try to win
-        // 2. Try to block player from winning
-        // 3. Take center if available
-        // 4. Take random corner or side
+    async sendMoveToServer(position, player) {
+        if (!this.gameSessionId) {
+            console.warn('No game session ID - cannot make move');
+            return;
+        }
 
-        // Check for winning move
-        for (let i = 0; i < 9; i++) {
-            if (!this.board[i]) {
-                this.board[i] = 'O';
-                if (this.checkWinner(true) === 'O') {
-                    this.board[i] = null;
-                    return i;
+        try {
+            const response = await fetch(`/api/${this.gameName}/move`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sessionId: this.gameSessionId,
+                    move: {
+                        position: position,
+                        player: player
+                    }
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.gameState = data.newState;
+                this.updateUIFromState();
+
+                // Handle AI response if game is still ongoing and it's AI's turn
+                if (data.aiMove) {
+                    // AI move was made automatically by backend
+                    const aiPosition = data.aiMove.position;
+                    this.updateAIThoughts(`I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || "Your turn!"}`);
+                } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'O') {
+                    // AI needs to move but didn't in this response - request AI move
+                    setTimeout(() => this.makeAIMove(), 500);
                 }
-                this.board[i] = null;
+
+                console.log('Move processed successfully');
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to send move to server:', errorData);
+                this.updateAIThoughts("Move failed. Please try again!");
             }
+        } catch (error) {
+            console.error('Error sending move to server:', error);
+            this.updateAIThoughts("Network error. Check your connection!");
         }
+    }
 
-        // Check for blocking move
-        for (let i = 0; i < 9; i++) {
-            if (!this.board[i]) {
-                this.board[i] = 'X';
-                if (this.checkWinner(true) === 'X') {
-                    this.board[i] = null;
-                    return i;
-                }
-                this.board[i] = null;
+    updateUIFromState() {
+        if (!this.gameState) return;
+
+        // Update board display
+        this.gameState.board.forEach((cell, index) => {
+            if (cell !== null) {
+                this.updateSquare(index, cell);
             }
-        }
+        });
 
-        // Take center if available
-        if (!this.board[4]) {
-            return 4;
-        }
+        // Update game status
+        this.updateGameStatus();
 
-        // Take corners
-        const corners = [0, 2, 6, 8];
-        const availableCorners = corners.filter(i => !this.board[i]);
-        if (availableCorners.length > 0) {
-            return availableCorners[Math.floor(Math.random() * availableCorners.length)];
+        // Update AI thoughts based on game state
+        if (this.gameState.gameOver) {
+            this.updateAIThoughts(this.getGameEndMessage());
         }
-
-        // Take any available side
-        const sides = [1, 3, 5, 7];
-        const availableSides = sides.filter(i => !this.board[i]);
-        if (availableSides.length > 0) {
-            return availableSides[Math.floor(Math.random() * availableSides.length)];
-        }
-
-        return -1; // No moves available
     }
 
     updateSquare(index, player) {
         const square = document.querySelector(`[data-index="${index}"]`);
-        square.textContent = player;
-        // Fixed: Remove btn-active to prevent styling conflicts
-        if (player === 'X') {
-            square.classList.remove('btn-neutral', 'hover:btn-primary');
-            square.classList.add('btn-success');
-        } else {
-            square.classList.remove('btn-neutral', 'hover:btn-primary');
-            square.classList.add('btn-error');
-        }
-    }
-
-    checkWinner(aiLogic = false) {
-        const winLines = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-            [0, 4, 8], [2, 4, 6] // Diagonals
-        ];
-
-        for (let line of winLines) {
-            const [a, b, c] = line;
-            if (this.board[a] && this.board[a] === this.board[b] && this.board[a] === this.board[c]) {
-                this.winner = this.board[a];
-                if(!aiLogic) this.highlightWinningLine(line);
-                return this.board[a];
+        if (square && square.textContent === '') {
+            square.textContent = player;
+            if (player === 'X') {
+                square.classList.remove('btn-neutral', 'hover:btn-primary');
+                square.classList.add('btn-success');
+            } else {
+                square.classList.remove('btn-neutral', 'hover:btn-primary');
+                square.classList.add('btn-error');
             }
         }
-        return null;
     }
 
-    highlightWinningLine(line) {
-        line.forEach(index => {
-            const square = document.querySelector(`[data-index="${index}"]`);
-            square.classList.add('ring-4', 'ring-warning');
-        });
-    }
+    updateGameStatus(customMessage = null) {
+        const statusElement = document.getElementById('game-status');
 
-    checkDraw() {
-        return this.board.every(cell => cell !== null) && !this.winner;
-    }
-
-    endGame() {
-        this.gameOver = true;
-        let statusMessage = '';
-
-        if (this.winner === 'X') {
-            statusMessage = '🎉 You Won! Great job!';
-            this.updateAIThoughts("Well played! You outmaneuvered me this time. 🏆");
-        } else if (this.winner === 'O') {
-            statusMessage = '🤖 AI Wins! Better luck next time!';
-            this.updateAIThoughts("Victory! That was a strategic game. 🎯");
-        } else {
-            statusMessage = '🤝 It\'s a Draw! Good game!';
-            this.updateAIThoughts("A well-fought draw! Neither of us could gain the advantage. ⚖️");
+        if (customMessage) {
+            statusElement.textContent = customMessage;
+            statusElement.className = 'text-2xl font-bold text-info mb-4';
+            return;
         }
 
-        this.updateGameStatus(statusMessage);
-    }
+        if (!this.gameState) {
+            statusElement.textContent = 'Loading...';
+            statusElement.className = 'text-2xl font-bold text-info mb-4';
+            return;
+        }
 
-    updateGameStatus(message = null) {
-        const statusElement = document.getElementById('game-status');
-        if (message) {
-            statusElement.textContent = message;
-        } else if (this.gameOver) {
-            statusElement.textContent = 'Game Over!';
-        } else if (this.currentPlayer === 'X') {
-            statusElement.textContent = 'Your turn! Choose a square.';
+        if (this.gameState.gameOver) {
+            if (this.gameState.winner === 'X') {
+                statusElement.textContent = '🎉 You Win!';
+                statusElement.className = 'text-2xl font-bold text-success mb-4';
+            } else if (this.gameState.winner === 'O') {
+                statusElement.textContent = '🤖 AI Wins!';
+                statusElement.className = 'text-2xl font-bold text-error mb-4';
+            } else {
+                statusElement.textContent = '🤝 It\'s a Tie!';
+                statusElement.className = 'text-2xl font-bold text-warning mb-4';
+            }
         } else {
-            statusElement.textContent = 'AI is thinking...';
+            if (this.gameState.currentPlayer === 'X') {
+                statusElement.textContent = '🎯 Your Turn';
+                statusElement.className = 'text-2xl font-bold text-primary mb-4';
+            } else {
+                statusElement.textContent = '🤖 AI Thinking...';
+                statusElement.className = 'text-2xl font-bold text-secondary mb-4';
+            }
         }
     }
 
     updateAIThoughts(thought) {
-        const aiThoughtsElement = document.getElementById('ai-thoughts');
-        if (aiThoughtsElement) {
-            aiThoughtsElement.textContent = thought;
+        const thoughtsElement = document.getElementById('ai-thoughts');
+        if (thoughtsElement) {
+            thoughtsElement.textContent = thought;
         }
     }
 
-    addMoveToHistory(player, index) {
-        this.moveHistory.push({ player, square: index + 1, timestamp: new Date() });
-        this.updateMoveHistory();
-    }
+    getGameEndMessage() {
+        if (!this.gameState || !this.gameState.gameOver) return null;
 
-    updateMoveHistory() {
-        const historyElement = document.getElementById('move-history');
-        if (historyElement) {
-            if (this.moveHistory.length === 0) {
-                historyElement.innerHTML = '<div class="text-sm opacity-70">No moves yet</div>';
-            } else {
-                historyElement.innerHTML = this.moveHistory.map((move, index) =>
-                    `<div class="text-sm">
-                        <span class="font-semibold">${index + 1}.</span> 
-                        ${move.player} → Square ${move.square}
-                    </div>`
-                ).join('');
-            }
-        }
-    }
-
-    restart() {
-        this.board = Array(9).fill(null);
-        this.currentPlayer = this.playerStarts ? 'X' : 'O';
-        this.gameOver = false;
-        this.winner = null;
-        this.moveHistory = [];
-
-        this.initializeBoard();
-        this.updateGameStatus();
-        this.updateMoveHistory();
-        this.updateAIThoughts("Game restarted! Ready for another round!");
-
-        // If AI should start, make AI move after short delay
-        if (!this.playerStarts) {
-            this.updateAIThoughts("I'll start this round!");
-            setTimeout(() => this.makeAIMove(), 500);
-        }
-    }
-
-    // Toggle who starts the game
-    toggleStarter() {
-        this.playerStarts = !this.playerStarts;
-        this.restart();
-        const starterText = this.playerStarts ? "You'll start next game!" : "AI will start next game!";
-        this.updateAIThoughts(starterText);
-    }
-
-    getHint() {
-        if (this.gameOver || this.currentPlayer === 'O') {
-            this.updateAIThoughts("No hints available right now!");
-            return;
-        }
-
-        let hintMessage = "💡 Hint: ";
-
-        // Check if player can win
-        for (let i = 0; i < 9; i++) {
-            if (!this.board[i]) {
-                this.board[i] = 'X';
-                if (this.checkWinner() === 'X') {
-                    this.board[i] = null;
-                    hintMessage += `You can win by playing square ${i + 1}! 🎯`;
-                    this.updateAIThoughts(hintMessage);
-                    return;
-                }
-                this.board[i] = null;
-            }
-        }
-
-        // Check if player needs to block
-        for (let i = 0; i < 9; i++) {
-            if (!this.board[i]) {
-                this.board[i] = 'O';
-                if (this.checkWinner() === 'O') {
-                    this.board[i] = null;
-                    hintMessage += `Block the AI by playing square ${i + 1}! 🛡️`;
-                    this.updateAIThoughts(hintMessage);
-                    return;
-                }
-                this.board[i] = null;
-            }
-        }
-
-        // General strategy hints
-        if (!this.board[4]) {
-            hintMessage += "Try the center square (5) for maximum strategic advantage! 🎯";
+        if (this.gameState.winner === 'X') {
+            return "Well played! You won this round. Want to try again?";
+        } else if (this.gameState.winner === 'O') {
+            return "I won this time! Your strategy is improving though.";
         } else {
-            const corners = [0, 2, 6, 8];
-            const availableCorners = corners.filter(i => !this.board[i]);
-            if (availableCorners.length > 0) {
-                hintMessage += `Try a corner like square ${availableCorners[0] + 1} for better positioning! 📐`;
-            } else {
-                hintMessage += "Look for opportunities to create multiple winning paths! 🧠";
-            }
+            return "A tie! We're evenly matched. Let's play again!";
         }
+    }
 
-        this.updateAIThoughts(hintMessage);
+    async restartGame() {
+        // Reset local state
+        this.gameSessionId = null;
+        this.gameState = null;
+        this.isProcessingMove = false;
+
+        // Clear the board
+        const boardElement = document.getElementById('game-board');
+        const squares = boardElement.querySelectorAll('button');
+        squares.forEach(square => {
+            square.textContent = '';
+            square.className = 'btn btn-lg btn-neutral w-20 h-20 text-3xl font-bold hover:btn-primary transition-all duration-200';
+        });
+
+        // Start a new game
+        await this.initializeGame();
+    }
+
+    async toggleFirstPlayer() {
+        // For now, just restart with opposite setting
+        // This could be enhanced to remember the preference
+        this.restartGame();
     }
 }
-
-// Global game instance
-let game = null;
 
 // Initialize game when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    startGame();
+let game;
+document.addEventListener('DOMContentLoaded', () => {
+    game = new TicTacToeGame();
 });
 
-// Global functions for button handlers (called from EJS)
-function startGame() {
-    game = new TicTacToeGame();
-}
-
+// Global functions for buttons
 function restartGame() {
     if (game) {
-        game.restart();
+        game.restartGame();
     }
 }
 
-function toggleStarter() {
+function toggleFirstPlayer() {
     if (game) {
-        game.toggleStarter();
+        game.toggleFirstPlayer();
     }
-}
-
-function getHint() {
-    if (game) {
-        game.getHint();
-    }
-}
-
-// Modal functions (from your layout's scripts.ejs)
-function openModal(modalId) {
-    document.getElementById(modalId).classList.add('modal-open');
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('modal-open');
 }

@@ -1,158 +1,55 @@
+// src/backend/routes/game.js
 const express = require('express');
 const router = express.Router();
 const pool = require('../../shared/database/connection');
+const gameFactory = require('../game-logic/game-factory');
 
-// Mock game states storage (in production, use database)
-const gameStates = new Map();
+// In-memory game session storage (consider Redis for production)
+const gameSessions = new Map();
 
-// Get all available games
-router.get('/', async (req, res) => {
-    try {
-        // This could come from database in the future
-        const games = [
-            {
-                id: 'tic-tac-toe',
-                name: 'Tic Tac Toe',
-                description: 'Classic game with adaptive AI opponent',
-                icon: '⭕',
-                difficulty: 'Easy',
-                players: 1,
-                status: 'active',
-                category: 'strategy'
-            },
-            {
-                id: 'snake',
-                name: 'Snake AI',
-                description: 'Snake game with predictive AI assistance',
-                icon: '🐍',
-                difficulty: 'Medium',
-                players: 1,
-                status: 'active',
-                category: 'arcade'
-            },
-            {
-                id: 'puzzle',
-                name: 'AI Puzzle',
-                description: 'Dynamic puzzles that adapt to your skill',
-                icon: '🧩',
-                difficulty: 'Hard',
-                players: 1,
-                status: 'active',
-                category: 'puzzle'
-            },
-            {
-                id: 'chess',
-                name: 'Chess',
-                description: 'Chess with AI that learns your style',
-                icon: '♟️',
-                difficulty: 'Expert',
-                players: 1,
-                status: 'coming-soon',
-                category: 'strategy'
-            },
-            {
-                id: 'trivia',
-                name: 'Smart Trivia',
-                description: 'Trivia questions tailored to your knowledge',
-                icon: '🧠',
-                difficulty: 'Variable',
-                players: 1,
-                status: 'coming-soon',
-                category: 'knowledge'
-            }
-        ];
+// Generate unique session ID
+function generateSessionId() {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
-        res.json(games);
-    } catch (error) {
-        console.error('Games list error:', error);
-        res.status(500).json({ error: error.message });
+// validate the user is logged in before any game logic can be called
+router.use((req, res, next) => {
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Authentication required' });
     }
+    next();
 });
 
-// Get specific game info
-router.get('/:gameId', async (req, res) => {
-    try {
-        const { gameId } = req.params;
-
-        // Mock game data - in production, fetch from database
-        const gameInfo = {
-            'tic-tac-toe': {
-                id: 'tic-tac-toe',
-                name: 'Tic Tac Toe',
-                description: 'Classic 3x3 grid game with AI opponent',
-                rules: 'Get three in a row to win!',
-                difficulty: 'Easy',
-                estimatedTime: '2-5 minutes'
-            },
-            'snake': {
-                id: 'snake',
-                name: 'Snake AI',
-                description: 'Navigate the snake to eat food and grow',
-                rules: 'Avoid walls and your own tail!',
-                difficulty: 'Medium',
-                estimatedTime: '5-10 minutes'
-            }
-        };
-
-        const game = gameInfo[gameId];
-        if (!game) {
-            return res.status(404).json({ error: 'Game not found' });
-        }
-
-        res.json(game);
-    } catch (error) {
-        console.error('Game info error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Start a new game
+// Generic game initialization - no DB write until first move
 router.post('/:gameId/start', async (req, res) => {
     try {
         const { gameId } = req.params;
-        const sessionId = req.headers['x-session-id'];
 
-        // Generate game session ID
-        const gameSessionId = `${gameId}_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-
-        // Initialize game state based on game type
-        let initialState;
-        switch (gameId) {
-            case 'tic-tac-toe':
-                initialState = {
-                    board: Array(9).fill(null),
-                    currentPlayer: 'X',
-                    winner: null,
-                    gameOver: false
-                };
-                break;
-            case 'snake':
-                initialState = {
-                    snake: [{ x: 10, y: 10 }],
-                    food: { x: 15, y: 15 },
-                    direction: 'right',
-                    score: 0,
-                    gameOver: false
-                };
-                break;
-            default:
-                return res.status(400).json({ error: 'Unsupported game type' });
+        if (!gameFactory.isValidGameId(gameId)) {
+            return res.status(400).json({ error: 'Invalid game type' });
         }
 
-        // Store game state
-        gameStates.set(gameSessionId, {
-            gameId,
+        const engine = gameFactory.getEngine(gameId);
+        const sessionId = generateSessionId();
+
+        // Initialize game state (no DB write yet)
+        const gameState = engine.initializeGame(req.body);
+
+        // Store in memory temporarily
+        gameSessions.set(sessionId, {
+            ...gameState,
             sessionId,
-            state: initialState,
-            createdAt: new Date(),
-            lastMove: new Date()
+            userId: req.user.id,
+            lastActivity: new Date(),
+            isPersisted: false,
+            isInitializing: false // Add flag to prevent concurrent initialization
         });
 
         res.json({
-            gameSessionId,
+            success: true,
+            sessionId,
             gameId,
-            state: initialState,
-            message: 'Game started successfully'
+            state: gameState
         });
 
     } catch (error) {
@@ -161,69 +58,111 @@ router.post('/:gameId/start', async (req, res) => {
     }
 });
 
-// Get game state
-router.get('/:gameId/state/:gameSessionId', async (req, res) => {
+// Generic move processing with lazy DB initialization
+router.post('/:gameId/move', async (req, res) => {
     try {
-        const { gameSessionId } = req.params;
+        const { gameId } = req.params;
+        const { sessionId, move } = req.body;
 
-        const gameData = gameStates.get(gameSessionId);
-        if (!gameData) {
+        if (!sessionId || !move) {
+            return res.status(400).json({ error: 'Missing sessionId or move' });
+        }
+
+        const session = gameSessions.get(sessionId);
+        if (!session) {
             return res.status(404).json({ error: 'Game session not found' });
         }
 
-        res.json({
-            gameSessionId,
-            gameId: gameData.gameId,
-            state: gameData.state,
-            lastMove: gameData.lastMove
-        });
-
-    } catch (error) {
-        console.error('Game state error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Make a move
-router.post('/:gameId/move/:gameSessionId', async (req, res) => {
-    try {
-        const { gameId, gameSessionId } = req.params;
-        const { move } = req.body;
-
-        const gameData = gameStates.get(gameSessionId);
-        if (!gameData) {
-            return res.status(404).json({ error: 'Game session not found' });
+        // Check if another request is already processing this session
+        if (session.isProcessing) {
+            return res.status(429).json({ error: 'Move already being processed' });
         }
 
-        // Process move based on game type
-        let newState;
-        let isValid = true;
+        // Lock session for processing
+        session.isProcessing = true;
 
-        switch (gameId) {
-            case 'tic-tac-toe':
-                newState = processTicTacToeMove(gameData.state, move);
-                break;
-            case 'snake':
-                newState = processSnakeMove(gameData.state, move);
-                break;
-            default:
-                return res.status(400).json({ error: 'Unsupported game type' });
+        try {
+            const engine = gameFactory.getEngine(gameId);
+
+            // Process the move
+            let newState = engine.processMove(session, move);
+
+            // Update session
+            session.lastActivity = new Date();
+            Object.assign(session, newState);
+
+            // Lazy database initialization - save on first move (with race condition protection)
+            if (!session.isPersisted && !session.isInitializing) {
+                session.isInitializing = true;
+                try {
+                    await initializeGameInDB(session, engine);
+                    session.isPersisted = true;
+                } catch (error) {
+                    // Check if error is due to duplicate key (race condition)
+                    if (error.code === '23505' && error.constraint === 'tic_tac_toe_games_game_session_id_key') {
+                        console.log(`Game session ${sessionId} already initialized by another request`);
+                        session.isPersisted = true; // Mark as persisted since it exists
+                    } else {
+                        throw error; // Re-throw if it's a different error
+                    }
+                } finally {
+                    session.isInitializing = false;
+                }
+            }
+
+            // Update game state in database (only if already persisted)
+            if (session.isPersisted) {
+                await updateGameStateInDB(session, engine);
+            }
+
+            // If game is over, complete the game record
+            if (newState.gameOver && session.isPersisted) {
+                await completeGameInDB(session, engine);
+                // Clean up session
+                gameSessions.delete(sessionId);
+
+                // Release lock and return result
+                return res.json({
+                    success: true,
+                    newState,
+                    aiMove: null
+                });
+            }
+
+            // Handle AI move if applicable
+            let aiMove = null;
+            if (!newState.gameOver && newState.currentPlayer === 'O') {
+                aiMove = engine.getAIMove(newState, session.difficulty);
+                if (aiMove) {
+                    const aiState = engine.processMove(newState, aiMove);
+                    Object.assign(session, aiState);
+
+                    // Update AI move in database
+                    if (session.isPersisted) {
+                        await updateGameStateInDB(session, engine);
+                    }
+
+                    if (aiState.gameOver && session.isPersisted) {
+                        await completeGameInDB(session, engine);
+                        gameSessions.delete(sessionId);
+                    }
+
+                    newState = aiState;
+                }
+            }
+
+            res.json({
+                success: true,
+                newState,
+                aiMove
+            });
+
+        } finally {
+            // Always release the processing lock
+            if (session) {
+                session.isProcessing = false;
+            }
         }
-
-        if (!isValid) {
-            return res.status(400).json({ error: 'Invalid move' });
-        }
-
-        // Update stored state
-        gameData.state = newState;
-        gameData.lastMove = new Date();
-        gameStates.set(gameSessionId, gameData);
-
-        res.json({
-            gameSessionId,
-            state: newState,
-            isValid: true
-        });
 
     } catch (error) {
         console.error('Move processing error:', error);
@@ -231,117 +170,189 @@ router.post('/:gameId/move/:gameSessionId', async (req, res) => {
     }
 });
 
-// Get leaderboard for a game
-router.get('/:gameId/leaderboard', async (req, res) => {
+// Generic stats endpoint
+router.get('/:gameId/stats', async (req, res) => {
     try {
         const { gameId } = req.params;
+        const userId = req.query.userId || req.user?.id;
 
-        // Mock leaderboard data
-        const leaderboards = {
-            'tic-tac-toe': [
-                { rank: 1, player: 'AI Master', score: 985, games: 100 },
-                { rank: 2, player: 'Strategy Pro', score: 892, games: 85 },
-                { rank: 3, player: 'Demo Player', score: 745, games: 67 }
-            ],
-            'snake': [
-                { rank: 1, player: 'Snake Charmer', score: 1250, games: 45 },
-                { rank: 2, player: 'Speed Demon', score: 1100, games: 38 },
-                { rank: 3, player: 'Pixel Hunter', score: 950, games: 29 }
-            ]
-        };
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID required' });
+        }
 
-        const leaderboard = leaderboards[gameId] || [];
-        res.json(leaderboard);
+        if (!gameFactory.isValidGameId(gameId)) {
+            return res.status(400).json({ error: 'Invalid game type' });
+        }
+
+        const stats = await getGameStats(gameId, userId);
+        res.json(stats);
 
     } catch (error) {
-        console.error('Leaderboard error:', error);
+        console.error('Stats error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Helper functions for game logic
-function processTicTacToeMove(currentState, move) {
-    const { position } = move;
-    const newState = JSON.parse(JSON.stringify(currentState));
+// Generic cleanup endpoint
+router.post('/:gameId/cleanup', async (req, res) => {
+    try {
+        const { gameId } = req.params;
 
-    // Validate move
-    if (newState.board[position] !== null || newState.gameOver) {
-        throw new Error('Invalid move');
-    }
-
-    // Make move
-    newState.board[position] = newState.currentPlayer;
-
-    // Check for winner
-    const winner = checkTicTacToeWinner(newState.board);
-    if (winner) {
-        newState.winner = winner;
-        newState.gameOver = true;
-    } else if (newState.board.every(cell => cell !== null)) {
-        newState.winner = 'tie';
-        newState.gameOver = true;
-    } else {
-        // Switch players
-        newState.currentPlayer = newState.currentPlayer === 'X' ? 'O' : 'X';
-    }
-
-    return newState;
-}
-
-function checkTicTacToeWinner(board) {
-    const lines = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-        [0, 4, 8], [2, 4, 6] // diagonals
-    ];
-
-    for (let line of lines) {
-        const [a, b, c] = line;
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-            return board[a];
+        if (!gameFactory.isValidGameId(gameId)) {
+            return res.status(400).json({ error: 'Invalid game type' });
         }
-    }
 
-    return null;
+        const result = await cleanupAbandonedGames(gameId);
+
+        // Also clean up memory sessions older than 1 hour
+        const now = new Date();
+        let cleanedSessions = 0;
+        for (let [sessionId, session] of gameSessions.entries()) {
+            if (now - session.lastActivity > 60 * 60 * 1000) { // 1 hour
+                gameSessions.delete(sessionId);
+                cleanedSessions++;
+            }
+        }
+
+        res.json({
+            success: true,
+            deletedGames: result,
+            cleanedSessions,
+            message: `Cleaned up ${result} abandoned games and ${cleanedSessions} expired sessions`
+        });
+
+    } catch (error) {
+        console.error('Cleanup error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// List all available games
+router.get('/', async (req, res) => {
+    try {
+        const availableGames = gameFactory.getAvailableGames();
+
+        // Add metadata for each game
+        const games = availableGames.map(game => ({
+            id: game.id,
+            name: game.name,
+            description: getGameDescription(game.id),
+            icon: getGameIcon(game.id),
+            difficulty: getGameDifficulty(game.id),
+            players: 1, // Default for AI games
+            status: 'active',
+            category: getGameCategory(game.id)
+        }));
+
+        res.json({ games });
+    } catch (error) {
+        console.error('Games list error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Database helper functions
+async function initializeGameInDB(session, engine) {
+    if (!session.userId) return; // Skip if no user
+
+    await pool.query(
+        'SELECT start_tic_tac_toe_game($1, $2, $3, $4)',
+        [session.userId, session.sessionId, session.playerStarts, session.difficulty]
+    );
 }
 
-function processSnakeMove(currentState, move) {
-    const { direction } = move;
-    const newState = JSON.parse(JSON.stringify(currentState));
+async function updateGameStateInDB(session, engine) {
+    const serialized = engine.serializeState(session);
+    await pool.query(
+        'SELECT upsert_tic_tac_toe_state($1, $2)',
+        [serialized.boardState, session.moveCount]
+    );
+}
 
-    // Update direction
-    newState.direction = direction;
-
-    // Move snake
-    const head = { ...newState.snake[0] };
-    switch (direction) {
-        case 'up': head.y -= 1; break;
-        case 'down': head.y += 1; break;
-        case 'left': head.x -= 1; break;
-        case 'right': head.x += 1; break;
+async function completeGameInDB(session, engine) {
+    if (!session.userId) {
+        console.error('missing User ID', session.sessionId);
+        throw new Error(`User ID for ${session.sessionId} not found`);
     }
 
-    newState.snake.unshift(head);
+    try {
+        const serialized = engine.serializeState(session);
+        const winner = session.winner === 'tie' ? 'T' : session.winner;
 
-    // Check if food eaten
-    if (head.x === newState.food.x && head.y === newState.food.y) {
-        newState.score += 10;
-        // Generate new food position
-        newState.food = {
-            x: Math.floor(Math.random() * 20),
-            y: Math.floor(Math.random() * 20)
-        };
-    } else {
-        newState.snake.pop();
+        const result = await pool.query(
+            'SELECT complete_tic_tac_toe_game($1, $2, $3, $4, $5, $6)',
+            [session.sessionId, serialized.metadata.moveSequence, winner,
+                session.moveCount, 0, session.userId]
+        );
+        console.log("game completion result:", result.rows[0]);
+    } catch (error) {
+        console.error("Failed to complete game in DB:", error);
+        throw error;
     }
+}
 
-    // Check game over conditions
-    if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 ||
-        newState.snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
-        newState.gameOver = true;
-    }
+async function getGameStats(gameId, userId) {
+    // This would need to be made more generic for different game types
+    const result = await pool.query(`        SELECT 
+            COUNT(*) as total_games,
+            COUNT(CASE WHEN winner = 'X' THEN 1 END) as wins,
+            COUNT(CASE WHEN winner = 'O' THEN 1 END) as losses,
+            COUNT(CASE WHEN winner = 'T' THEN 1 END) as ties,
+            AVG(total_moves) as avg_moves,
+            MAX(final_score) as best_score,
+            COUNT(CASE WHEN completed_at IS NULL THEN 1 END) as incomplete_games
+        FROM tic_tac_toe_games 
+        WHERE user_id = $1
+    `, [userId]);
 
-    return newState;
+    return result.rows[0];
+}
+
+async function cleanupAbandonedGames(gameId) {
+    // For now, just handle tic-tac-toe, but this could be made generic
+    const result = await pool.query('SELECT cleanup_abandoned_tic_tac_toe_games()');
+    return result.rows[0].cleanup_abandoned_tic_tac_toe_games;
+}
+
+// Game metadata helpers (could be moved to game engines)
+function getGameDescription(gameId) {
+    const descriptions = {
+        'tic-tac-toe': 'Classic game with adaptive AI opponent',
+        'snake': 'Snake game with predictive AI assistance',
+        'puzzle': 'Dynamic puzzles that adapt to your skill',
+        'chess': 'Chess with AI that learns your style'
+    };
+    return descriptions[gameId] || 'Fun game with AI features';
+}
+
+function getGameIcon(gameId) {
+    const icons = {
+        'tic-tac-toe': '⭕',
+        'snake': '🐍',
+        'puzzle': '🧩',
+        'chess': '♟️'
+    };
+    return icons[gameId] || '🎮';
+}
+
+function getGameDifficulty(gameId) {
+    const difficulties = {
+        'tic-tac-toe': 'Easy',
+        'snake': 'Medium',
+        'puzzle': 'Hard',
+        'chess': 'Expert'
+    };
+    return difficulties[gameId] || 'Medium';
+}
+
+function getGameCategory(gameId) {
+    const categories = {
+        'tic-tac-toe': 'strategy',
+        'snake': 'arcade',
+        'puzzle': 'puzzle',
+        'chess': 'strategy'
+    };
+    return categories[gameId] || 'arcade';
 }
 
 module.exports = router;
