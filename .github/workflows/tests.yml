@@ -1,15 +1,70 @@
-name: 🧪 Comprehensive Test Suite
+name: 🧪 CI/CD Pipeline
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * 1'  # Every Monday at 2 AM
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  comprehensive-tests:
+  # Code Quality (Formatting Only)
+  code-quality:
+    name: 🎨 Code Formatting
     runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
 
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Check code formatting (Prettier)
+        run: npm run format:check
+
+      - name: 🔒 Security audit
+        run: npm audit --audit-level=moderate
+
+  # Unit Tests
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run unit tests with coverage
+        run: npm run test:unit:coverage
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: unit-tests
+          fail_ci_if_error: false
+
+  # Database & Setup Tests
+  smoke-tests:
+    name: 🚀 Smoke Tests
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:17
@@ -54,81 +109,494 @@ jobs:
           # Setup database schema
           PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
 
-      - name: 🧪 Unit Tests
-        run: npm run test:unit
-        env:
-          NODE_ENV: test
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps chromium
 
-      - name: 📦 Install Playwright browsers and dependencies
-        run: npx playwright install --with-deps
-
-      - name: 🚀 Smoke Tests
-        run: npm run test:smoke --project=chromium
+      - name: 🚀 Run smoke tests
+        run: npm run test:smoke -- --project=chromium
         env:
           NODE_ENV: test
           CI: true
 
-      - name: 🔐 Authentication Tests
-        run: npm run test:auth --project=chromium
-        env:
-          NODE_ENV: test
-          CI: true
-
-      - name: 🎮 Game Tests
-        run: npm run test:games --project=chromium
-        env:
-          NODE_ENV: test
-          CI: true
-
-      - name: 📡 API Tests
-        run: npm run test:api --project=chromium
-        env:
-          NODE_ENV: test
-          CI: true
-
-      - name: 🧭 Navigation Tests
-        run: npm run test:navigation --project=chromium
-        env:
-          NODE_ENV: test
-          CI: true
-
-      - name: ⚡ Performance Tests
-        run: npm run test:performance --project=chromium
-        env:
-          NODE_ENV: test
-          CI: true
-
-      - name: 🔄 Cross-browser Tests (Firefox)
-        run: |
-          npx playwright test tests/smoke/routes.spec.js --project=firefox \
-            --grep "homepage loads correctly|games page loads correctly"
-        env:
-          NODE_ENV: test
-          CI: true
-
-      - name: 📊 Upload test results
+      - name: 📤 Upload smoke test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: comprehensive-test-results
+          name: smoke-test-results
           path: |
             test-results/
             playwright-report/
-          retention-days: 7
+          retention-days: 3
 
-      - name: 📋 Test Results Summary
-        if: always()
+  # Authentication Tests
+  auth-tests:
+    name: 🔐 Authentication Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: 'testpassword'
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
         run: |
-          echo "## 🧪 Comprehensive Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3001" >> .env
+          
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: 🔐 Run authentication tests
+        run: npm run test:auth -- --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📤 Upload auth test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 3
+
+  # Game Functionality Tests
+  game-tests:
+    name: 🎮 Game Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: 'testpassword'
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
+        run: |
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3001" >> .env
+          
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: 🎮 Run game interaction tests
+        run: npm run test:games -- --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📤 Upload game test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: game-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 3
+
+  # API Tests
+  api-tests:
+    name: 📡 API Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: 'testpassword'
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
+        run: |
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3001" >> .env
+          
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: 📡 Run API tests
+        run: npm run test:api -- --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📤 Upload API test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 3
+
+  # Navigation Tests
+  navigation-tests:
+    name: 🧭 Navigation Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: 'testpassword'
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
+        run: |
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3001" >> .env
+          
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: 🧭 Run navigation tests
+        run: npm run test:navigation -- --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📤 Upload navigation test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: navigation-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 3
+
+  # Performance Tests
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: 'testpassword'
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
+        run: |
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3001" >> .env
+          
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: ⚡ Run performance tests
+        run: npm run test:performance -- --project=chromium
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📤 Upload performance test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 3
+
+  # Cross-browser Tests (only on main branch)
+  cross-browser-tests:
+    name: 🌐 Cross-browser Tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [smoke-tests, auth-tests, game-tests, api-tests]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: 'testpassword'
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    strategy:
+      matrix:
+        browser: [firefox, webkit]
+
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Build CSS
+        run: npm run build-css
+
+      - name: 🗄️ Setup test environment
+        run: |
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test_ai_game_db" >> .env
+          echo "DB_USER=testuser" >> .env
+          echo "DB_PASSWORD=testpassword" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=3001" >> .env
+          
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+
+      - name: 📦 Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: 🌐 Run cross-browser smoke tests
+        run: npm run test:smoke -- --project=${{ matrix.browser }}
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: 📤 Upload cross-browser test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cross-browser-${{ matrix.browser }}-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 3
+
+  # Dependency Updates (runs weekly)
+  dependency-updates:
+    name: 🔄 Dependency Updates
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 🔄 Check for dependency updates
+        run: |
+          npm outdated || true
+          npx npm-check-updates --upgrade --target minor
+
+      - name: 📥 Install updated dependencies
+        run: npm install
+
+      - name: 🧪 Run quick tests
+        run: npm run test:unit
+
+      - name: 📝 Create pull request for dependency updates
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update dependencies to latest minor versions"
+          title: "🔄 Automated Dependency Updates"
+          body: |
+            This PR contains automated dependency updates to the latest minor versions.
+            
+            ## Changes
+            - Updated npm dependencies to latest minor versions
+            - All unit tests pass with new versions
+            
+            ## Testing
+            - ✅ Unit tests pass
+            - Please review changes and run full test suite before merging
+          branch: automated-dependency-updates
+          delete-branch: true
+
+  # Final Summary Job
+  test-summary:
+    name: 📋 Test Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests, smoke-tests, auth-tests, game-tests, api-tests, navigation-tests, performance-tests]
+    if: always()
+    steps:
+      - name: 📋 Generate Test Summary
+        run: |
+          echo "## 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Tests Completed:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Smoke Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Authentication Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Game Functionality Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ API Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Navigation Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Performance Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Cross-browser Verification" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Formatting | ${{ needs.code-quality.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke Tests | ${{ needs.smoke-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Authentication Tests | ${{ needs.auth-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Game Tests | ${{ needs.game-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ${{ needs.api-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Navigation Tests | ${{ needs.navigation-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Tests | ${{ needs.performance-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "See uploaded artifacts for detailed reports." >> $GITHUB_STEP_SUMMARY
+          echo "All test artifacts are available for download above." >> $GITHUB_STEP_SUMMARY

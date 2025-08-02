@@ -2,98 +2,108 @@
 const pool = require('../../shared/database/connection');
 
 class GameCleanupService {
-    constructor() {
-        this.cleanupInterval = null;
-        this.isRunning = false;
+  constructor() {
+    this.cleanupInterval = null;
+    this.isRunning = false;
+  }
+
+  // Start the cleanup scheduler (runs every 5 minutes)
+  start(intervalMinutes = 5) {
+    if (this.isRunning) {
+      console.log('Cleanup service already running');
+      return;
     }
 
-    // Start the cleanup scheduler (runs every 5 minutes)
-    start(intervalMinutes = 5) {
-        if (this.isRunning) {
-            console.log('Cleanup service already running');
-            return;
-        }
+    this.isRunning = true;
+    console.log(
+      `Starting game cleanup service (runs every ${intervalMinutes} minutes)`
+    );
 
-        this.isRunning = true;
-        console.log(`Starting game cleanup service (runs every ${intervalMinutes} minutes)`);
+    // Run cleanup immediately on start
+    this.runCleanup();
 
-        // Run cleanup immediately on start
+    // Set up recurring cleanup
+    this.cleanupInterval = setInterval(
+      () => {
         this.runCleanup();
+      },
+      intervalMinutes * 60 * 1000
+    );
+  }
 
-        // Set up recurring cleanup
-        this.cleanupInterval = setInterval(() => {
-            this.runCleanup();
-        }, intervalMinutes * 60 * 1000);
+  // Stop the cleanup scheduler
+  stop() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
     }
+    this.isRunning = false;
+    console.log('Game cleanup service stopped');
+  }
 
-    // Stop the cleanup scheduler
-    stop() {
-        if (this.cleanupInterval) {
-            clearInterval(this.cleanupInterval);
-            this.cleanupInterval = null;
-        }
-        this.isRunning = false;
-        console.log('Game cleanup service stopped');
-    }
+  // Run the cleanup process
+  async runCleanup() {
+    try {
+      console.log('Running game cleanup...');
 
-    // Run the cleanup process
-    async runCleanup() {
-        try {
-            console.log('Running game cleanup...');
+      /**
+       * DEBUGGING
+       */
 
-            /**
-             * DEBUGGING
-             */
-
-            const functionCheck = await pool.query(`
+      const functionCheck = await pool.query(`
         SELECT 1 FROM pg_proc WHERE proname = 'cleanup_abandoned_tic_tac_toe_games'
     `);
 
-            if (functionCheck.rows.length === 0) {
-                console.log('Cleanup function does not exist yet');
-                return { success: true, abandonedGames: 0, expiredSessions: 0 };
-            }
+      if (functionCheck.rows.length === 0) {
+        console.log('Cleanup function does not exist yet');
+        return { success: true, abandonedGames: 0, expiredSessions: 0 };
+      }
 
-            /**
-             * END DEBUGGING
-             */
+      /**
+       * END DEBUGGING
+       */
 
-                // Cleanup abandoned tic tac toe games
-            const tttResult = await pool.query('SELECT cleanup_abandoned_tic_tac_toe_games()');
-            const tttDeleted = tttResult.rows[0].cleanup_abandoned_tic_tac_toe_games;
+      // Cleanup abandoned tic tac toe games
+      const tttResult = await pool.query(
+        'SELECT cleanup_abandoned_tic_tac_toe_games()'
+      );
+      const tttDeleted = tttResult.rows[0].cleanup_abandoned_tic_tac_toe_games;
 
-            // Cleanup expired sessions
-            const sessionResult = await pool.query('SELECT cleanup_expired_sessions()');
-            const sessionsDeleted = sessionResult.rows[0].cleanup_expired_sessions;
+      // Cleanup expired sessions
+      const sessionResult = await pool.query(
+        'SELECT cleanup_expired_sessions()'
+      );
+      const sessionsDeleted = sessionResult.rows[0].cleanup_expired_sessions;
 
-            // Log results
-            if (tttDeleted > 0 || sessionsDeleted > 0) {
-                console.log(`Cleanup completed: ${tttDeleted} abandoned games, ${sessionsDeleted} expired sessions`);
-            } else {
-                console.log('Cleanup completed: No items to clean');
-            }
+      // Log results
+      if (tttDeleted > 0 || sessionsDeleted > 0) {
+        console.log(
+          `Cleanup completed: ${tttDeleted} abandoned games, ${sessionsDeleted} expired sessions`
+        );
+      } else {
+        console.log('Cleanup completed: No items to clean');
+      }
 
-            return {
-                success: true,
-                abandonedGames: tttDeleted,
-                expiredSessions: sessionsDeleted,
-                timestamp: new Date().toISOString()
-            };
-
-        } catch (error) {
-            console.error('Cleanup error:', error);
-            return {
-                success: false,
-                error: error.message,
-                timestamp: new Date().toISOString()
-            };
-        }
+      return {
+        success: true,
+        abandonedGames: tttDeleted,
+        expiredSessions: sessionsDeleted,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
     }
+  }
 
-    // Get cleanup statistics
-    async getCleanupStats() {
-        try {
-            const result = await pool.query(`
+  // Get cleanup statistics
+  async getCleanupStats() {
+    try {
+      const result = await pool.query(`
                 SELECT 
                     'tic_tac_toe_games' as table_name,
                     COUNT(CASE WHEN completed_at IS NULL THEN 1 END) as incomplete_games,
@@ -111,27 +121,26 @@ class GameCleanupService {
                 FROM user_sessions
             `);
 
-            return {
-                success: true,
-                stats: result.rows,
-                timestamp: new Date().toISOString()
-            };
-
-        } catch (error) {
-            console.error('Stats error:', error);
-            return {
-                success: false,
-                error: error.message,
-                timestamp: new Date().toISOString()
-            };
-        }
+      return {
+        success: true,
+        stats: result.rows,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Stats error:', error);
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      };
     }
+  }
 
-    // Manual cleanup trigger
-    async forceCleanup() {
-        console.log('Manual cleanup triggered');
-        return await this.runCleanup();
-    }
+  // Manual cleanup trigger
+  async forceCleanup() {
+    console.log('Manual cleanup triggered');
+    return await this.runCleanup();
+  }
 }
 
 // Singleton instance
