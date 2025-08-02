@@ -18,6 +18,17 @@ const PORT = process.env.PORT || 3000;
 app.use(cookieParser());
 app.use(authMiddleware);
 
+/**
+ * DEBUGGING
+ */
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`, req.headers.cookie ? 'with cookies' : 'no cookies');
+    next();
+});
+/**
+ * END DEBUGGING
+ */
+
 const csrfProtection = csrf({
     cookie: {
         httpOnly: true,
@@ -75,27 +86,15 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
     res.json({ csrfToken: req.csrfToken() });
 });
 
-// API Routes
-app.use('/api/ai', aiRoutes);
-app.use('/api', gameRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api', dynamicAuthMiddleware);
-
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
-});
-
-// API Routes - now with conditional authentication
-app.use('/api/ai', aiRoutes);
-app.use('/api', gameRoutes);
-app.use('/api/auth', authRoutes);
-
 // Apply CSRF protection ONLY to specific auth endpoints that need it
 app.use('/api/auth/login', csrfProtection);
 app.use('/api/auth/register', csrfProtection);
 app.use('/api/auth/logout', csrfProtection);
 
-
+// API Routes - now with conditional authentication
+app.use('/api/auth', authRoutes);     // Auth routes first
+app.use('/api/ai', aiRoutes);
+app.use('/api', gameRoutes);          // Generic game routes last
 
 // Updated game data with new games
 const games = [
@@ -263,17 +262,6 @@ app.get('/settings', (req, res) => {
         currentPage: 'settings',
         currentTemplate: 'settings',
         ...getTemplateData(req)
-    });
-});
-
-// Stats page (requires authentication)
-app.get('/api/auth/stats', (req, res) => {
-    res.json({
-        status: 'OK',
-        message: 'Here are your stats',
-        gamesPlayed: 4,
-        winRate: 34,
-        aiContributions: 944
     });
 });
 

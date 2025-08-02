@@ -11,16 +11,34 @@ class AuthManager {
 
         this.handleUrlParams();
 
-        // Load Google Identity Services if configured
         if (window.GOOGLE_CLIENT_ID && window.GOOGLE_CLIENT_ID !== 'YOUR_GOOGLE_CLIENT_ID') {
             this.loadGoogleIdentityServices();
         }
-
-        // Check if user is already authenticated
         await this.checkAuthStatus();
-
-        // Set up event listeners (this will also render Google buttons)
         this.setupEventListeners();
+        this.isReady = true;
+        window.dispatchEvent(new CustomEvent('authManagerReady'));
+    }
+
+    async waitForReady(maxWaitTime = 5000){
+        if(this.isReady){
+            return true;
+        }
+
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                console.warn('AuthManager took too long to initialize');
+                resolve(false);
+            }, maxWaitTime);
+
+            const handleReady = () => {
+                clearTimeout(timeout);
+                window.removeEventListener('authManagerReady', handleReady);
+                resolve(true);
+            };
+
+            window.addEventListener('authManagerReady', handleReady);
+        });
     }
 
     loadGoogleIdentityServices() {
@@ -42,8 +60,6 @@ class AuthManager {
     }
 
     initializeGoogleAuth() {
-        console.log('Initializing Google Auth with client ID:', window.GOOGLE_CLIENT_ID);
-
         if (window.google && window.google.accounts && window.GOOGLE_CLIENT_ID) {
             try {
                 window.google.accounts.id.initialize({
@@ -52,10 +68,7 @@ class AuthManager {
                         console.log('Google auth callback triggered:', response);
                         this.handleGoogleAuth(response);
                     }
-                    // Remove the auto_select and cancel_on_tap_outside options
                 });
-
-                console.log('Google Identity Services initialized successfully');
             } catch (error) {
                 console.error('Google auth initialization failed:', error);
             }
@@ -432,6 +445,77 @@ class AuthManager {
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${path};`;
     }
 
+    isAuthenticatedForGames() {
+        return this.currentUser && this.currentUser.id;
+    }
+
+    handleGameAuthError(errorData, aiThoughtsElementId = 'ai-thoughts') {
+        if (errorData.requiresAuth) {
+            // Show the AI thought about needing to log in
+            if (errorData.aiThought) {
+                this.updateAIThoughts(aiThoughtsElementId, errorData.aiThought);
+            }
+
+            // Show the login required modal
+            this.showLoginRequiredModal();
+            return true;
+        }
+        return false;
+    }
+
+    showLoginRequiredModal() {
+        this.openModal('login-required-modal');
+    }
+
+    updateAIThoughts(elementId, message) {
+        const aiThoughtsElement = document.getElementById(elementId);
+        if (aiThoughtsElement) {
+            aiThoughtsElement.textContent = message;
+        }
+    }
+
+    checkAuthBeforeGameAction(actionName = 'play', aiThoughtsElementId = 'ai-thoughts') {
+        if (!this.isAuthenticatedForGames()) {
+            this.updateAIThoughts(aiThoughtsElementId,
+                `I can only ${actionName} with authenticated users - please log in first!`);
+            this.showLoginRequiredModal();
+            return false;
+        }
+        return true;
+    }
+
+    async handleGameApiCall(apiCall, aiThoughtsElementId = 'ai-thoughts') {
+        try {
+            const response = await apiCall();
+
+            if (!response.ok) {
+                const errorData = await response.json();
+
+                // Handle authentication errors specifically
+                if (response.status === 401 && this.handleGameAuthError(errorData, aiThoughtsElementId)) {
+                    return null;
+                }
+
+                // Handle other errors
+                if (errorData.aiThought) {
+                    this.updateAIThoughts(aiThoughtsElementId, errorData.aiThought);
+                } else {
+                    this.updateAIThoughts(aiThoughtsElementId,
+                        errorData.message || 'Something went wrong. Please try again.');
+                }
+
+                return null;
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Game API call failed:', error);
+            this.updateAIThoughts(aiThoughtsElementId,
+                'Network error. Please check your connection and try again.');
+            return null;
+        }
+    }
+
     async getCsrfToken() {
         try {
             const response = await fetch('/api/csrf-token', {
@@ -486,6 +570,19 @@ function logout() {
         window.authManager.logout();
     }
 }
+
+window.showLoginRequiredModal = function() {
+    if (window.authManager) {
+        window.authManager.showLoginRequiredModal();
+    }
+};
+
+window.checkAuthForGame = function(actionName = 'play', aiThoughtsElementId = 'ai-thoughts') {
+    if (window.authManager) {
+        return window.authManager.checkAuthBeforeGameAction(actionName, aiThoughtsElementId);
+    }
+    return false;
+};
 
 // Initialize auth manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

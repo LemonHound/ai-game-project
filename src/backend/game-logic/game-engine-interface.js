@@ -1,4 +1,3 @@
-// src/backend/game-logic/game-engine-interface.js
 /**
  * Standard interface that all game engines must implement
  */
@@ -82,6 +81,15 @@ class GameEngineInterface {
             { name: 'avg_moves', type: 'average' },
             { name: 'best_score', type: 'max' }
         ];
+    }
+
+    /**
+     * Get the states of a game
+     * @param limit - defaults to 10 if not specified; otherwise acts as a "select top X" filter.
+     * @return {null}
+     */
+    async getStates(limit) {
+        return null;
     }
 }
 

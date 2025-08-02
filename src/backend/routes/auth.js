@@ -191,6 +191,21 @@ router.get('/me', async (req, res) => {
     }
 });
 
+// Get statistics
+router.get('/stats', async (req, res) => {
+    try {
+        // For now, just return placeholder data
+        res.json({
+            gamesPlayed: 4,
+            winRate: 34,
+            aiContributions: 944
+        });
+    } catch (error) {
+        console.error('Stats error:', error);
+        res.status(500).json({ error: 'Failed to get user statistics' });
+    }
+});
+
 // Register new user
 router.post('/register', async (req, res) => {
     try {

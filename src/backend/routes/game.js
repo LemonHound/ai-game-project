@@ -1,4 +1,3 @@
-// src/backend/routes/game.js
 const express = require('express');
 const router = express.Router();
 const pool = require('../../shared/database/connection');
@@ -16,6 +15,15 @@ function generateSessionId() {
 router.post('/:gameId/start', async (req, res) => {
     try {
         const { gameId } = req.params;
+
+        if(!req.user || !req.user.id){
+            return res.status(401).json({
+                error: 'Authentication required',
+                message: 'You need to be logged in to play games',
+                aiThought: 'I can only play with authenticated users - please log in first!',
+                requiresAuth: true
+            });
+        }
 
         if (!gameFactory.isValidGameId(gameId)) {
             return res.status(400).json({ error: 'Invalid game type' });
@@ -55,6 +63,15 @@ router.post('/:gameId/move', async (req, res) => {
     try {
         const { gameId } = req.params;
         const { sessionId, move } = req.body;
+
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                error: 'Authentication required',
+                message: 'You need to be logged in to make moves',
+                aiThought: 'I can only play with authenticated users - please log in to continue!',
+                requiresAuth: true
+            });
+        }
 
         if (!sessionId || !move) {
             return res.status(400).json({ error: 'Missing sessionId or move' });
@@ -239,6 +256,21 @@ router.get('/', async (req, res) => {
         res.json({ games });
     } catch (error) {
         console.error('Games list error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /:gameId/popular-states - Get popular game states
+router.get('/:gameId/game_states', async (req, res) => {
+    try {
+        let { gameId, limit } = req.params;
+        limit = parseInt(limit) || 10;
+        console.log("limit", limit);
+        const engine = gameFactory.getEngine(gameId);
+        const gameStates = await engine.getStates(limit);
+        res.json(gameStates);
+    } catch (error) {
+        console.error('Popular states error:', error);
         res.status(500).json({ error: error.message });
     }
 });

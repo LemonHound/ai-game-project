@@ -1,4 +1,3 @@
-// @ts-check
 const { defineConfig, devices } = require('@playwright/test');
 
 /**
@@ -6,6 +5,7 @@ const { defineConfig, devices } = require('@playwright/test');
  */
 module.exports = defineConfig({
     testDir: './tests',
+    globalSetup: require.resolve('./tests/global-setup.js'),
     /* Only include Playwright test files, exclude Jest tests */
     testMatch: [
         '**/tests/smoke/**/*.spec.js',
@@ -13,7 +13,8 @@ module.exports = defineConfig({
         '**/tests/games/**/*.spec.js',
         '**/tests/e2e/**/*.spec.js',
         '**/tests/api/**/*.spec.js',
-        '**/tests/performance/**/*.spec.js'
+        '**/tests/performance/**/*.spec.js',
+        '**/tests/database/**/*.spec.js'
     ],
     /* Ignore Jest test files */
     testIgnore: [
@@ -29,7 +30,7 @@ module.exports = defineConfig({
     workers: process.env.CI ? 1 : undefined,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
     reporter: [
-        ['html', { outputFolder: 'playwright-report' }],
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
         ['junit', { outputFile: 'test-results/results.xml' }],
         ['list']
     ],

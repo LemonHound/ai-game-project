@@ -1,5 +1,7 @@
 // src/backend/game-logic/tic-tac-toe.js
 const GameEngineInterface = require('./game-engine-interface');
+const pool = require("../../shared/database/connection");
+const express = require('express');
 
 class TicTacToeEngine extends GameEngineInterface {
     constructor() {
@@ -261,6 +263,30 @@ class TicTacToeEngine extends GameEngineInterface {
             { name: 'win_rate', type: 'percentage', label: 'Win Rate' },
             { name: 'incomplete_games', type: 'count', label: 'Incomplete Games' }
         ];
+    }
+
+    async getStates(limit = 10) {
+        try {
+            // Query the database for popular tic-tac-toe states
+            const query = `
+            SELECT
+                board_positions,
+                move_count,
+                count,
+                rating
+            FROM tic_tac_toe_states
+            where move_count > 0
+            ORDER BY count DESC, move_count desc
+            LIMIT $1
+        `;
+
+            const result = await pool.query(query, [limit]);
+            return result.rows;
+
+        } catch (error) {
+            console.error('Popular states error:', error);
+            throw error; // Re-throw the error so the router can handle it
+        }
     }
 }
 

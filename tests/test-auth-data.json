@@ -1,0 +1,34 @@
+{
+  "sessionId": "a8e1130d-28ff-47e2-b344-5446207bc9a1",
+  "user": {
+    "id": 1,
+    "username": "demo",
+    "email": "demo@aigamehub.com",
+    "displayName": "Demo Player",
+    "profilePicture": null,
+    "authProvider": "local"
+  },
+  "cookies": [
+    {
+      "name": "_csrf",
+      "value": "I4-O82wT9ZPcVIXSQepJuawJ",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Strict"
+    },
+    {
+      "name": "sessionId",
+      "value": "a8e1130d-28ff-47e2-b344-5446207bc9a1",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1754779544,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Strict"
+    }
+  ],
+  "timestamp": 1754174744276
+}
