@@ -9,6 +9,9 @@
 <!-- Include the authentication manager -->
 <script src="/js/auth-manager.js"></script>
 
+<!-- Include the game authentication utilities -->
+<script src="/js/game-auth-utils.js"></script>
+
 <!-- Only include page-specific scripts -->
 <% if (typeof pageScripts !== 'undefined' && pageScripts.length > 0) { %>
     <% pageScripts.forEach(script => { %>
@@ -37,6 +40,25 @@
         const sidebar = document.getElementById('mobile-sidebar');
         if (sidebar) {
             sidebar.classList.toggle('hidden');
+        }
+    }
+
+    async function checkAuthForGame(actionName = 'play', aiThoughtsElementId = 'ai-thoughts') {
+        if (window.GameAuthUtils) {
+            return await window.GameAuthUtils.checkAuthBeforeAction(actionName, aiThoughtsElementId);
+        }
+        return false;
+    }
+
+    function showLoginRequiredModal() {
+        if (window.GameAuthUtils) {
+            window.GameAuthUtils.showLoginRequiredModal();
+        }
+    }
+
+    async function restartGame() {
+        if (game && game.restartGame) {
+            await game.restartGame();
         }
     }
 </script>

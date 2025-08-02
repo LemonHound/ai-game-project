@@ -1,4 +1,3 @@
-// tic-tac-toe.js - Updated to use new backend game engine system
 class TicTacToeGame {
     constructor() {
         this.gameSessionId = null;
@@ -12,51 +11,55 @@ class TicTacToeGame {
     async initializeGame() {
         this.initializeBoard();
         this.updateGameStatus('Starting new game...');
-        this.updateAIThoughts("Starting new game...");
+        this.updateAIThoughts("Checking authentication...");
 
+        const authReady = await window.GameAuthUtils.waitForAuthManager();
+
+        if (!authReady) {
+            this.updateAIThoughts("Authentication system failed to load. Please refresh the page.");
+            return;
+        }
+
+        if (!window.authManager.isAuthenticatedForGames()) {
+            this.updateAIThoughts("I can only play with authenticated users - please log in first!");
+            return;
+        }
+
+        this.updateAIThoughts("Starting new game...");
         await this.startGameOnServer();
     }
 
     async startGameOnServer() {
-        try {
-            // Use the new generic game route
-            const response = await fetch(`/api/${this.gameName}/start`, {
+        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
+            return fetch(`/api/${this.gameName}/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     playerStarts: true,
                     difficulty: 'medium'
                 })
             });
+        });
 
-            if (response.ok) {
-                const data = await response.json();
-                this.gameSessionId = data.sessionId;
-                this.gameState = data.state;
+        if (data) {
+            this.gameSessionId = data.sessionId;
+            this.gameState = data.state;
 
-                console.log('Game session started:', this.gameSessionId);
+            console.log('Game session started:', this.gameSessionId);
 
-                // Update UI based on backend state
-                this.updateUIFromState();
+            // Update UI based on backend state
+            this.updateUIFromState();
 
-                // If AI should start first, it will be handled by the backend
-                if (!this.gameState.playerStarts) {
-                    this.updateAIThoughts("I'll start this game!");
-                    // The backend will handle AI's first move
-                    await this.makeAIMove();
-                } else {
-                    this.updateAIThoughts("Ready for a new game! Make your first move.");
-                }
+            // If AI should start first, it will be handled by the backend
+            if (!this.gameState.playerStarts) {
+                this.updateAIThoughts("I'll start this game!");
+                await this.makeAIMove();
             } else {
-                const errorData = await response.json();
-                console.error('Failed to start game session:', errorData);
-                this.updateAIThoughts("Something went wrong starting the game. Try again!");
+                this.updateAIThoughts("Ready for a new game! Make your first move.");
             }
-        } catch (error) {
-            console.error('Error starting game:', error);
-            this.updateAIThoughts("Connection error. Please check your internet and try again.");
         }
     }
 
@@ -74,6 +77,14 @@ class TicTacToeGame {
     }
 
     async makePlayerMove(position) {
+        // Use the utility to check authentication (it will wait if needed)
+        const isAuthenticated = await window.GameAuthUtils.isAuthenticated();
+        if (!isAuthenticated) {
+            this.updateAIThoughts("I can only play with authenticated users - please log in to continue!");
+            window.GameAuthUtils.showLoginRequiredModal();
+            return;
+        }
+
         // Prevent moves during processing or if game is over
         if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
             return;
@@ -115,35 +126,30 @@ class TicTacToeGame {
         this.isProcessingMove = true;
         this.updateAIThoughts("Thinking...");
 
-        try {
-            // The backend will automatically handle AI moves when it's AI's turn
-            // We just need to request the AI move
-            const response = await fetch(`/api/${this.gameName}/move`, {
+        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
+            return fetch(`/api/${this.gameName}/move`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     sessionId: this.gameSessionId,
                     move: { player: 'O', requestAIMove: true }
                 })
             });
+        });
 
-            if (response.ok) {
-                const data = await response.json();
-                this.gameState = data.newState;
-                this.updateUIFromState();
+        if (data) {
+            this.gameState = data.newState;
+            this.updateUIFromState();
 
-                if (data.aiMove) {
-                    this.updateAIThoughts(`I chose square ${data.aiMove.position + 1}. Your turn!`);
-                }
+            if (data.aiMove) {
+                this.updateAIThoughts(`I chose square ${data.aiMove.position + 1}. Your turn!`);
             }
-        } catch (error) {
-            console.error('Error making AI move:', error);
-            this.updateAIThoughts("I had trouble making my move. Try restarting the game.");
-        } finally {
-            this.isProcessingMove = false;
         }
+
+        this.isProcessingMove = false;
     }
 
     async sendMoveToServer(position, player) {
@@ -152,12 +158,13 @@ class TicTacToeGame {
             return;
         }
 
-        try {
-            const response = await fetch(`/api/${this.gameName}/move`, {
+        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
+            return fetch(`/api/${this.gameName}/move`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     sessionId: this.gameSessionId,
                     move: {
@@ -166,31 +173,23 @@ class TicTacToeGame {
                     }
                 })
             });
+        });
 
-            if (response.ok) {
-                const data = await response.json();
-                this.gameState = data.newState;
-                this.updateUIFromState();
+        if (data) {
+            this.gameState = data.newState;
+            this.updateUIFromState();
 
-                // Handle AI response if game is still ongoing and it's AI's turn
-                if (data.aiMove) {
-                    // AI move was made automatically by backend
-                    const aiPosition = data.aiMove.position;
-                    this.updateAIThoughts(`I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || "Your turn!"}`);
-                } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'O') {
-                    // AI needs to move but didn't in this response - request AI move
-                    setTimeout(() => this.makeAIMove(), 500);
-                }
-
-                console.log('Move processed successfully');
-            } else {
-                const errorData = await response.json();
-                console.error('Failed to send move to server:', errorData);
-                this.updateAIThoughts("Move failed. Please try again!");
+            // Handle AI response if game is still ongoing and it's AI's turn
+            if (data.aiMove) {
+                // AI move was made automatically by backend
+                const aiPosition = data.aiMove.position;
+                this.updateAIThoughts(`I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || "Your turn!"}`);
+            } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'O') {
+                // AI needs to move but didn't in this response - request AI move
+                setTimeout(() => this.makeAIMove(), 500);
             }
-        } catch (error) {
-            console.error('Error sending move to server:', error);
-            this.updateAIThoughts("Network error. Check your connection!");
+
+            console.log('Move processed successfully');
         }
     }
 
@@ -284,6 +283,11 @@ class TicTacToeGame {
     }
 
     async restartGame() {
+        const canRestart = await window.GameAuthUtils.checkAuthBeforeAction('restart a game');
+        if (!canRestart) {
+            return;
+        }
+
         // Reset local state
         this.gameSessionId = null;
         this.gameState = null;
@@ -302,8 +306,7 @@ class TicTacToeGame {
     }
 
     async toggleFirstPlayer() {
-        // For now, just restart with opposite setting
-        // This could be enhanced to remember the preference
+        // TODO: Add logic for this
         this.restartGame();
     }
 }

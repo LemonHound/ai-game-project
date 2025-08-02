@@ -76,24 +76,28 @@ test.describe('Authentication Flow', () => {
         const meResponse = await page.request.get('/api/auth/me');
         expect(meResponse.status()).toBe(401);
 
+        // Get CSRF token first
+        const csrfResponse = await page.request.get('/api/csrf-token');
+        expect(csrfResponse.ok()).toBeTruthy();
+        const csrfData = await csrfResponse.json();
+
         const loginResponse = await page.request.post('/api/auth/login', {
             data: {
                 email: 'demo@aigamehub.com',
                 password: 'password123'
+            },
+            headers: {
+                'X-CSRF-Token': csrfData.csrfToken
             }
         });
 
         expect(loginResponse.ok()).toBeTruthy();
         const loginData = await loginResponse.json();
         expect(loginData).toHaveProperty('user');
-        expect(loginData).toHaveProperty('sessionId');
+        expect(loginData).toHaveProperty('message'); // Your API returns message, not sessionId
 
-        const authMeResponse = await page.request.get('/api/auth/me', {
-            headers: {
-                'x-session-id': loginData.sessionId
-            }
-        });
-
+        // Since your API uses cookies, the session should be automatically available
+        const authMeResponse = await page.request.get('/api/auth/me');
         expect(authMeResponse.ok()).toBeTruthy();
         const userData = await authMeResponse.json();
         expect(userData.email).toBe('demo@aigamehub.com');

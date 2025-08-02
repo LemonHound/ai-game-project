@@ -27,7 +27,10 @@
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="482f00c1-004d-4341-b0ce-961a520c7858">
-      <console name="Connection" type="STANDARD" schema="postgres" session="Main" />
+      <console name="ai_game_db" type="STANDARD" schema="ai_game_db" session="Main" />
+      <console name="Connection" type="STANDARD" schema="public" session="Main"><![CDATA[select * from tic_tac_toe_states
+
+select * from cleanup_expired_sessions()]]></console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseEditorStateManager">
@@ -301,6 +304,7 @@
       <qualified-text-editor text-length-threshold="300">
         <content-types>
           <content-type name="Text" enabled="true" />
+          <content-type name="Properties" enabled="true" />
           <content-type name="XML" enabled="true" />
           <content-type name="DTD" enabled="true" />
           <content-type name="HTML" enabled="true" />
