@@ -5,7 +5,6 @@ const { defineConfig, devices } = require('@playwright/test');
  */
 module.exports = defineConfig({
   testDir: './tests',
-  globalSetup: require.resolve('./tests/global-setup.js'),
   /* Only include Playwright test files, exclude Jest tests */
   testMatch: [
     '**/tests/smoke/**/*.spec.js',

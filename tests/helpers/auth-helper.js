@@ -2,131 +2,155 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Get the shared authentication data from global setup
+ * Create a fresh authenticated session
  */
-function getGlobalAuth() {
-  const authFile = path.join(__dirname, '../test-auth-data.json');
+async function createFreshAuth(request) {
+  // Get CSRF token
+  const csrfResponse = await request.get('/api/csrf-token');
+  if (!csrfResponse.ok()) {
+    throw new Error(`CSRF token request failed: ${csrfResponse.status()}`);
+  }
+  const csrfData = await csrfResponse.json();
+  const csrfCookies = csrfResponse.headers()['set-cookie'];
 
-  if (!fs.existsSync(authFile)) {
+  // Login to get fresh session
+  const loginResponse = await request.post('/api/auth/login', {
+    data: {
+      email: 'demo@aigamehub.com',
+      password: 'password123',
+    },
+    headers: {
+      'X-CSRF-Token': csrfData.csrfToken,
+      Cookie: csrfCookies ? csrfCookies.split(';')[0] : '',
+    },
+  });
+
+  if (!loginResponse.ok()) {
+    const errorText = await loginResponse.text();
     throw new Error(
-      'Authentication data not found. Global setup may have failed.'
+      `Fresh auth failed: ${loginResponse.status()} - ${errorText}`
     );
   }
 
-  const authData = JSON.parse(fs.readFileSync(authFile, 'utf8'));
-  return authData;
+  // Extract session cookie
+  const cookies = loginResponse.headers()['set-cookie'];
+  const sessionMatch = cookies.match(/sessionId=([^;]+)/);
+
+  if (!sessionMatch) {
+    throw new Error('No session cookie in fresh auth response');
+  }
+
+  return {
+    sessionId: sessionMatch[1],
+    sessionCookie: { name: 'sessionId', value: sessionMatch[1] },
+  };
 }
 
 /**
- * Get CSRF token for requests that need it
+ * Get CSRF token with session cookie
  */
-async function getCsrfToken(request) {
-  const response = await request.get('/api/csrf-token');
+async function getCsrfToken(request, sessionCookie = null) {
+  const headers = {};
+  if (sessionCookie) {
+    headers.Cookie = `${sessionCookie.name}=${sessionCookie.value}`;
+  }
+
+  const response = await request.get('/api/csrf-token', { headers });
   if (!response.ok()) {
     throw new Error(`CSRF token request failed: ${response.status()}`);
   }
   const data = await response.json();
-  return data.csrfToken;
+
+  const cookies = response.headers()['set-cookie'];
+  return {
+    token: data.csrfToken,
+    cookies: cookies,
+  };
 }
 
 /**
- * Create request context with proper cookie handling
- */
-async function createAuthenticatedContext(request) {
-  const authData = getGlobalAuth();
-
-  // Create a new context with cookies
-  const context = await request.newContext({
-    // Set cookies from the global auth
-    storageState: {
-      cookies: authData.cookies,
-      origins: [],
-    },
-  });
-
-  return context;
-}
-
-/**
- * Add authentication headers to any request
- * Use this in your API tests: addAuth(request).get('/api/endpoint')
+ * Create an authenticated request helper
  */
 function addAuth(request) {
-  const authData = getGlobalAuth();
+  // Each addAuth call creates its own session
+  let authSession = null;
+
+  const ensureAuth = async () => {
+    if (!authSession) {
+      authSession = await createFreshAuth(request);
+    }
+    return authSession;
+  };
 
   return {
     get: async (url, options = {}) => {
-      // For cookie-based auth, we need to include cookies
+      const session = await ensureAuth();
+
       const headers = {
-        Cookie: authData.cookies
-          .map((cookie) => `${cookie.name}=${cookie.value}`)
-          .join('; '),
+        Cookie: `${session.sessionCookie.name}=${session.sessionCookie.value}`,
         ...options.headers,
       };
 
-      console.log(`Making GET request to: ${url}`);
-      console.log(`Headers:`, headers);
+      const response = await request.get(url, {
+        ...options,
+        headers,
+      });
 
-      return request.get(url, {
+      return response;
+    },
+
+    post: async (url, options = {}) => {
+      const session = await ensureAuth();
+
+      let csrfData;
+      try {
+        csrfData = await getCsrfToken(request, session.sessionCookie);
+      } catch (error) {
+        throw error;
+      }
+
+      let allCookies = `${session.sessionCookie.name}=${session.sessionCookie.value}`;
+
+      if (csrfData.cookies) {
+        const csrfCookieValue = csrfData.cookies.split(';')[0];
+        allCookies += '; ' + csrfCookieValue;
+      }
+
+      const headers = {
+        Cookie: allCookies,
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfData.token,
+        ...(options.headers || {}),
+      };
+
+      return request.post(url, {
         ...options,
         headers,
       });
     },
 
-    post: async (url, options = {}) => {
-      // Get CSRF token for POST requests
-      const headers = {
-        Cookie: authData.cookies
-          .map((cookie) => `${cookie.name}=${cookie.value}`)
-          .join('; '),
-        'Content-Type': 'application/json', // Ensure JSON content type
-        ...(options.headers || {}), // Handle undefined options.headers
-      };
-
-      // Add CSRF token if not already present
-      if (!headers['X-CSRF-Token'] && !headers['x-csrf-token']) {
-        try {
-          const csrfToken = await getCsrfToken(request);
-          headers['X-CSRF-Token'] = csrfToken;
-        } catch (error) {
-          console.warn('Could not get CSRF token:', error.message);
-        }
-      }
-
-      // Ensure data is properly structured for Playwright
-      const requestOptions = {
-        ...options,
-        headers,
-      };
-
-      const response = await request.post(url, requestOptions);
-      if (!response.ok()) {
-        console.error(`Request failed with status ${response.status()}`);
-        const responseText = await response
-          .text()
-          .catch(() => 'Could not read response text');
-        console.error(`Response body:`, responseText);
-      }
-
-      return response;
-    },
-
     put: async (url, options = {}) => {
+      const session = await ensureAuth();
+
+      let csrfData;
+      try {
+        csrfData = await getCsrfToken(request, session.sessionCookie);
+      } catch (error) {
+        throw error;
+      }
+
+      let allCookies = `${session.sessionCookie.name}=${session.sessionCookie.value}`;
+
+      if (csrfData.cookies) {
+        const csrfCookieValue = csrfData.cookies.split(';')[0];
+        allCookies += '; ' + csrfCookieValue;
+      }
+
       const headers = {
-        Cookie: authData.cookies
-          .map((cookie) => `${cookie.name}=${cookie.value}`)
-          .join('; '),
+        Cookie: allCookies,
+        'X-CSRF-Token': csrfData.token,
         ...options.headers,
       };
-
-      if (!headers['X-CSRF-Token'] && !headers['x-csrf-token']) {
-        try {
-          const csrfToken = await getCsrfToken(request);
-          headers['X-CSRF-Token'] = csrfToken;
-        } catch (error) {
-          console.warn('Could not get CSRF token:', error.message);
-        }
-      }
 
       return request.put(url, {
         ...options,
@@ -135,21 +159,27 @@ function addAuth(request) {
     },
 
     delete: async (url, options = {}) => {
+      const session = await ensureAuth();
+
+      let csrfData;
+      try {
+        csrfData = await getCsrfToken(request, session.sessionCookie);
+      } catch (error) {
+        throw error;
+      }
+
+      let allCookies = `${session.sessionCookie.name}=${session.sessionCookie.value}`;
+
+      if (csrfData.cookies) {
+        const csrfCookieValue = csrfData.cookies.split(';')[0];
+        allCookies += '; ' + csrfCookieValue;
+      }
+
       const headers = {
-        Cookie: authData.cookies
-          .map((cookie) => `${cookie.name}=${cookie.value}`)
-          .join('; '),
+        Cookie: allCookies,
+        'X-CSRF-Token': csrfData.token,
         ...options.headers,
       };
-
-      if (!headers['X-CSRF-Token'] && !headers['x-csrf-token']) {
-        try {
-          const csrfToken = await getCsrfToken(request);
-          headers['X-CSRF-Token'] = csrfToken;
-        } catch (error) {
-          console.warn('Could not get CSRF token:', error.message);
-        }
-      }
 
       return request.delete(url, {
         ...options,
@@ -158,21 +188,27 @@ function addAuth(request) {
     },
 
     patch: async (url, options = {}) => {
+      const session = await ensureAuth();
+
+      let csrfData;
+      try {
+        csrfData = await getCsrfToken(request, session.sessionCookie);
+      } catch (error) {
+        throw error;
+      }
+
+      let allCookies = `${session.sessionCookie.name}=${session.sessionCookie.value}`;
+
+      if (csrfData.cookies) {
+        const csrfCookieValue = csrfData.cookies.split(';')[0];
+        allCookies += '; ' + csrfCookieValue;
+      }
+
       const headers = {
-        Cookie: authData.cookies
-          .map((cookie) => `${cookie.name}=${cookie.value}`)
-          .join('; '),
+        Cookie: allCookies,
+        'X-CSRF-Token': csrfData.token,
         ...options.headers,
       };
-
-      if (!headers['X-CSRF-Token'] && !headers['x-csrf-token']) {
-        try {
-          const csrfToken = await getCsrfToken(request);
-          headers['X-CSRF-Token'] = csrfToken;
-        } catch (error) {
-          console.warn('Could not get CSRF token:', error.message);
-        }
-      }
 
       return request.patch(url, {
         ...options,
@@ -180,14 +216,6 @@ function addAuth(request) {
       });
     },
   };
-}
-
-/**
- * Get just the session ID for manual header addition
- */
-function getSessionId() {
-  const authData = getGlobalAuth();
-  return authData.sessionId;
 }
 
 /**
@@ -205,8 +233,7 @@ function createTestUser() {
 
 module.exports = {
   addAuth,
-  getSessionId,
   createTestUser,
   getCsrfToken,
-  createAuthenticatedContext,
+  createFreshAuth,
 };
