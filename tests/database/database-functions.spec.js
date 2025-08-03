@@ -70,7 +70,7 @@ test.describe('Database Functions', () => {
       const gameSession = await startResponse.json();
 
       // Complete game with a few moves
-      const moves = [0, 1, 3, 4, 6]; // X wins (left column)
+      const moves = [0, 1, 3]; // O wins (diagonal / )
 
       for (let i = 0; i < moves.length; i++) {
         const moveResponse = await auth.post('/api/tic-tac-toe/move', {

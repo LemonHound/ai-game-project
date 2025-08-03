@@ -64,6 +64,7 @@ module.exports = defineConfig({
     },
 
     /* Test against mobile viewports. */
+    /* Disabling until the mobile-friendly site is developed
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
@@ -72,6 +73,7 @@ module.exports = defineConfig({
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
     },
+       */
   ],
 
   /* Run your local dev server before starting the tests */

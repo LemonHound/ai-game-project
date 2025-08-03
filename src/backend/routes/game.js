@@ -266,8 +266,8 @@ router.get('/', async (req, res) => {
 // GET /:gameId/popular-states - Get popular game states
 router.get('/:gameId/game_states', async (req, res) => {
   try {
-    let { gameId, limit } = req.params;
-    limit = parseInt(limit) || 10;
+    const { gameId } = req.params;
+    const limit = parseInt(req.query.limit) || 10;
     console.log('limit', limit);
     const engine = gameFactory.getEngine(gameId);
     const gameStates = await engine.getStates(limit);

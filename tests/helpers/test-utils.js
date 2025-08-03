@@ -1,13 +1,37 @@
 const { expect } = require('@playwright/test');
 
 async function loginWithDemo(page) {
-  await page.click('[data-testid="navbar-login-btn"]', { force: true });
+  // Check if we're on mobile by getting viewport size
+  const viewport = page.viewportSize();
+  const isMobile = viewport && viewport.width < 768;
+
+  if (isMobile) {
+    // On mobile, scroll to top and ensure navbar is visible
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500); // Wait for scroll to complete
+  }
+
+  // Try to find and click the login button with better mobile handling
+  const loginButton = page.locator('[data-testid="navbar-login-btn"]');
+
+  // Ensure the button is visible and in viewport
+  await loginButton.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+
+  // Click with force to bypass any mobile viewport issues
+  await loginButton.click({ force: true });
+
+  // Wait for modal to open
   await expect(page.locator('#login-modal.modal-open')).toBeVisible();
 
+  // Fill in credentials
   await page.fill('#login-email', 'demo@aigamehub.com');
   await page.fill('#login-password', 'password123');
+
+  // Click submit
   await page.click('[data-testid="login-submit-btn"]');
 
+  // Wait for successful login
   await expect(page.locator('#auth-logged-in')).toBeVisible();
 }
 

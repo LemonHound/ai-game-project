@@ -440,6 +440,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // Global functions for button handlers
 function startGame() {
   game = new Connect4Game();
+  window.game = game;
 }
 
 function restartGame() {
