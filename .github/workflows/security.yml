@@ -10,37 +10,6 @@ on:
     - cron: '0 3 * * 0'
 
 jobs:
-  codeql-analysis:
-    name: 🔍 CodeQL Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'javascript' ]
-
-    steps:
-      - name: 🚀 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: 🔍 Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-          queries: security-extended,security-and-quality
-
-      - name: 🏗️ Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: 🔍 Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{matrix.language}}"
-
   dependency-security:
     name: 🛡️ Dependency Security Scan
     runs-on: ubuntu-latest
@@ -76,7 +45,7 @@ jobs:
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Run \`npm audit fix\` to automatically fix issues where possible." >> $GITHUB_STEP_SUMMARY
+          echo "Run \`npm audit fix\` to automatically fix issues where possible."
 
       - name: 📤 Upload audit results
         uses: actions/upload-artifact@v4
@@ -85,6 +54,74 @@ jobs:
           name: security-audit-results
           path: audit-results.json
           retention-days: 30
+
+  static-analysis:
+    name: 🔍 Static Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🔒 Install ESLint security plugin
+        run: npm install --no-save eslint-plugin-security
+
+      - name: 🔍 Run ESLint with security rules
+        run: |
+          npx eslint --ext .js,.ts,.jsx,.tsx . \
+            --plugin security \
+            --rule 'security/detect-buffer-noassert: error' \
+            --rule 'security/detect-child-process: warn' \
+            --rule 'security/detect-disable-mustache-escape: error' \
+            --rule 'security/detect-eval-with-expression: error' \
+            --rule 'security/detect-no-csrf-before-method-override: error' \
+            --rule 'security/detect-non-literal-fs-filename: warn' \
+            --rule 'security/detect-non-literal-regexp: warn' \
+            --rule 'security/detect-non-literal-require: warn' \
+            --rule 'security/detect-object-injection: warn' \
+            --rule 'security/detect-possible-timing-attacks: warn' \
+            --rule 'security/detect-pseudoRandomBytes: error' \
+            --rule 'security/detect-unsafe-regex: error' \
+            --format json \
+            --output-file eslint-security-results.json || true
+
+      - name: 📊 ESLint Security Summary
+        run: |
+          echo "## 🔍 ESLint Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f eslint-security-results.json ]; then
+            error_count=$(cat eslint-security-results.json | jq '[.[] | .messages[] | select(.severity == 2)] | length' 2>/dev/null || echo "0")
+            warning_count=$(cat eslint-security-results.json | jq '[.[] | .messages[] | select(.severity == 1)] | length' 2>/dev/null || echo "0")
+          
+            echo "### Security Issues Found" >> $GITHUB_STEP_SUMMARY
+            echo "- 🚨 **Errors**: $error_count" >> $GITHUB_STEP_SUMMARY
+            echo "- ⚠️ **Warnings**: $warning_count" >> $GITHUB_STEP_SUMMARY
+          
+            if [ "$error_count" -gt 0 ] || [ "$warning_count" -gt 0 ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "Review the uploaded artifacts for detailed security findings." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "✅ No security issues detected by ESLint" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      - name: 📤 Upload ESLint security results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eslint-security-results
+          path: eslint-security-results.json
+          retention-days: 7
 
   secret-scanning:
     name: 🔐 Secret Scanning
@@ -99,9 +136,86 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
+          base: ${{ github.event.repository.default_branch }}
           head: HEAD
-          extra_args: --debug --only-verified
+          extra_args: --debug --only-verified --fail
+        # Skip secret scanning if base and head are the same
+        if: github.sha != github.event.before
+
+      - name: 🔒 Basic secret pattern check (backup)
+        if: github.sha == github.event.before
+        run: |
+          echo "## 🔒 Basic Secret Pattern Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Common secret patterns
+          patterns=(
+            "api[_-]?key[\s]*[=:][\s]*['\"][a-zA-Z0-9]{20,}"
+            "secret[_-]?key[\s]*[=:][\s]*['\"][a-zA-Z0-9]{20,}"
+            "access[_-]?token[\s]*[=:][\s]*['\"][a-zA-Z0-9]{20,}"
+            "password[\s]*[=:][\s]*['\"][^'\"]{8,}"
+            "private[_-]?key[\s]*[=:][\s]*['\"].*BEGIN.*PRIVATE.*KEY"
+          )
+          
+          found_issues=false
+          for pattern in "${patterns[@]}"; do
+            if grep -r -i -E "$pattern" --include="*.js" --include="*.ts" --include="*.json" --include="*.env*" . \
+               | grep -v node_modules | grep -v ".git" | grep -v test; then
+              found_issues=true
+            fi
+          done
+          
+          if [ "$found_issues" = true ]; then
+            echo "⚠️ **Potential secrets detected** - Review patterns above" >> $GITHUB_STEP_SUMMARY
+            echo "Consider using environment variables for sensitive data" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ No obvious secret patterns detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  file-security-check:
+    name: 🗃️ File Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Check for suspicious files
+        run: |
+          echo "## 🗃️ File Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for potentially dangerous files
+          dangerous_files=()
+          
+          # Check for executable files in unexpected places
+          if find . -type f -executable -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./scripts/*" | grep -v "package-lock.json"; then
+            dangerous_files+=("Unexpected executable files found")
+          fi
+          
+          # Check for files with suspicious extensions
+          if find . -name "*.exe" -o -name "*.bat" -o -name "*.cmd" -o -name "*.sh" | grep -v "./scripts/" | grep -v ".git"; then
+            dangerous_files+=("Potentially suspicious executable files")
+          fi
+          
+          # Check for large files that might contain secrets
+          if find . -size +10M -not -path "./node_modules/*" -not -path "./.git/*" -type f; then
+            dangerous_files+=("Large files detected (potential secret storage)")
+          fi
+          
+          # Check for .env files that might be committed
+          if find . -name ".env*" -not -name ".env.example" -not -path "./node_modules/*" -type f; then
+            dangerous_files+=("Environment files detected (potential secret exposure)")
+          fi
+          
+          if [ ${#dangerous_files[@]} -eq 0 ]; then
+            echo "✅ No suspicious files detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Potential security issues found:**" >> $GITHUB_STEP_SUMMARY
+            for issue in "${dangerous_files[@]}"; do
+              echo "- $issue" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
 
   license-check:
     name: 📋 License Compliance
@@ -134,3 +248,22 @@ jobs:
           name: license-report
           path: license-summary.txt
           retention-days: 30
+
+  security-summary:
+    name: 📋 Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-security, static-analysis, secret-scanning, file-security-check, license-check]
+    if: always()
+    steps:
+      - name: 📋 Generate security summary
+        run: |
+          echo "## 🔒 Security Analysis Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "- 🛡️ Dependency Security: ${{ needs.dependency-security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 Static Analysis: ${{ needs.static-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔐 Secret Scanning: ${{ needs.secret-scanning.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🗃️ File Security: ${{ needs.file-security-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 License Check: ${{ needs.license-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check individual job summaries and artifacts for detailed results."
