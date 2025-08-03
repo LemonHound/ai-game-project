@@ -88,7 +88,6 @@ test.describe('API Endpoints', () => {
     });
 
     test('POST /api/auth/login with valid credentials', async ({ request }) => {
-      // Use addAuth helper to automatically get CSRF token
       const auth = addAuth(request);
       const response = await auth.post('/api/auth/login', {
         data: {
@@ -190,50 +189,18 @@ test.describe('API Endpoints', () => {
       const auth = addAuth(request);
       const response = await auth.get('/api/auth/me');
 
+      console.log('Auth /me test - Status:', response.status());
+      console.log('Auth /me test - OK:', response.ok());
+
+      if (!response.ok()) {
+        const errorText = await response.text();
+        console.log('Auth /me test - Error:', errorText);
+      }
+
       expect(response.ok()).toBeTruthy();
 
       const userData = await response.json();
       expect(userData.email).toBe('demo@aigamehub.com');
-    });
-
-    test('POST /api/auth/logout clears session', async ({ request }) => {
-      // First, do a fresh login to get a session we can safely logout
-      const auth = addAuth(request);
-      const loginResponse = await auth.post('/api/auth/login', {
-        data: {
-          email: 'demo@aigamehub.com',
-          password: 'password123',
-        },
-      });
-
-      expect(loginResponse.ok()).toBeTruthy();
-
-      // Extract sessionId from cookie
-      const setCookieHeader = loginResponse.headers()['set-cookie'];
-      expect(setCookieHeader).toBeDefined();
-
-      // Parse the sessionId from the cookie
-      const sessionMatch = setCookieHeader.match(/sessionId=([^;]+)/);
-      expect(sessionMatch).toBeTruthy();
-      const sessionId = sessionMatch[1];
-
-      // Now logout using that session (use addAuth for CSRF token)
-      const logoutResponse = await auth.post('/api/auth/logout', {
-        headers: {
-          'x-session-id': sessionId,
-        },
-      });
-
-      expect(logoutResponse.ok()).toBeTruthy();
-
-      // Verify session is cleared by trying to use it
-      const meResponse = await request.get('/api/auth/me', {
-        headers: {
-          'x-session-id': sessionId,
-        },
-      });
-
-      expect(meResponse.status()).toBe(401);
     });
 
     test('GET /api/auth/stats returns user statistics', async ({ request }) => {
@@ -272,6 +239,38 @@ test.describe('API Endpoints', () => {
       expect(typeof stats.gamesPlayed).toBe('number');
       expect(typeof stats.winRate).toBe('number');
       expect(typeof stats.aiContributions).toBe('number');
+    });
+
+    test('POST /api/auth/logout clears session', async ({ request }) => {
+      // First, do a fresh login to get a session we can safely logout
+      const auth = addAuth(request);
+      const loginResponse = await auth.post('/api/auth/login', {
+        data: {
+          email: 'demo@aigamehub.com',
+          password: 'password123',
+        },
+      });
+
+      expect(loginResponse.ok()).toBeTruthy();
+
+      // Now logout using the auth helper
+      const logoutResponse = await auth.post('/api/auth/logout');
+      expect(logoutResponse.ok()).toBeTruthy();
+
+      // Verify session is cleared by trying to access protected endpoint
+      const meResponse = await auth.get('/api/auth/me');
+      expect(meResponse.status()).toBe(401);
+
+      // ADDED: Login again to restore session for other tests
+      // This also tests that login works after logout
+      const reLoginResponse = await auth.post('/api/auth/login', {
+        data: {
+          email: 'demo@aigamehub.com',
+          password: 'password123',
+        },
+      });
+
+      expect(reLoginResponse.ok()).toBeTruthy();
     });
   });
 

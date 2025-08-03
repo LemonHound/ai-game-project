@@ -1,6 +1,5 @@
 # Test outputs and reports
 test-results/
-tests/test-auth-data.json
 playwright-report/
 coverage/
 *.webm
