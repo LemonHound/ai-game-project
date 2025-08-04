@@ -98,6 +98,183 @@ CREATE TABLE IF NOT EXISTS tic_tac_toe_games (
 
 
 -- ============================================
+-- Checkers Game States and Games Tables
+-- ============================================
+
+-- Checkers Game States - stores board states for learning
+CREATE TABLE IF NOT EXISTS checkers_states (
+    id SERIAL PRIMARY KEY,
+    game_state_hash CHAR(32) UNIQUE NOT NULL,  -- MD5 hash of board state
+    board_positions VARCHAR(32) NOT NULL,      -- 32 chars representing playable squares: 'R', 'r', 'B', 'b', '_' (empty)
+                                               -- R=red piece, r=red king, B=black piece, b=black king, _=empty
+    move_count SMALLINT NOT NULL,              -- Number of moves made in game
+    count INTEGER DEFAULT 1,                   -- Times this state was reached
+    rating REAL DEFAULT 0.0 CHECK (rating >= -1.0 AND rating <= 1.0), -- AI evaluation (-1 to 1)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Checkers Player Games - individual game records
+CREATE TABLE IF NOT EXISTS checkers_games (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    game_session_id VARCHAR(50) UNIQUE NOT NULL,
+    move_sequence TEXT,                        -- "R:12-16,B:21-17,R:16-20" - full game moves
+    winner CHAR(1) CHECK (winner IN ('R', 'B', 'T')), -- 'R' (red/player), 'B' (black/AI), or 'T' (tie)
+    total_moves SMALLINT,
+    player_started BOOLEAN DEFAULT true,       -- Whether player went first (red pieces)
+    difficulty_level VARCHAR(20) DEFAULT 'medium',
+    final_score INTEGER DEFAULT 0,            -- Could be piece count difference
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL                -- NULL for incomplete games
+);
+
+-- ============================================
+-- Indexes for Performance
+-- ============================================
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_checkers_game_state_hash ON checkers_states(game_state_hash);
+CREATE INDEX IF NOT EXISTS idx_checkers_states_move_count ON checkers_states(move_count);
+CREATE INDEX IF NOT EXISTS idx_checkers_states_updated_at ON checkers_states(updated_at);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_checkers_games_session_id ON checkers_games(game_session_id);
+CREATE INDEX IF NOT EXISTS idx_checkers_games_user_id ON checkers_games(user_id);
+CREATE INDEX IF NOT EXISTS idx_checkers_games_started_at ON checkers_games(started_at);
+CREATE INDEX IF NOT EXISTS idx_checkers_games_completed_at ON checkers_games(completed_at);
+CREATE INDEX IF NOT EXISTS idx_checkers_games_incomplete ON checkers_games(started_at) WHERE completed_at IS NULL;
+
+-- ============================================
+-- Database Functions for Checkers
+-- ============================================
+
+-- Function to clean up abandoned checkers games
+CREATE OR REPLACE FUNCTION cleanup_abandoned_checkers_games()
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM checkers_games
+    WHERE completed_at IS NULL
+    AND started_at < NOW() - INTERVAL '10 minutes';
+
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to insert or update checkers game state
+CREATE OR REPLACE FUNCTION upsert_checkers_state(
+    p_board_positions VARCHAR(32),
+    p_move_count SMALLINT
+)
+RETURNS INTEGER AS $$
+DECLARE
+    state_hash CHAR(32);
+    state_id INTEGER;
+BEGIN
+    -- Calculate MD5 hash of board positions
+    state_hash := MD5(p_board_positions);
+
+    -- Insert or update state
+    INSERT INTO checkers_states (game_state_hash, board_positions, move_count)
+    VALUES (state_hash, p_board_positions, p_move_count)
+    ON CONFLICT (game_state_hash) DO UPDATE SET
+        count = checkers_states.count + 1,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING id INTO state_id;
+
+    RETURN state_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to start a new checkers game
+CREATE OR REPLACE FUNCTION start_checkers_game(
+    p_user_id INTEGER,
+    p_session_id VARCHAR(50),
+    p_player_started BOOLEAN,
+    p_difficulty VARCHAR(20)
+)
+RETURNS INTEGER AS $$
+DECLARE
+    game_id INTEGER;
+BEGIN
+    INSERT INTO checkers_games (
+        user_id,
+        game_session_id,
+        player_started,
+        difficulty_level,
+        total_moves,
+        move_sequence
+    ) VALUES (
+        p_user_id,
+        p_session_id,
+        p_player_started,
+        p_difficulty,
+        0,
+        ''
+    ) RETURNING id INTO game_id;
+
+    RETURN game_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to complete a checkers game
+CREATE OR REPLACE FUNCTION complete_checkers_game(
+    p_session_id VARCHAR(50),
+    p_move_sequence TEXT,
+    p_winner CHAR(1),
+    p_total_moves SMALLINT,
+    p_final_score INTEGER,
+    p_user_id INTEGER
+)
+RETURNS INTEGER AS $$
+DECLARE
+    updated_rows INTEGER;
+BEGIN
+    UPDATE checkers_games SET
+        move_sequence = p_move_sequence,
+        winner = p_winner,
+        total_moves = p_total_moves,
+        final_score = p_final_score,
+        completed_at = CURRENT_TIMESTAMP
+    WHERE game_session_id = p_session_id
+    AND user_id = p_user_id;
+
+    GET DIAGNOSTICS updated_rows = ROW_COUNT;
+
+    -- If no existing game found, create new completed game record
+    IF updated_rows = 0 THEN
+        INSERT INTO checkers_games (
+            user_id,
+            game_session_id,
+            move_sequence,
+            winner,
+            total_moves,
+            final_score,
+            player_started,
+            difficulty_level,
+            started_at,
+            completed_at
+        ) VALUES (
+            p_user_id,
+            p_session_id,
+            p_move_sequence,
+            p_winner,
+            p_total_moves,
+            p_final_score,
+            true, -- default
+            'medium', -- default
+            CURRENT_TIMESTAMP - INTERVAL '5 minutes', -- estimate start time
+            CURRENT_TIMESTAMP
+        );
+        updated_rows = 1;
+    END IF;
+
+    RETURN updated_rows;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
 -- Create Indexes for Performance
 -- ============================================
 

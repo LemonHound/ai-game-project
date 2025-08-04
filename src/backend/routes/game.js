@@ -282,20 +282,38 @@ router.get('/:gameId/game_states', async (req, res) => {
 async function initializeGameInDB(session, engine) {
   if (!session.userId) return; // Skip if no user
 
-  await pool.query('SELECT start_tic_tac_toe_game($1, $2, $3, $4)', [
-    session.userId,
-    session.sessionId,
-    session.playerStarts,
-    session.difficulty,
-  ]);
+  // Handle different game types
+  if (engine.getEngineId() === 'tic-tac-toe') {
+    await pool.query('SELECT start_tic_tac_toe_game($1, $2, $3, $4)', [
+      session.userId,
+      session.sessionId,
+      session.playerStarts,
+      session.difficulty,
+    ]);
+  } else if (engine.getEngineId() === 'checkers') {
+    await pool.query('SELECT start_checkers_game($1, $2, $3, $4)', [
+      session.userId,
+      session.sessionId,
+      session.playerStarts,
+      session.difficulty,
+    ]);
+  }
 }
 
 async function updateGameStateInDB(session, engine) {
   const serialized = engine.serializeState(session);
-  await pool.query('SELECT upsert_tic_tac_toe_state($1, $2)', [
-    serialized.boardState,
-    session.moveCount,
-  ]);
+
+  if (engine.getEngineId() === 'tic-tac-toe') {
+    await pool.query('SELECT upsert_tic_tac_toe_state($1, $2)', [
+      serialized.boardState,
+      session.moveCount,
+    ]);
+  } else if (engine.getEngineId() === 'checkers') {
+    await pool.query('SELECT upsert_checkers_state($1, $2)', [
+      serialized.boardState,
+      session.moveCount,
+    ]);
+  }
 }
 
 async function completeGameInDB(session, engine) {
@@ -308,18 +326,33 @@ async function completeGameInDB(session, engine) {
     const serialized = engine.serializeState(session);
     const winner = session.winner === 'tie' ? 'T' : session.winner;
 
-    const result = await pool.query(
-      'SELECT complete_tic_tac_toe_game($1, $2, $3, $4, $5, $6)',
-      [
-        session.sessionId,
-        serialized.metadata.moveSequence,
-        winner,
-        session.moveCount,
-        0,
-        session.userId,
-      ]
-    );
-    console.log('game completion result:', result.rows[0]);
+    if (engine.getEngineId() === 'tic-tac-toe') {
+      const result = await pool.query(
+        'SELECT complete_tic_tac_toe_game($1, $2, $3, $4, $5, $6)',
+        [
+          session.sessionId,
+          serialized.metadata.moveSequence,
+          winner,
+          session.moveCount,
+          0,
+          session.userId,
+        ]
+      );
+      console.log('tic-tac-toe completion result:', result.rows[0]);
+    } else if (engine.getEngineId() === 'checkers') {
+      const result = await pool.query(
+        'SELECT complete_checkers_game($1, $2, $3, $4, $5, $6)',
+        [
+          session.sessionId,
+          serialized.metadata.moveSequence,
+          winner,
+          session.moveCount,
+          0, // final_score placeholder
+          session.userId,
+        ]
+      );
+      console.log('checkers completion result:', result.rows[0]);
+    }
   } catch (error) {
     console.error('Failed to complete game in DB:', error);
     throw error;
@@ -327,37 +360,62 @@ async function completeGameInDB(session, engine) {
 }
 
 async function getGameStats(gameId, userId) {
-  // This would need to be made more generic for different game types
-  const result = await pool.query(
-    `        SELECT 
-            COUNT(*) as total_games,
-            COUNT(CASE WHEN winner = 'X' THEN 1 END) as wins,
-            COUNT(CASE WHEN winner = 'O' THEN 1 END) as losses,
-            COUNT(CASE WHEN winner = 'T' THEN 1 END) as ties,
-            AVG(total_moves) as avg_moves,
-            MAX(final_score) as best_score,
-            COUNT(CASE WHEN completed_at IS NULL THEN 1 END) as incomplete_games
-        FROM tic_tac_toe_games 
-        WHERE user_id = $1
-    `,
-    [userId]
-  );
+  let query;
 
+  if (gameId === 'tic-tac-toe') {
+    query = `
+      SELECT 
+        COUNT(*) as total_games,
+        COUNT(CASE WHEN winner = 'X' THEN 1 END) as wins,
+        COUNT(CASE WHEN winner = 'O' THEN 1 END) as losses,
+        COUNT(CASE WHEN winner = 'T' THEN 1 END) as ties,
+        AVG(total_moves) as avg_moves,
+        MAX(final_score) as best_score,
+        COUNT(CASE WHEN completed_at IS NULL THEN 1 END) as incomplete_games
+      FROM tic_tac_toe_games 
+      WHERE user_id = $1
+    `;
+  } else if (gameId === 'checkers') {
+    query = `
+      SELECT 
+        COUNT(*) as total_games,
+        COUNT(CASE WHEN winner = 'R' THEN 1 END) as wins,
+        COUNT(CASE WHEN winner = 'B' THEN 1 END) as losses,
+        COUNT(CASE WHEN winner = 'T' THEN 1 END) as ties,
+        AVG(total_moves) as avg_moves,
+        MAX(final_score) as best_score,
+        COUNT(CASE WHEN completed_at IS NULL THEN 1 END) as incomplete_games
+      FROM checkers_games 
+      WHERE user_id = $1
+    `;
+  } else {
+    throw new Error(`Stats not implemented for game: ${gameId}`);
+  }
+
+  const result = await pool.query(query, [userId]);
   return result.rows[0];
 }
 
 async function cleanupAbandonedGames(gameId) {
-  // For now, just handle tic-tac-toe, but this could be made generic
-  const result = await pool.query(
-    'SELECT cleanup_abandoned_tic_tac_toe_games()'
-  );
-  return result.rows[0].cleanup_abandoned_tic_tac_toe_games;
+  let result;
+
+  if (gameId === 'tic-tac-toe') {
+    result = await pool.query('SELECT cleanup_abandoned_tic_tac_toe_games()');
+    return result.rows[0].cleanup_abandoned_tic_tac_toe_games;
+  } else if (gameId === 'checkers') {
+    result = await pool.query('SELECT cleanup_abandoned_checkers_games()');
+    return result.rows[0].cleanup_abandoned_checkers_games;
+  } else {
+    throw new Error(`Cleanup not implemented for game: ${gameId}`);
+  }
 }
 
 // Game metadata helpers (could be moved to game engines)
 function getGameDescription(gameId) {
   const descriptions = {
     'tic-tac-toe': 'Classic game with adaptive AI opponent',
+    checkers:
+      'Classic checkers with an AI that adapts to your tactical preferences',
     snake: 'Snake game with predictive AI assistance',
     puzzle: 'Dynamic puzzles that adapt to your skill',
     chess: 'Chess with AI that learns your style',
@@ -368,8 +426,7 @@ function getGameDescription(gameId) {
 function getGameIcon(gameId) {
   const icons = {
     'tic-tac-toe': '⭕',
-    snake: '🐍',
-    puzzle: '🧩',
+    checkers: '⚫',
     chess: '♟️',
   };
   return icons[gameId] || '🎮';
@@ -378,8 +435,7 @@ function getGameIcon(gameId) {
 function getGameDifficulty(gameId) {
   const difficulties = {
     'tic-tac-toe': 'Easy',
-    snake: 'Medium',
-    puzzle: 'Hard',
+    checkers: 'Hard',
     chess: 'Expert',
   };
   return difficulties[gameId] || 'Medium';
@@ -388,8 +444,7 @@ function getGameDifficulty(gameId) {
 function getGameCategory(gameId) {
   const categories = {
     'tic-tac-toe': 'strategy',
-    snake: 'arcade',
-    puzzle: 'puzzle',
+    checkers: 'strategy',
     chess: 'strategy',
   };
   return categories[gameId] || 'arcade';

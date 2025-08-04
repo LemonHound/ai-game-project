@@ -45,26 +45,20 @@
 
                     <!-- Game Board - Takes remaining space -->
                     <div class="flex-1 flex items-center justify-center overflow-hidden">
-                        <!-- Game-specific content will be inserted here -->
                         <% if (currentGame.id === 'tic-tac-toe') { %>
-                            <!-- Tic Tac Toe Board -->
                             <%- include('partials/tic-tac-toe-board') %>
                         <% } else if (currentGame.id === 'chess') { %>
-                            <!-- Chess Board -->
                             <%- include('partials/chess-board') %>
+                        <% } else if (currentGame.id === 'checkers') { %>
+                            <%- include('partials/checkers-board') %>
                         <% } else if (currentGame.id === 'connect4') { %>
-                            <!-- Connect 4 Board -->
                             <%- include('partials/connect4-board') %>
                         <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                            <!-- Dots and Boxes Board -->
                             <%- include('partials/dots-and-boxes-board') %>
                         <% } else { %>
-                            <!-- Placeholder for other games -->
                             <div class="text-center">
-                                <div class="text-6xl mb-4"><%= currentGame.icon %></div>
-                                <h3 class="text-xl font-bold mb-2">Coming Soon!</h3>
-                                <p class="opacity-70 mb-4"><%= currentGame.name %> is currently in development.</p>
-                                <a href="/games" class="btn btn-primary">Browse Other Games</a>
+                                <h3 class="text-xl font-semibold mb-2">Coming Soon!</h3>
+                                <p class="opacity-70">This game is currently in development.</p>
                             </div>
                         <% } %>
                     </div>
@@ -246,6 +240,13 @@
                 <p>📦 <strong>Completing Boxes:</strong> Draw the fourth side of a box to claim it and get another turn</p>
                 <p>🏆 <strong>Winning:</strong> Player with the most completed boxes wins!</p>
                 <p>🧠 <strong>Strategy:</strong> Avoid giving away boxes by not drawing the third side</p>
+            <% } else if (currentGame.id === 'checkers') { %>
+                    <p>🎯 <strong>Objective:</strong> Capture all opponent pieces or block all their moves</p>
+                    <p>🎮 <strong>How to Play:</strong> Click your red piece, then click where you want to move</p>
+                    <p>📦 <strong>Capturing:</strong> Jump over opponent pieces diagonally to capture them</p>
+                    <p>👑 <strong>Kings:</strong> Reach the opposite end to promote your piece to a king</p>
+                    <p>🏆 <strong>Winning:</strong> Capture all enemy pieces or block all their moves!</p>
+                    <p>🧠 <strong>Strategy:</strong> Control the center and create multiple capture threats</p>
             <% } else { %>
                 <p>📋 Rules for <%= currentGame.name %> will be available when the game launches.</p>
                 <p>🚀 This game is currently in development and will be available soon!</p>
@@ -266,6 +267,10 @@
 <% } else if (currentGame.id === 'chess') { %>
     <script>
         var pageScripts = ['chess.js'];
+    </script>
+<% } else if (currentGame.id === 'checkers') { %>
+    <script>
+        var pageScripts = ['checkers.js'];
     </script>
 <% } else if (currentGame.id === 'connect4') { %>
     <script>
