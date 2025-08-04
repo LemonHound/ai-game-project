@@ -165,9 +165,9 @@ const games = [
     icon: '⚫',
     difficulty: 'Hard',
     players: 1,
-    status: 'coming-soon',
+    status: 'active',
     category: 'strategy',
-    tags: ['Strategy', '1 Player', 'Coming Soon'],
+    tags: ['Strategy', '1 Player', 'Classic'],
   },
 ];
 

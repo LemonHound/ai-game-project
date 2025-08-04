@@ -1,5 +1,5 @@
-// src/backend/game-logic/game-factory.js
 const TicTacToeEngine = require('./tic-tac-toe');
+const CheckersEngine = require('./checkers');
 
 class GameFactory {
   constructor() {
@@ -11,6 +11,9 @@ class GameFactory {
     // Register all available game engines
     const ticTacToe = new TicTacToeEngine();
     this.engines.set(ticTacToe.getEngineId(), ticTacToe);
+
+    const checkers = new CheckersEngine();
+    this.engines.set(checkers.getEngineId(), checkers);
 
     // Future games can be added here:
     // const snake = new SnakeEngine();

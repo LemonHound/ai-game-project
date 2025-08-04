@@ -127,6 +127,181 @@ test.describe('Game Interaction Tests', () => {
     });
   });
 
+  test.describe('Checkers Game', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/game/checkers');
+      await page.waitForFunction(
+        () => {
+          const squares = document.querySelectorAll('[data-index]');
+          return squares.length === 64; // Wait for all 64 squares to be created
+        },
+        { timeout: 15000 }
+      );
+    });
+
+    test('checkers game loads and is playable', async ({ page }) => {
+      // Wait for the 8x8 board to be fully generated
+      await page.waitForFunction(
+        () => {
+          const squares = document.querySelectorAll('[data-index]');
+          return squares.length === 64;
+        },
+        { timeout: 15000 }
+      );
+
+      await expect(page.locator('#game-board')).toBeVisible();
+
+      // Check that board has 64 squares (8x8)
+      const squares = page.locator('[data-index]');
+      await expect(squares).toHaveCount(64);
+
+      // Check that red pieces are present in starting positions
+      const redPieces = page.locator('.bg-red-600');
+      await expect(redPieces.first()).toBeVisible({ timeout: 5000 });
+
+      // Check that black pieces are present
+      const blackPieces = page.locator('.bg-gray-800');
+      await expect(blackPieces.first()).toBeVisible({ timeout: 5000 });
+
+      // Try to click on a red piece (player's pieces)
+      const firstRedPiece = redPieces.first();
+      await firstRedPiece.click();
+
+      // Wait for piece selection
+      await page.waitForTimeout(500);
+
+      // Look for selection indicator (ring around selected piece)
+      const selectedSquare = page.locator('.ring-4.ring-blue-400');
+      await expect(selectedSquare).toBeVisible({ timeout: 2000 });
+
+      // Look for highlighted valid moves
+      const moveHighlights = page.locator('.move-highlight');
+      await expect(moveHighlights.first()).toBeVisible({ timeout: 2000 });
+
+      // Try to make a move by clicking on a highlighted square
+      await moveHighlights.first().click();
+      await page.waitForTimeout(1000);
+
+      // Verify AI thoughts or game status updated
+      const aiThoughts = page.locator('[data-testid="ai-thoughts"]');
+      await expect(aiThoughts).toContainText(/moved|turn|thinking/i, {
+        timeout: 5000,
+      });
+    });
+
+    test('checkers piece selection and movement works', async ({ page }) => {
+      // Wait for board to load
+      await page.waitForTimeout(2000);
+
+      // Find a red piece (player pieces)
+      const redPieces = page.locator('.bg-red-600');
+      await expect(redPieces.first()).toBeVisible();
+
+      // Click on first red piece
+      await redPieces.first().click();
+      await page.waitForTimeout(500);
+
+      // Should show selection ring
+      const selectedRing = page.locator('.ring-blue-400');
+      await expect(selectedRing).toBeVisible();
+
+      // Should show possible moves highlighted in green
+      const moveHighlights = page.locator('.bg-green-400');
+
+      // If moves are available, try to make one
+      const moveCount = await moveHighlights.count();
+      if (moveCount > 0) {
+        await moveHighlights.first().click();
+        await page.waitForTimeout(1000);
+
+        // Selection should be cleared after move
+        await expect(selectedRing).not.toBeVisible();
+
+        // AI should respond or game status should update
+        const gameStatus = page.locator('#game-status');
+        await expect(gameStatus).toContainText(/AI|thinking|turn/i, {
+          timeout: 3000,
+        });
+      }
+    });
+
+    test('checkers restart functionality works', async ({ page }) => {
+      // Wait for game to load
+      await page.waitForTimeout(2000);
+
+      // Try to make a move first
+      const redPieces = page.locator('.bg-red-600');
+      if ((await redPieces.count()) > 0) {
+        await redPieces.first().click();
+        await page.waitForTimeout(500);
+
+        const moveHighlights = page.locator('.bg-green-400');
+        if ((await moveHighlights.count()) > 0) {
+          await moveHighlights.first().click();
+          await page.waitForTimeout(1000);
+        }
+      }
+
+      // Click restart button
+      const restartButton = page
+        .locator('button:has-text("Restart"), [data-testid="restart-btn"]')
+        .first();
+
+      if (await restartButton.isVisible()) {
+        await restartButton.click();
+        await page.waitForTimeout(2000);
+
+        // Board should be reset to starting position
+        const redPieces = page.locator('.bg-red-600');
+        const blackPieces = page.locator('.bg-gray-800');
+
+        // Should have starting number of pieces (approximately 12 each)
+        expect(await redPieces.count()).toBeGreaterThan(10);
+        expect(await blackPieces.count()).toBeGreaterThan(10);
+
+        // Game status should reset
+        const gameStatus = page.locator('#game-status');
+        await expect(gameStatus).toContainText(/turn|ready/i);
+      }
+    });
+
+    test('checkers displays move information correctly', async ({ page }) => {
+      // Wait for game to load
+      await page.waitForTimeout(2000);
+
+      // Check that move info is displayed
+      const moveInfo = page.locator('#move-info');
+      await expect(moveInfo).toBeVisible();
+      await expect(moveInfo).toContainText(/Move.*Red.*Black/);
+
+      // Check that piece counts are reasonable (around 12 each at start)
+      const moveInfoText = await moveInfo.textContent();
+      expect(moveInfoText).toMatch(/Red:\s*1[0-2]/); // Should be 10-12 red pieces
+      expect(moveInfoText).toMatch(/Black:\s*1[0-2]/); // Should be 10-12 black pieces
+    });
+
+    test('checkers shows appropriate AI thoughts', async ({ page }) => {
+      // Wait for game to load
+      await page.waitForTimeout(2000);
+
+      const aiThoughts = page.locator('[data-testid="ai-thoughts"]');
+      await expect(aiThoughts).toBeVisible();
+
+      // Should show helpful initial message
+      await expect(aiThoughts).toContainText(/ready|click|select|move/i);
+
+      // Try selecting a piece
+      const redPieces = page.locator('.bg-red-600');
+      if ((await redPieces.count()) > 0) {
+        await redPieces.first().click();
+        await page.waitForTimeout(500);
+
+        // AI thoughts should update with selection guidance
+        await expect(aiThoughts).toContainText(/selected|click|highlighted/i);
+      }
+    });
+  });
+
   test.describe('Connect 4 Game', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto('/');
