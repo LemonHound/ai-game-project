@@ -136,7 +136,7 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          extra_args: --debug --only-verified --no-update
+          extra_args: --debug --only-verified
 
       - name: 🔒 Basic secret pattern check (backup)
         if: failure()
