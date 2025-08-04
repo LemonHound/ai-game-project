@@ -136,14 +136,10 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
-        # Skip secret scanning if base and head are the same
-        if: github.sha != github.event.before
+          extra_args: --debug --only-verified --no-update
 
       - name: 🔒 Basic secret pattern check (backup)
-        if: github.sha == github.event.before
+        if: failure()
         run: |
           echo "## 🔒 Basic Secret Pattern Check" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
