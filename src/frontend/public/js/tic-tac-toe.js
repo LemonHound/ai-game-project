@@ -212,19 +212,12 @@ class TicTacToeGame {
   updateUIFromState() {
     if (!this.gameState) return;
 
-    // Clear all squares first
-    for (let i = 0; i < 64; i++) {
-      this.updateSquare(i, '_');
-    }
-
-    // Update board display - convert 32-square board to visual display
-    for (let i = 0; i < 32; i++) {
-      const piece = this.gameState.board[i];
-      if (piece !== '_') {
-        const index64 = this.index32To64(i);
-        this.updateSquare(index64, piece);
+    // Update board display
+    this.gameState.board.forEach((cell, index) => {
+      if (cell !== null) {
+        this.updateSquare(index, cell);
       }
-    }
+    });
 
     // Update game status
     this.updateGameStatus();

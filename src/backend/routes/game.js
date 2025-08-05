@@ -114,12 +114,13 @@ router.post('/:gameId/move', async (req, res) => {
           // Check if error is due to duplicate key (race condition)
           if (
             error.code === '23505' &&
-            error.constraint === 'tic_tac_toe_games_game_session_id_key'
+            (error.constraint === 'tic_tac_toe_games_game_session_id_key' ||
+              error.constraint === 'checkers_games_game_session_id_key')
           ) {
             console.log(
               `Game session ${sessionId} already initialized by another request`
             );
-            session.isPersisted = true; // Mark as persisted since it exists
+            session.isPersisted = true;
           } else {
             throw error; // Re-throw if it's a different error
           }
