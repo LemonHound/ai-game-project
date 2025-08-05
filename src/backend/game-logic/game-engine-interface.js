@@ -40,6 +40,15 @@ class GameEngineInterface {
   }
 
   /**
+   * Return true if it is the AI's turn
+   * @param gameState - current game State
+   * @returns {Boolean} True if next move is for AI
+   */
+  isAIMove(gameState) {
+    throw new Error('isAIMove() must be implemented');
+  }
+
+  /**
    * Check if game is over and determine winner
    * @param {Object} gameState - Current game state
    * @returns {Object|null} { winner: string, gameOver: boolean } or null if game continues

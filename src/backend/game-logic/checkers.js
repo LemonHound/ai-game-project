@@ -6,10 +6,6 @@ class CheckersEngine extends GameEngineInterface {
     super();
     this.engine_id = 'checkers';
 
-    // Board constants - we use 32 playable squares (dark squares only)
-    this.BOARD_SIZE = 8;
-    this.PLAYABLE_SQUARES = 32;
-
     // Piece types
     this.EMPTY = '_';
     this.RED_PIECE = 'R'; // Player pieces
@@ -22,34 +18,18 @@ class CheckersEngine extends GameEngineInterface {
     return this.engine_id;
   }
 
-  // Convert 32-square index (0-31) to 8x8 board row/col
-  indexToRowCol(index32) {
-    const row = Math.floor(index32 / 4);
-    const col = (index32 % 4) * 2 + (row % 2);
+  indexToRowCol(index) {
+    const row = Math.floor(index / 8);
+    const col = Math.floor(index % 8);
     return { row, col };
   }
 
-  // Convert 8x8 board row/col to 32-square index
   rowColToIndex(row, col) {
     if (!this.isPlayableSquare(row, col)) return -1;
-    return row * 4 + Math.floor(col / 2);
-  }
-
-  // Convert 64-square index to 32-square index
-  index64To32(index64) {
-    const row = Math.floor(index64 / 8);
-    const col = index64 % 8;
-    return this.rowColToIndex(row, col);
-  }
-
-  // Convert 32-square index to 64-square index (for frontend compatibility)
-  index32To64(index32) {
-    const { row, col } = this.indexToRowCol(index32);
     return row * 8 + col;
   }
 
   isPlayableSquare(row, col) {
-    // Only dark squares are playable in checkers
     return (row + col) % 2 === 1;
   }
 
@@ -57,12 +37,11 @@ class CheckersEngine extends GameEngineInterface {
     const playerStarts = options.playerStarts !== false; // Default true (red goes first)
     const difficulty = options.difficulty || 'medium';
 
-    // Initialize standard checkers starting position using 32 squares
     const initialBoard = this.createInitialBoard();
 
     return {
       gameId: this.engine_id,
-      board: initialBoard, // 32-element array
+      board: initialBoard,
       currentPlayer: playerStarts ? 'R' : 'B', // R = Red (player), B = Black (AI)
       gameOver: false,
       winner: null,
@@ -70,75 +49,97 @@ class CheckersEngine extends GameEngineInterface {
       playerStarts,
       difficulty,
       moveCount: 0,
-      mustCapture: null, // Stores 32-square index if player must continue capturing
+      mustCapture: null,
       createdAt: new Date().toISOString(),
     };
   }
 
   createInitialBoard() {
-    // Standard checkers setup using 32 playable squares:
-    // Squares 0-11: Black pieces (AI) - top 3 rows
-    // Squares 12-19: Empty - middle 2 rows
-    // Squares 20-31: Red pieces (Player) - bottom 3 rows
-    const board = Array(32).fill(this.EMPTY);
+    const board = Array(64).fill(this.EMPTY);
 
-    // Place black pieces (AI) on squares 0-11
-    for (let i = 0; i < 12; i++) {
-      board[i] = this.BLACK_PIECE;
-    }
-
-    // Place red pieces (player) on squares 20-31
-    for (let i = 20; i < 32; i++) {
-      board[i] = this.RED_PIECE;
+    for (let i = 0; i < board.length; i++) {
+      const row = Math.floor(i / 8);
+      const col = i % 8;
+      if (row % 2 === 0) {
+        if (col % 2 === 1) {
+          if (row < 3) {
+            board[i] = this.BLACK_PIECE;
+          }
+          if (row >= 5) {
+            board[i] = this.RED_PIECE;
+          }
+        }
+      } else {
+        if (col % 2 === 0) {
+          if (row < 3) {
+            board[i] = this.BLACK_PIECE;
+          }
+          if (row >= 5) {
+            board[i] = this.RED_PIECE;
+          }
+        }
+      }
     }
 
     return board;
   }
 
   isValidMove(gameState, move) {
-    // move format: { from: index32, to: index32, captures: [indices32] }
-    if (
-      !move ||
-      typeof move.from === 'undefined' ||
-      typeof move.to === 'undefined'
-    ) {
+    if (move.requestAIMove) {
+      console.log('skipping isValidMove - AI move requested');
+      return true;
+    }
+    if (!move) {
       console.error('Invalid move format:', move);
       return false;
     }
 
     const { from, to } = move;
 
-    if (gameState.gameOver) return false;
+    if (gameState.gameOver) {
+      return false;
+    }
 
-    // Basic bounds checking for 32-square system
-    if (from < 0 || from >= 32 || to < 0 || to >= 32) return false;
+    if (move.requestAIMove === false) {
+      if (from < 0 || from >= 64 || to < 0 || to >= 64) {
+        console.log('move was outside of the board dimensions');
+        return false;
+      }
+    }
 
     const piece = gameState.board[from];
     const targetSquare = gameState.board[to];
 
-    // Must have a piece to move
-    if (!piece || piece === this.EMPTY) return false;
+    if (!piece || piece === this.EMPTY) {
+      return false;
+    }
 
-    // Must move own piece
     if (
       gameState.currentPlayer === 'R' &&
       !piece.includes('R') &&
       !piece.includes('r')
-    )
+    ) {
+      console.log('red attempted to move a black piece');
       return false;
+    }
     if (
       gameState.currentPlayer === 'B' &&
       !piece.includes('B') &&
       !piece.includes('b')
-    )
+    ) {
+      console.log('black attempted to move a red piece');
       return false;
+    }
 
-    // Target square must be empty
-    if (targetSquare !== this.EMPTY) return false;
-
-    // If must capture (continuing multi-jump), verify this move continues from correct position
-    if (gameState.mustCapture !== null && gameState.mustCapture !== from)
+    if (targetSquare !== this.EMPTY) {
+      console.log('target square is not empty');
       return false;
+    }
+
+    if (gameState.mustCapture !== null && gameState.mustCapture !== from) {
+      console.log('target must capture?? wtf is this logic');
+      return false;
+    }
 
     return this.isValidMovement(gameState, from, to, move.captures || []);
   }
@@ -151,33 +152,46 @@ class CheckersEngine extends GameEngineInterface {
     const rowDiff = toPos.row - fromPos.row;
     const colDiff = Math.abs(toPos.col - fromPos.col);
 
-    // Must move diagonally
-    if (Math.abs(rowDiff) !== colDiff) return false;
+    if (Math.abs(rowDiff) !== colDiff) {
+      console.log('not a diagonal move');
+      return false;
+    }
 
     const isKing = piece.toLowerCase() !== piece;
 
-    // Regular pieces can only move forward (except kings)
     if (!isKing) {
-      if (piece === this.RED_PIECE && rowDiff >= 0) return false; // Red moves up (negative row direction)
-      if (piece === this.BLACK_PIECE && rowDiff <= 0) return false; // Black moves down (positive row direction)
+      if (piece === this.RED_PIECE && rowDiff >= 0) {
+        console.log('red attempted to move backwards');
+        return false;
+      }
+      if (piece === this.BLACK_PIECE && rowDiff <= 0) {
+        console.log('black attempted to move backwards');
+        return false;
+      }
     }
 
-    // Single square move (no capture)
     if (Math.abs(rowDiff) === 1) {
-      return captures.length === 0; // No captures for single moves
+      console.log(
+        'only moved one row. checking for captures.  result:',
+        captures.length
+      );
+      return captures.length === 0;
     }
 
-    // Multi-square move must be capture
     if (Math.abs(rowDiff) === 2) {
-      // Must capture exactly one piece
-      if (captures.length !== 1) return false;
+      if (captures.length !== 1) {
+        console.log('moved 2 rows but did not capture.');
+        return false;
+      }
 
-      const captureIndex32 = captures[0];
-      if (captureIndex32 < 0 || captureIndex32 >= 32) return false;
+      const captureIndex = captures[0];
+      if (captureIndex < 0 || captureIndex >= 64) {
+        console.log('moved outside of valid board range');
+        return false;
+      }
 
-      const capturePos = this.indexToRowCol(captureIndex32);
+      const capturePos = this.indexToRowCol(captureIndex);
 
-      // Capture position must be between from and to
       const expectedCaptureRow = fromPos.row + rowDiff / 2;
       const expectedCaptureCol = fromPos.col + (toPos.col - fromPos.col) / 2;
 
@@ -185,29 +199,43 @@ class CheckersEngine extends GameEngineInterface {
         capturePos.row !== expectedCaptureRow ||
         capturePos.col !== expectedCaptureCol
       ) {
+        console.log(
+          'capture position is different than expected. got col',
+          capturePos.col,
+          ' row',
+          capturePos.row,
+          ', expected col',
+          expectedCaptureCol,
+          ' row',
+          expectedCaptureRow
+        );
         return false;
       }
 
-      const capturedPiece = gameState.board[captureIndex32];
+      const capturedPiece = gameState.board[captureIndex];
 
-      // Must capture opponent piece
       if (
         gameState.currentPlayer === 'R' &&
         !capturedPiece.includes('B') &&
         !capturedPiece.includes('b')
-      )
+      ) {
+        console.log('red attempted to capture red');
         return false;
+      }
       if (
         gameState.currentPlayer === 'B' &&
         !capturedPiece.includes('R') &&
         !capturedPiece.includes('r')
-      )
+      ) {
+        console.log('black attempted to capture black');
         return false;
-
+      }
+      console.log('this is a valid move, returning true');
       return true;
     }
 
-    return false; // Invalid move distance
+    console.log('invalid move distance, returning false');
+    return false;
   }
 
   processMove(gameState, move) {
@@ -223,8 +251,8 @@ class CheckersEngine extends GameEngineInterface {
     newState.board[from] = this.EMPTY;
 
     // Handle captures
-    captures.forEach((captureIndex32) => {
-      newState.board[captureIndex32] = this.EMPTY;
+    captures.forEach((captureIndex) => {
+      newState.board[captureIndex] = this.EMPTY;
     });
 
     // Check for king promotion
@@ -269,10 +297,15 @@ class CheckersEngine extends GameEngineInterface {
     return newState;
   }
 
-  getCaptureMoves(gameState, fromIndex32) {
+  isAIMove(gameState) {
+    // TODO: Update this logic when AI can play as Red
+    return gameState.currentPlayer === 'B';
+  }
+
+  getCaptureMoves(gameState, fromIndex) {
     const captureMoves = [];
-    const piece = gameState.board[fromIndex32];
-    const fromPos = this.indexToRowCol(fromIndex32);
+    const piece = gameState.board[fromIndex];
+    const fromPos = this.indexToRowCol(fromIndex);
 
     // Check all four diagonal directions
     const directions = [
@@ -309,13 +342,13 @@ class CheckersEngine extends GameEngineInterface {
       // Check if landing square is playable
       if (!this.isPlayableSquare(landRow, landCol)) continue;
 
-      const captureIndex32 = this.rowColToIndex(captureRow, captureCol);
-      const landIndex32 = this.rowColToIndex(landRow, landCol);
+      const captureIndex = this.rowColToIndex(captureRow, captureCol);
+      const landIndex = this.rowColToIndex(landRow, landCol);
 
-      if (captureIndex32 === -1 || landIndex32 === -1) continue;
-      if (gameState.board[landIndex32] !== this.EMPTY) continue;
+      if (captureIndex === -1 || landIndex === -1) continue;
+      if (gameState.board[landIndex] !== this.EMPTY) continue;
 
-      const capturedPiece = gameState.board[captureIndex32];
+      const capturedPiece = gameState.board[captureIndex];
 
       // Must capture opponent piece
       const isOpponent =
@@ -326,9 +359,9 @@ class CheckersEngine extends GameEngineInterface {
 
       if (isOpponent) {
         captureMoves.push({
-          from: fromIndex32,
-          to: landIndex32,
-          captures: [captureIndex32],
+          from: fromIndex,
+          to: landIndex,
+          captures: [captureIndex],
         });
       }
     }
@@ -362,7 +395,7 @@ class CheckersEngine extends GameEngineInterface {
 
   getPiecesForPlayer(gameState, player) {
     const pieces = [];
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < 64; i++) {
       const piece = gameState.board[i];
       if (player === 'R' && (piece.includes('R') || piece.includes('r'))) {
         pieces.push(i);
@@ -383,32 +416,32 @@ class CheckersEngine extends GameEngineInterface {
       gameState.currentPlayer
     );
 
-    // If must capture, only consider moves from that position
+    // If capturing is forced (i.e. chain captures), only consider moves from that position
     if (gameState.mustCapture !== null) {
       return this.getMovesFromPosition(gameState, gameState.mustCapture);
     }
 
     // Check all pieces for valid moves
-    for (const pieceIndex32 of playerPieces) {
-      moves.push(...this.getMovesFromPosition(gameState, pieceIndex32));
+    for (const pieceIndex of playerPieces) {
+      moves.push(...this.getMovesFromPosition(gameState, pieceIndex));
     }
 
-    // Prioritize capture moves (mandatory in checkers)
+    // Prioritize capture moves
     const captureMoves = moves.filter(
       (move) => move.captures && move.captures.length > 0
     );
     return captureMoves.length > 0 ? captureMoves : moves;
   }
 
-  getMovesFromPosition(gameState, fromIndex32) {
+  getMovesFromPosition(gameState, fromIndex) {
     const moves = [];
-    const fromPos = this.indexToRowCol(fromIndex32);
-    const piece = gameState.board[fromIndex32];
+    const fromPos = this.indexToRowCol(fromIndex);
+    const piece = gameState.board[fromIndex];
 
     if (!piece || piece === this.EMPTY) return moves;
 
     // Check capture moves first
-    const captureMoves = this.getCaptureMoves(gameState, fromIndex32);
+    const captureMoves = this.getCaptureMoves(gameState, fromIndex);
     moves.push(...captureMoves);
 
     // If captures are available, they are mandatory
@@ -437,13 +470,12 @@ class CheckersEngine extends GameEngineInterface {
       if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) continue;
       if (!this.isPlayableSquare(newRow, newCol)) continue;
 
-      const toIndex32 = this.rowColToIndex(newRow, newCol);
-      if (toIndex32 === -1 || gameState.board[toIndex32] !== this.EMPTY)
-        continue;
+      const toIndex = this.rowColToIndex(newRow, newCol);
+      if (toIndex === -1 || gameState.board[toIndex] !== this.EMPTY) continue;
 
       moves.push({
-        from: fromIndex32,
-        to: toIndex32,
+        from: fromIndex,
+        to: toIndex,
         captures: [],
       });
     }
@@ -451,7 +483,6 @@ class CheckersEngine extends GameEngineInterface {
     return moves;
   }
 
-  // Convert 32-square board to 32-character string for database storage
   serializeState(gameState) {
     const boardState = gameState.board.join('');
     const moveSequence = gameState.moveHistory
@@ -473,11 +504,13 @@ class CheckersEngine extends GameEngineInterface {
   }
 
   getAIMove(gameState, difficulty = 'medium') {
+    console.log('getting AI move');
     if (gameState.currentPlayer !== 'B' || gameState.gameOver) {
       return null;
     }
 
     const validMoves = this.getAllValidMoves(gameState);
+    console.log('all valid moves', validMoves);
     if (validMoves.length === 0) return null;
 
     // Simple AI: prefer captures, otherwise random move
@@ -509,11 +542,10 @@ class CheckersEngine extends GameEngineInterface {
   async getStates(limit = 10) {
     try {
       const query = `
-                SELECT
-                    board_positions,
-                    move_count,
-                    count,
-                    rating
+                SELECT board_positions,
+                       move_count,
+                       count,
+                       rating
                 FROM checkers_states
                 WHERE move_count > 0
                 ORDER BY count DESC, move_count DESC

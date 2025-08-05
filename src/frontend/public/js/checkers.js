@@ -4,7 +4,7 @@ class CheckersGame {
     this.gameState = null;
     this.gameName = 'checkers';
     this.isProcessingMove = false;
-    this.selectedSquare = null; // 32-square index
+    this.selectedSquare = null;
     this.validMoves = [];
 
     this.initializeGame();
@@ -54,8 +54,6 @@ class CheckersGame {
       this.gameSessionId = data.sessionId;
       this.gameState = data.state;
 
-      console.log('Checkers game session started:', this.gameSessionId);
-
       // Update UI based on backend state
       this.updateUIFromState();
 
@@ -70,29 +68,14 @@ class CheckersGame {
     }
   }
 
-  // Convert 32-square index to 8x8 board row/col
-  indexToRowCol(index32) {
-    const row = Math.floor(index32 / 4);
-    const col = (index32 % 4) * 2 + (row % 2);
+  indexToRowCol(index) {
+    const row = Math.floor(index / 8);
+    const col = Math.floor(index % 8);
     return { row, col };
   }
 
-  // Convert 8x8 board row/col to 32-square index
   rowColToIndex(row, col) {
     if ((row + col) % 2 === 0) return -1; // Not a playable square
-    return row * 4 + Math.floor(col / 2);
-  }
-
-  // Convert 64-square index (from DOM) to 32-square index
-  index64To32(index64) {
-    const row = Math.floor(index64 / 8);
-    const col = index64 % 8;
-    return this.rowColToIndex(row, col);
-  }
-
-  // Convert 32-square index to 64-square index (for DOM)
-  index32To64(index32) {
-    const { row, col } = this.indexToRowCol(index32);
     return row * 8 + col;
   }
 
@@ -108,9 +91,13 @@ class CheckersGame {
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         const square = document.createElement('div');
-        const index64 = row * 8 + col;
-        const index32 = this.index64To32(index64);
-        const isPlayable = index32 !== -1;
+        const index = row * 8 + col;
+        let isPlayable = false;
+        if (row % 2 === 0) {
+          isPlayable = col % 2 === 1;
+        } else {
+          isPlayable = col % 2 === 0;
+        }
 
         square.className = isPlayable
           ? 'w-15 h-15 bg-amber-900 border border-amber-800 flex items-center justify-center cursor-pointer hover:bg-amber-800 transition-colors'
@@ -118,15 +105,12 @@ class CheckersGame {
 
         square.style.width = '60px';
         square.style.height = '60px';
-        square.setAttribute('data-index64', index64);
+        square.setAttribute('data-index', index);
         square.setAttribute('data-row', row);
         square.setAttribute('data-col', col);
 
         if (isPlayable) {
-          square.setAttribute('data-index32', index32);
-          square.addEventListener('click', () =>
-            this.handleSquareClick(index32)
-          );
+          square.addEventListener('click', () => this.handleSquareClick(index));
         }
 
         boardElement.appendChild(square);
@@ -134,7 +118,7 @@ class CheckersGame {
     }
   }
 
-  async handleSquareClick(index32) {
+  async handleSquareClick(index) {
     const isAuthenticated = await window.GameAuthUtils.isAuthenticated();
     if (!isAuthenticated) {
       this.updateAIThoughts(
@@ -153,17 +137,17 @@ class CheckersGame {
       return;
     }
 
-    const piece = this.gameState.board[index32];
+    const piece = this.gameState.board[index];
 
     // If clicking on own piece, select it
     if (this.isPieceOwnedByPlayer(piece)) {
-      this.selectSquare(index32);
+      this.selectSquare(index);
       return;
     }
 
     // If clicking on empty square with a piece selected, try to move
     if (this.selectedSquare !== null && piece === '_') {
-      await this.attemptMove(this.selectedSquare, index32);
+      await this.attemptMove(this.selectedSquare, index);
       return;
     }
 
@@ -175,19 +159,16 @@ class CheckersGame {
     return piece === 'R' || piece === 'r'; // Red pieces and red kings
   }
 
-  selectSquare(index32) {
-    // Clear previous selection
+  selectSquare(index) {
     this.clearSelection();
 
-    this.selectedSquare = index32;
-    const index64 = this.index32To64(index32);
-    const square = document.querySelector(`[data-index64="${index64}"]`);
+    this.selectedSquare = index;
+    const square = document.querySelector(`[data-index="${index}"]`);
     square.classList.add('ring-4', 'ring-blue-400', 'ring-inset');
 
-    // Show valid moves for this piece
-    this.highlightValidMoves(index32);
+    this.highlightValidMoves(index);
 
-    const piece = this.gameState.board[index32];
+    const piece = this.gameState.board[index];
     const pieceType = piece === 'R' ? 'piece' : 'king';
     this.updateAIThoughts(
       `Selected your ${pieceType}. Click on a highlighted square to move.`
@@ -196,8 +177,8 @@ class CheckersGame {
 
   clearSelection() {
     if (this.selectedSquare !== null) {
-      const index64 = this.index32To64(this.selectedSquare);
-      const prevSquare = document.querySelector(`[data-index64="${index64}"]`);
+      const index = this.selectedSquare.index;
+      const prevSquare = document.querySelector(`[data-index="${index}"]`);
       if (prevSquare) {
         prevSquare.classList.remove('ring-4', 'ring-blue-400', 'ring-inset');
       }
@@ -212,23 +193,22 @@ class CheckersGame {
     this.validMoves = [];
   }
 
-  highlightValidMoves(fromIndex32) {
-    this.validMoves = this.calculateValidMovesForPiece(fromIndex32);
+  highlightValidMoves(fromIndex) {
+    this.validMoves = this.calculateValidMovesForPiece(fromIndex);
 
     this.validMoves.forEach((move) => {
-      const toIndex64 = this.index32To64(move.to);
-      const square = document.querySelector(`[data-index64="${toIndex64}"]`);
+      const square = document.querySelector(`[data-index="${move.to}"]`);
       if (square) {
         square.classList.add('bg-green-400', 'move-highlight');
       }
     });
   }
 
-  calculateValidMovesForPiece(fromIndex32) {
+  calculateValidMovesForPiece(fromIndex) {
     // Simplified move calculation for frontend highlighting
     const moves = [];
-    const piece = this.gameState.board[fromIndex32];
-    const fromPos = this.indexToRowCol(fromIndex32);
+    const piece = this.gameState.board[fromIndex];
+    const fromPos = this.indexToRowCol(fromIndex);
 
     // Basic diagonal moves
     const directions = [
@@ -249,9 +229,9 @@ class CheckersGame {
       const newCol = fromPos.col + dir.col;
 
       if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-        const newIndex32 = this.rowColToIndex(newRow, newCol);
-        if (newIndex32 !== -1 && this.gameState.board[newIndex32] === '_') {
-          moves.push({ from: fromIndex32, to: newIndex32, captures: [] });
+        const newIndex = this.rowColToIndex(newRow, newCol);
+        if (newIndex !== -1 && this.gameState.board[newIndex] === '_') {
+          moves.push({ from: fromIndex, to: newIndex, captures: [] });
         }
       }
 
@@ -262,20 +242,20 @@ class CheckersGame {
       const landCol = fromPos.col + dir.col * 2;
 
       if (landRow >= 0 && landRow < 8 && landCol >= 0 && landCol < 8) {
-        const captureIndex32 = this.rowColToIndex(captureRow, captureCol);
-        const landIndex32 = this.rowColToIndex(landRow, landCol);
+        const captureIndex = this.rowColToIndex(captureRow, captureCol);
+        const landIndex = this.rowColToIndex(landRow, landCol);
 
-        if (captureIndex32 !== -1 && landIndex32 !== -1) {
-          const capturedPiece = this.gameState.board[captureIndex32];
+        if (captureIndex !== -1 && landIndex !== -1) {
+          const capturedPiece = this.gameState.board[captureIndex];
 
           if (
             (capturedPiece === 'B' || capturedPiece === 'b') &&
-            this.gameState.board[landIndex32] === '_'
+            this.gameState.board[landIndex] === '_'
           ) {
             moves.push({
-              from: fromIndex32,
-              to: landIndex32,
-              captures: [captureIndex32],
+              from: fromIndex,
+              to: landIndex,
+              captures: [captureIndex],
             });
           }
         }
@@ -349,8 +329,8 @@ class CheckersGame {
     }
   }
 
-  formatSquare(index32) {
-    const { row, col } = this.indexToRowCol(index32);
+  formatSquare(index) {
+    const { row, col } = this.indexToRowCol(index);
     return `${String.fromCharCode(65 + col)}${8 - row}`; // Convert to chess notation (A8, B7, etc.)
   }
 
@@ -400,20 +380,21 @@ class CheckersGame {
   updateUIFromState() {
     if (!this.gameState) return;
 
-    // Update board display - convert 32-square board to visual display
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < 64; i++) {
       const piece = this.gameState.board[i];
-      const index64 = this.index32To64(i);
-      this.updateSquare(index64, piece);
+      this.updateSquare(i, piece);
     }
 
     // Clear non-playable squares
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
-        if ((row + col) % 2 === 0) {
+        if (
+          (row % 2 === 0 && col % 2 === 0) ||
+          (row % 2 === 1 && col % 2 === 1)
+        ) {
           // Light squares
-          const index64 = row * 8 + col;
-          this.updateSquare(index64, '_');
+          const index = row * 8 + col;
+          this.updateSquare(index, '_');
         }
       }
     }
@@ -439,8 +420,8 @@ class CheckersGame {
     }
   }
 
-  updateSquare(index64, piece) {
-    const square = document.querySelector(`[data-index64="${index64}"]`);
+  updateSquare(index, piece) {
+    const square = document.querySelector(`[data-index="${index}"]`);
     if (!square) return;
 
     // Clear existing piece
@@ -452,17 +433,17 @@ class CheckersGame {
         'w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-white';
 
       switch (piece) {
-        case 'R': // Red piece (player)
+        case 'R': // Red piece
           pieceElement.classList.add('bg-red-600', 'border-red-800');
           break;
-        case 'r': // Red king (player)
+        case 'r': // Red king
           pieceElement.classList.add('bg-red-600', 'border-red-800');
           pieceElement.textContent = '♔';
           break;
-        case 'B': // Black piece (AI)
+        case 'B': // Black piece
           pieceElement.classList.add('bg-gray-800', 'border-gray-900');
           break;
-        case 'b': // Black king (AI)
+        case 'b': // Black king
           pieceElement.classList.add('bg-gray-800', 'border-gray-900');
           pieceElement.textContent = '♔';
           break;

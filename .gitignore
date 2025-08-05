@@ -8,7 +8,7 @@ coverage/
 # Build outputs
 dist/
 build/
-/src/frontend/public/css/output.css
+src/frontend/public/css/output.css
 
 # Dependencies
 node_modules/
