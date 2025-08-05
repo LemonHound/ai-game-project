@@ -18,20 +18,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cookieParser());
 app.use(authMiddleware);
 
-/**
- * DEBUGGING
- */
-app.use((req, res, next) => {
-  console.log(
-    `${req.method} ${req.path}`,
-    req.headers.cookie ? 'with cookies' : 'no cookies'
-  );
-  next();
-});
-/**
- * END DEBUGGING
- */
-
 const csrfProtection = csrf({
   cookie: {
     httpOnly: true,

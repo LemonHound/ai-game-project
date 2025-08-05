@@ -91,6 +91,11 @@ class TicTacToeEngine extends GameEngineInterface {
     return newState;
   }
 
+  isAIMove(gameState) {
+    // TODO: Update this logic when AI can play as X
+    return gameState.currentPlayer === 'O';
+  }
+
   checkGameEnd(gameState) {
     // Check for winner
     for (const line of this.winningLines) {

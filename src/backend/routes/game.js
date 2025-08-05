@@ -60,6 +60,7 @@ router.post('/:gameId/start', async (req, res) => {
 
 // Generic move processing with lazy DB initialization
 router.post('/:gameId/move', async (req, res) => {
+  console.log('/:gameId/move called');
   try {
     const { gameId } = req.params;
     const { sessionId, move } = req.body;
@@ -101,6 +102,8 @@ router.post('/:gameId/move', async (req, res) => {
       session.lastActivity = new Date();
       Object.assign(session, newState);
 
+      const isAITurn = engine.isAIMove(newState);
+
       // Lazy database initialization - save on first move (with race condition protection)
       if (!session.isPersisted && !session.isInitializing) {
         session.isInitializing = true;
@@ -122,6 +125,7 @@ router.post('/:gameId/move', async (req, res) => {
           }
         } finally {
           session.isInitializing = false;
+          console.log('is session persisted?', session.isPersisted);
         }
       }
 
@@ -146,8 +150,11 @@ router.post('/:gameId/move', async (req, res) => {
 
       // Handle AI move if applicable
       let aiMove = null;
-      if (!newState.gameOver && newState.currentPlayer === 'O') {
+
+      if (!newState.gameOver && isAITurn) {
+        console.log('Initiating AI Move from game.js');
         aiMove = engine.getAIMove(newState, session.difficulty);
+        console.log('AI move calculated to be', aiMove);
         if (aiMove) {
           const aiState = engine.processMove(newState, aiMove);
           Object.assign(session, aiState);

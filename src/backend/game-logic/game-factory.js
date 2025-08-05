@@ -8,16 +8,11 @@ class GameFactory {
   }
 
   _registerEngines() {
-    // Register all available game engines
     const ticTacToe = new TicTacToeEngine();
     this.engines.set(ticTacToe.getEngineId(), ticTacToe);
 
     const checkers = new CheckersEngine();
     this.engines.set(checkers.getEngineId(), checkers);
-
-    // Future games can be added here:
-    // const snake = new SnakeEngine();
-    // this.engines.set(snake.getEngineId(), snake);
   }
 
   getEngine(gameId) {
@@ -34,7 +29,6 @@ class GameFactory {
       return {
         id: gameId,
         name: this._formatGameName(gameId),
-        // Add more metadata as needed
       };
     });
   }
