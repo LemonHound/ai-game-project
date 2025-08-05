@@ -8,370 +8,371 @@ const gameSessions = new Map();
 
 // Generate unique session ID
 function generateSessionId() {
-  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
 // Generic game initialization - no DB write until first move
 router.post('/:gameId/start', async (req, res) => {
-  try {
-    const { gameId } = req.params;
+    try {
+        const { gameId } = req.params;
 
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        error: 'Authentication required',
-        message: 'You need to be logged in to play games',
-        aiThought:
-          'I can only play with authenticated users - please log in first!',
-        requiresAuth: true,
-      });
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                error: 'Authentication required',
+                message: 'You need to be logged in to play games',
+                aiThought:
+                    'I can only play with authenticated users - please log in first!',
+                requiresAuth: true,
+            });
+        }
+
+        if (!gameFactory.isValidGameId(gameId)) {
+            return res.status(400).json({ error: 'Invalid game type' });
+        }
+
+        const engine = gameFactory.getEngine(gameId);
+        const sessionId = generateSessionId();
+
+        // Initialize game state (no DB write yet)
+        const gameState = engine.initializeGame(req.body);
+
+        // Store in memory temporarily
+        gameSessions.set(sessionId, {
+            ...gameState,
+            sessionId,
+            userId: req.user.id,
+            lastActivity: new Date(),
+            isPersisted: false,
+            isInitializing: false, // Add flag to prevent concurrent initialization
+        });
+
+        res.json({
+            success: true,
+            sessionId,
+            gameId,
+            state: gameState,
+        });
+    } catch (error) {
+        console.error('Game start error:', error);
+        res.status(500).json({ error: error.message });
     }
-
-    if (!gameFactory.isValidGameId(gameId)) {
-      return res.status(400).json({ error: 'Invalid game type' });
-    }
-
-    const engine = gameFactory.getEngine(gameId);
-    const sessionId = generateSessionId();
-
-    // Initialize game state (no DB write yet)
-    const gameState = engine.initializeGame(req.body);
-
-    // Store in memory temporarily
-    gameSessions.set(sessionId, {
-      ...gameState,
-      sessionId,
-      userId: req.user.id,
-      lastActivity: new Date(),
-      isPersisted: false,
-      isInitializing: false, // Add flag to prevent concurrent initialization
-    });
-
-    res.json({
-      success: true,
-      sessionId,
-      gameId,
-      state: gameState,
-    });
-  } catch (error) {
-    console.error('Game start error:', error);
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // Generic move processing with lazy DB initialization
 router.post('/:gameId/move', async (req, res) => {
-  console.log('/:gameId/move called');
-  try {
-    const { gameId } = req.params;
-    const { sessionId, move } = req.body;
-
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        error: 'Authentication required',
-        message: 'You need to be logged in to make moves',
-        aiThought:
-          'I can only play with authenticated users - please log in to continue!',
-        requiresAuth: true,
-      });
-    }
-
-    if (!sessionId || !move) {
-      return res.status(400).json({ error: 'Missing sessionId or move' });
-    }
-
-    const session = gameSessions.get(sessionId);
-    if (!session) {
-      return res.status(404).json({ error: 'Game session not found' });
-    }
-
-    // Check if another request is already processing this session
-    if (session.isProcessing) {
-      return res.status(429).json({ error: 'Move already being processed' });
-    }
-
-    // Lock session for processing
-    session.isProcessing = true;
-
     try {
-      const engine = gameFactory.getEngine(gameId);
+        const { gameId } = req.params;
+        const { sessionId, move } = req.body;
 
-      // Process the move
-      let newState = engine.processMove(session, move);
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                error: 'Authentication required',
+                message: 'You need to be logged in to make moves',
+                aiThought:
+                    'I can only play with authenticated users - please log in to continue!',
+                requiresAuth: true,
+            });
+        }
 
-      // Update session
-      session.lastActivity = new Date();
-      Object.assign(session, newState);
+        if (!sessionId || !move) {
+            return res.status(400).json({ error: 'Missing sessionId or move' });
+        }
 
-      const isAITurn = engine.isAIMove(newState);
+        const session = gameSessions.get(sessionId);
+        if (!session) {
+            return res.status(404).json({ error: 'Game session not found' });
+        }
 
-      // Lazy database initialization - save on first move (with race condition protection)
-      if (!session.isPersisted && !session.isInitializing) {
-        session.isInitializing = true;
+        // Check if another request is already processing this session
+        if (session.isProcessing) {
+            return res
+                .status(429)
+                .json({ error: 'Move already being processed' });
+        }
+
+        // Lock session for processing
+        session.isProcessing = true;
+
         try {
-          await initializeGameInDB(session, engine);
-          session.isPersisted = true;
-        } catch (error) {
-          // Check if error is due to duplicate key (race condition)
-          if (
-            error.code === '23505' &&
-            (error.constraint === 'tic_tac_toe_games_game_session_id_key' ||
-              error.constraint === 'checkers_games_game_session_id_key')
-          ) {
-            console.log(
-              `Game session ${sessionId} already initialized by another request`
-            );
-            session.isPersisted = true;
-          } else {
-            throw error; // Re-throw if it's a different error
-          }
+            const engine = gameFactory.getEngine(gameId);
+
+            // Process the move
+            let newState = engine.processMove(session, move);
+
+            // Update session
+            session.lastActivity = new Date();
+            Object.assign(session, newState);
+
+            const isAITurn = engine.isAIMove(newState);
+
+            // Lazy database initialization - save on first move (with race condition protection)
+            if (!session.isPersisted && !session.isInitializing) {
+                session.isInitializing = true;
+                try {
+                    await initializeGameInDB(session, engine);
+                    session.isPersisted = true;
+                } catch (error) {
+                    // Check if error is due to duplicate key (race condition)
+                    if (
+                        error.code === '23505' &&
+                        (error.constraint ===
+                            'tic_tac_toe_games_game_session_id_key' ||
+                            error.constraint ===
+                                'checkers_games_game_session_id_key')
+                    ) {
+                        console.log(
+                            `Game session ${sessionId} already initialized by another request`
+                        );
+                        session.isPersisted = true;
+                    } else {
+                        throw error; // Re-throw if it's a different error
+                    }
+                } finally {
+                    session.isInitializing = false;
+                    console.log('is session persisted?', session.isPersisted);
+                }
+            }
+
+            // Update game state in database (only if already persisted)
+            if (session.isPersisted) {
+                await updateGameStateInDB(session, engine);
+            }
+
+            // If game is over, complete the game record
+            if (newState.gameOver && session.isPersisted) {
+                await completeGameInDB(session, engine);
+                // Clean up session
+                gameSessions.delete(sessionId);
+
+                // Release lock and return result
+                return res.json({
+                    success: true,
+                    newState,
+                    aiMove: null,
+                });
+            }
+
+            // Handle AI move if applicable
+            let aiMove = null;
+
+            if (!newState.gameOver && isAITurn) {
+                aiMove = await engine.getAIMove(newState, session.difficulty);
+                if (aiMove) {
+                    const aiState = engine.processMove(newState, aiMove);
+                    Object.assign(session, aiState);
+
+                    // Update AI move in database
+                    if (session.isPersisted) {
+                        await updateGameStateInDB(session, engine);
+                    }
+
+                    if (aiState.gameOver && session.isPersisted) {
+                        await completeGameInDB(session, engine);
+                        gameSessions.delete(sessionId);
+                    }
+
+                    newState = aiState;
+                }
+            }
+
+            res.json({
+                success: true,
+                newState,
+                aiMove,
+            });
         } finally {
-          session.isInitializing = false;
-          console.log('is session persisted?', session.isPersisted);
+            // Always release the processing lock
+            if (session) {
+                session.isProcessing = false;
+            }
         }
-      }
-
-      // Update game state in database (only if already persisted)
-      if (session.isPersisted) {
-        await updateGameStateInDB(session, engine);
-      }
-
-      // If game is over, complete the game record
-      if (newState.gameOver && session.isPersisted) {
-        await completeGameInDB(session, engine);
-        // Clean up session
-        gameSessions.delete(sessionId);
-
-        // Release lock and return result
-        return res.json({
-          success: true,
-          newState,
-          aiMove: null,
-        });
-      }
-
-      // Handle AI move if applicable
-      let aiMove = null;
-
-      if (!newState.gameOver && isAITurn) {
-        console.log('Initiating AI Move from game.js');
-        aiMove = engine.getAIMove(newState, session.difficulty);
-        console.log('AI move calculated to be', aiMove);
-        if (aiMove) {
-          const aiState = engine.processMove(newState, aiMove);
-          Object.assign(session, aiState);
-
-          // Update AI move in database
-          if (session.isPersisted) {
-            await updateGameStateInDB(session, engine);
-          }
-
-          if (aiState.gameOver && session.isPersisted) {
-            await completeGameInDB(session, engine);
-            gameSessions.delete(sessionId);
-          }
-
-          newState = aiState;
-        }
-      }
-
-      res.json({
-        success: true,
-        newState,
-        aiMove,
-      });
-    } finally {
-      // Always release the processing lock
-      if (session) {
-        session.isProcessing = false;
-      }
+    } catch (error) {
+        console.error('Move processing error:', error);
+        res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    console.error('Move processing error:', error);
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // Generic stats endpoint
 router.get('/:gameId/stats', async (req, res) => {
-  try {
-    const { gameId } = req.params;
-    const userId = req.query.userId || req.user?.id;
+    try {
+        const { gameId } = req.params;
+        const userId = req.query.userId || req.user?.id;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID required' });
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID required' });
+        }
+
+        if (!gameFactory.isValidGameId(gameId)) {
+            return res.status(400).json({ error: 'Invalid game type' });
+        }
+
+        const stats = await getGameStats(gameId, userId);
+        res.json(stats);
+    } catch (error) {
+        console.error('Stats error:', error);
+        res.status(500).json({ error: error.message });
     }
-
-    if (!gameFactory.isValidGameId(gameId)) {
-      return res.status(400).json({ error: 'Invalid game type' });
-    }
-
-    const stats = await getGameStats(gameId, userId);
-    res.json(stats);
-  } catch (error) {
-    console.error('Stats error:', error);
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // Generic cleanup endpoint
 router.post('/:gameId/cleanup', async (req, res) => {
-  try {
-    const { gameId } = req.params;
+    try {
+        const { gameId } = req.params;
 
-    if (!gameFactory.isValidGameId(gameId)) {
-      return res.status(400).json({ error: 'Invalid game type' });
+        if (!gameFactory.isValidGameId(gameId)) {
+            return res.status(400).json({ error: 'Invalid game type' });
+        }
+
+        const result = await cleanupAbandonedGames(gameId);
+
+        // Also clean up memory sessions older than 1 hour
+        const now = new Date();
+        let cleanedSessions = 0;
+        for (const [sessionId, session] of gameSessions.entries()) {
+            if (now - session.lastActivity > 60 * 60 * 1000) {
+                // 1 hour
+                gameSessions.delete(sessionId);
+                cleanedSessions++;
+            }
+        }
+
+        res.json({
+            success: true,
+            deletedGames: result,
+            cleanedSessions,
+            message: `Cleaned up ${result} abandoned games and ${cleanedSessions} expired sessions`,
+        });
+    } catch (error) {
+        console.error('Cleanup error:', error);
+        res.status(500).json({ error: error.message });
     }
-
-    const result = await cleanupAbandonedGames(gameId);
-
-    // Also clean up memory sessions older than 1 hour
-    const now = new Date();
-    let cleanedSessions = 0;
-    for (const [sessionId, session] of gameSessions.entries()) {
-      if (now - session.lastActivity > 60 * 60 * 1000) {
-        // 1 hour
-        gameSessions.delete(sessionId);
-        cleanedSessions++;
-      }
-    }
-
-    res.json({
-      success: true,
-      deletedGames: result,
-      cleanedSessions,
-      message: `Cleaned up ${result} abandoned games and ${cleanedSessions} expired sessions`,
-    });
-  } catch (error) {
-    console.error('Cleanup error:', error);
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // List all available games
 router.get('/', async (req, res) => {
-  try {
-    const availableGames = gameFactory.getAvailableGames();
+    try {
+        const availableGames = gameFactory.getAvailableGames();
 
-    // Add metadata for each game
-    const games = availableGames.map((game) => ({
-      id: game.id,
-      name: game.name,
-      description: getGameDescription(game.id),
-      icon: getGameIcon(game.id),
-      difficulty: getGameDifficulty(game.id),
-      players: 1, // Default for AI games
-      status: 'active',
-      category: getGameCategory(game.id),
-    }));
+        // Add metadata for each game
+        const games = availableGames.map(game => ({
+            id: game.id,
+            name: game.name,
+            description: getGameDescription(game.id),
+            icon: getGameIcon(game.id),
+            difficulty: getGameDifficulty(game.id),
+            players: 1, // Default for AI games
+            status: 'active',
+            category: getGameCategory(game.id),
+        }));
 
-    res.json({ games });
-  } catch (error) {
-    console.error('Games list error:', error);
-    res.status(500).json({ error: error.message });
-  }
+        res.json({ games });
+    } catch (error) {
+        console.error('Games list error:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // GET /:gameId/popular-states - Get popular game states
 router.get('/:gameId/game_states', async (req, res) => {
-  try {
-    const { gameId } = req.params;
-    const limit = parseInt(req.query.limit) || 10;
-    console.log('limit', limit);
-    const engine = gameFactory.getEngine(gameId);
-    const gameStates = await engine.getStates(limit);
-    res.json(gameStates);
-  } catch (error) {
-    console.error('Popular states error:', error);
-    res.status(500).json({ error: error.message });
-  }
+    try {
+        const { gameId } = req.params;
+        const limit = parseInt(req.query.limit) || 10;
+        console.log('limit', limit);
+        const engine = gameFactory.getEngine(gameId);
+        const gameStates = await engine.getStates(limit);
+        res.json(gameStates);
+    } catch (error) {
+        console.error('Popular states error:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Database helper functions
 async function initializeGameInDB(session, engine) {
-  if (!session.userId) return; // Skip if no user
+    if (!session.userId) return; // Skip if no user
 
-  // Handle different game types
-  if (engine.getEngineId() === 'tic-tac-toe') {
-    await pool.query('SELECT start_tic_tac_toe_game($1, $2, $3, $4)', [
-      session.userId,
-      session.sessionId,
-      session.playerStarts,
-      session.difficulty,
-    ]);
-  } else if (engine.getEngineId() === 'checkers') {
-    await pool.query('SELECT start_checkers_game($1, $2, $3, $4)', [
-      session.userId,
-      session.sessionId,
-      session.playerStarts,
-      session.difficulty,
-    ]);
-  }
+    // Handle different game types
+    if (engine.getEngineId() === 'tic-tac-toe') {
+        await pool.query('SELECT start_tic_tac_toe_game($1, $2, $3, $4)', [
+            session.userId,
+            session.sessionId,
+            session.playerStarts,
+            session.difficulty,
+        ]);
+    } else if (engine.getEngineId() === 'checkers') {
+        await pool.query('SELECT start_checkers_game($1, $2, $3, $4)', [
+            session.userId,
+            session.sessionId,
+            session.playerStarts,
+            session.difficulty,
+        ]);
+    }
 }
 
 async function updateGameStateInDB(session, engine) {
-  const serialized = engine.serializeState(session);
+    const serialized = engine.serializeState(session);
 
-  if (engine.getEngineId() === 'tic-tac-toe') {
-    await pool.query('SELECT upsert_tic_tac_toe_state($1, $2)', [
-      serialized.boardState,
-      session.moveCount,
-    ]);
-  } else if (engine.getEngineId() === 'checkers') {
-    await pool.query('SELECT upsert_checkers_state($1, $2)', [
-      serialized.boardState,
-      session.moveCount,
-    ]);
-  }
+    if (engine.getEngineId() === 'tic-tac-toe') {
+        await pool.query('SELECT upsert_tic_tac_toe_state($1, $2)', [
+            serialized.boardState,
+            session.moveCount,
+        ]);
+    } else if (engine.getEngineId() === 'checkers') {
+        await pool.query('SELECT upsert_checkers_state($1, $2)', [
+            serialized.boardState,
+            session.moveCount,
+        ]);
+    }
 }
 
 async function completeGameInDB(session, engine) {
-  if (!session.userId) {
-    console.error('missing User ID', session.sessionId);
-    throw new Error(`User ID for ${session.sessionId} not found`);
-  }
-
-  try {
-    const serialized = engine.serializeState(session);
-    const winner = session.winner === 'tie' ? 'T' : session.winner;
-
-    if (engine.getEngineId() === 'tic-tac-toe') {
-      const result = await pool.query(
-        'SELECT complete_tic_tac_toe_game($1, $2, $3, $4, $5, $6)',
-        [
-          session.sessionId,
-          serialized.metadata.moveSequence,
-          winner,
-          session.moveCount,
-          0,
-          session.userId,
-        ]
-      );
-      console.log('tic-tac-toe completion result:', result.rows[0]);
-    } else if (engine.getEngineId() === 'checkers') {
-      const result = await pool.query(
-        'SELECT complete_checkers_game($1, $2, $3, $4, $5, $6)',
-        [
-          session.sessionId,
-          serialized.metadata.moveSequence,
-          winner,
-          session.moveCount,
-          0, // final_score placeholder
-          session.userId,
-        ]
-      );
-      console.log('checkers completion result:', result.rows[0]);
+    if (!session.userId) {
+        console.error('missing User ID', session.sessionId);
+        throw new Error(`User ID for ${session.sessionId} not found`);
     }
-  } catch (error) {
-    console.error('Failed to complete game in DB:', error);
-    throw error;
-  }
+
+    try {
+        const serialized = engine.serializeState(session);
+        const winner = session.winner === 'tie' ? 'T' : session.winner;
+
+        if (engine.getEngineId() === 'tic-tac-toe') {
+            const result = await pool.query(
+                'SELECT complete_tic_tac_toe_game($1, $2, $3, $4, $5, $6)',
+                [
+                    session.sessionId,
+                    serialized.metadata.moveSequence,
+                    winner,
+                    session.moveCount,
+                    0,
+                    session.userId,
+                ]
+            );
+            console.log('tic-tac-toe completion result:', result.rows[0]);
+        } else if (engine.getEngineId() === 'checkers') {
+            const result = await pool.query(
+                'SELECT complete_checkers_game($1, $2, $3, $4, $5, $6)',
+                [
+                    session.sessionId,
+                    serialized.metadata.moveSequence,
+                    winner,
+                    session.moveCount,
+                    0, // final_score placeholder
+                    session.userId,
+                ]
+            );
+            console.log('checkers completion result:', result.rows[0]);
+        }
+    } catch (error) {
+        console.error('Failed to complete game in DB:', error);
+        throw error;
+    }
 }
 
 async function getGameStats(gameId, userId) {
-  let query;
+    let query;
 
-  if (gameId === 'tic-tac-toe') {
-    query = `
+    if (gameId === 'tic-tac-toe') {
+        query = `
       SELECT 
         COUNT(*) as total_games,
         COUNT(CASE WHEN winner = 'X' THEN 1 END) as wins,
@@ -383,8 +384,8 @@ async function getGameStats(gameId, userId) {
       FROM tic_tac_toe_games 
       WHERE user_id = $1
     `;
-  } else if (gameId === 'checkers') {
-    query = `
+    } else if (gameId === 'checkers') {
+        query = `
       SELECT 
         COUNT(*) as total_games,
         COUNT(CASE WHEN winner = 'R' THEN 1 END) as wins,
@@ -396,66 +397,68 @@ async function getGameStats(gameId, userId) {
       FROM checkers_games 
       WHERE user_id = $1
     `;
-  } else {
-    throw new Error(`Stats not implemented for game: ${gameId}`);
-  }
+    } else {
+        throw new Error(`Stats not implemented for game: ${gameId}`);
+    }
 
-  const result = await pool.query(query, [userId]);
-  return result.rows[0];
+    const result = await pool.query(query, [userId]);
+    return result.rows[0];
 }
 
 async function cleanupAbandonedGames(gameId) {
-  let result;
+    let result;
 
-  if (gameId === 'tic-tac-toe') {
-    result = await pool.query('SELECT cleanup_abandoned_tic_tac_toe_games()');
-    return result.rows[0].cleanup_abandoned_tic_tac_toe_games;
-  } else if (gameId === 'checkers') {
-    result = await pool.query('SELECT cleanup_abandoned_checkers_games()');
-    return result.rows[0].cleanup_abandoned_checkers_games;
-  } else {
-    throw new Error(`Cleanup not implemented for game: ${gameId}`);
-  }
+    if (gameId === 'tic-tac-toe') {
+        result = await pool.query(
+            'SELECT cleanup_abandoned_tic_tac_toe_games()'
+        );
+        return result.rows[0].cleanup_abandoned_tic_tac_toe_games;
+    } else if (gameId === 'checkers') {
+        result = await pool.query('SELECT cleanup_abandoned_checkers_games()');
+        return result.rows[0].cleanup_abandoned_checkers_games;
+    } else {
+        throw new Error(`Cleanup not implemented for game: ${gameId}`);
+    }
 }
 
 // Game metadata helpers (could be moved to game engines)
 function getGameDescription(gameId) {
-  const descriptions = {
-    'tic-tac-toe': 'Classic game with adaptive AI opponent',
-    checkers:
-      'Classic checkers with an AI that adapts to your tactical preferences',
-    snake: 'Snake game with predictive AI assistance',
-    puzzle: 'Dynamic puzzles that adapt to your skill',
-    chess: 'Chess with AI that learns your style',
-  };
-  return descriptions[gameId] || 'Fun game with AI features';
+    const descriptions = {
+        'tic-tac-toe': 'Classic game with adaptive AI opponent',
+        checkers:
+            'Classic checkers with an AI that adapts to your tactical preferences',
+        snake: 'Snake game with predictive AI assistance',
+        puzzle: 'Dynamic puzzles that adapt to your skill',
+        chess: 'Chess with AI that learns your style',
+    };
+    return descriptions[gameId] || 'Fun game with AI features';
 }
 
 function getGameIcon(gameId) {
-  const icons = {
-    'tic-tac-toe': '⭕',
-    checkers: '⚫',
-    chess: '♟️',
-  };
-  return icons[gameId] || '🎮';
+    const icons = {
+        'tic-tac-toe': '⭕',
+        checkers: '⚫',
+        chess: '♟️',
+    };
+    return icons[gameId] || '🎮';
 }
 
 function getGameDifficulty(gameId) {
-  const difficulties = {
-    'tic-tac-toe': 'Easy',
-    checkers: 'Hard',
-    chess: 'Expert',
-  };
-  return difficulties[gameId] || 'Medium';
+    const difficulties = {
+        'tic-tac-toe': 'Easy',
+        checkers: 'Hard',
+        chess: 'Expert',
+    };
+    return difficulties[gameId] || 'Medium';
 }
 
 function getGameCategory(gameId) {
-  const categories = {
-    'tic-tac-toe': 'strategy',
-    checkers: 'strategy',
-    chess: 'strategy',
-  };
-  return categories[gameId] || 'arcade';
+    const categories = {
+        'tic-tac-toe': 'strategy',
+        checkers: 'strategy',
+        chess: 'strategy',
+    };
+    return categories[gameId] || 'arcade';
 }
 
 module.exports = router;
