@@ -21,10 +21,7 @@ describe('Smoke Tests', () => {
     it('should connect to database', async () => {
         // Check if database is configured
         const dbConfigured =
-            process.env.DB_HOST &&
-            process.env.DB_USER &&
-            process.env.DB_PASSWORD &&
-            process.env.DB_NAME;
+            process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME;
 
         if (!dbConfigured) {
             console.warn('Database not configured - skipping database test');

@@ -15,9 +15,7 @@ class GameCleanupService {
         }
 
         this.isRunning = true;
-        console.log(
-            `Starting game cleanup service (runs every ${intervalMinutes} minutes)`
-        );
+        console.log(`Starting game cleanup service (runs every ${intervalMinutes} minutes)`);
 
         // Run cleanup immediately on start
         this.runCleanup();
@@ -64,24 +62,16 @@ class GameCleanupService {
              */
 
             // Cleanup abandoned tic tac toe games
-            const tttResult = await pool.query(
-                'SELECT cleanup_abandoned_tic_tac_toe_games()'
-            );
-            const tttDeleted =
-                tttResult.rows[0].cleanup_abandoned_tic_tac_toe_games;
+            const tttResult = await pool.query('SELECT cleanup_abandoned_tic_tac_toe_games()');
+            const tttDeleted = tttResult.rows[0].cleanup_abandoned_tic_tac_toe_games;
 
             // Cleanup expired sessions
-            const sessionResult = await pool.query(
-                'SELECT cleanup_expired_sessions()'
-            );
-            const sessionsDeleted =
-                sessionResult.rows[0].cleanup_expired_sessions;
+            const sessionResult = await pool.query('SELECT cleanup_expired_sessions()');
+            const sessionsDeleted = sessionResult.rows[0].cleanup_expired_sessions;
 
             // Log results
             if (tttDeleted > 0 || sessionsDeleted > 0) {
-                console.log(
-                    `Cleanup completed: ${tttDeleted} abandoned games, ${sessionsDeleted} expired sessions`
-                );
+                console.log(`Cleanup completed: ${tttDeleted} abandoned games, ${sessionsDeleted} expired sessions`);
             } else {
                 console.log('Cleanup completed: No items to clean');
             }

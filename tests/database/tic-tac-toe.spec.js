@@ -3,9 +3,7 @@ const { addAuth } = require('../helpers/auth-helper');
 
 test.describe('Tic Tac Toe Database Integration', () => {
     test.describe('Game State Storage', () => {
-        test('should store game states when moves are made', async ({
-            request,
-        }) => {
+        test('should store game states when moves are made', async ({ request }) => {
             // Need authentication for game routes
             const auth = addAuth(request);
 
@@ -31,9 +29,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
             expect(moveResult.success).toBe(true);
 
             // Verify state was stored by checking popular states
-            const statesResponse = await request.get(
-                '/api/tic-tac-toe/game_states?limit=5'
-            );
+            const statesResponse = await request.get('/api/tic-tac-toe/game_states?limit=5');
             expect(statesResponse.ok()).toBeTruthy();
 
             const states = await statesResponse.json();
@@ -45,9 +41,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
             expect(oneMove.board_positions).toMatch(/^[XO_]{9}$/); // Valid board format
         });
 
-        test('should increment count for duplicate game states', async ({
-            request,
-        }) => {
+        test('should increment count for duplicate game states', async ({ request }) => {
             const auth = addAuth(request);
 
             // Start two games and make the same first move
@@ -67,15 +61,11 @@ test.describe('Tic Tac Toe Database Integration', () => {
             }
 
             // Check that the state count increased
-            const statesResponse = await request.get(
-                '/api/tic-tac-toe/game_states'
-            );
+            const statesResponse = await request.get('/api/tic-tac-toe/game_states');
             const states = await statesResponse.json();
 
             const centerMoveState = states.find(
-                state =>
-                    state.move_count === 1 &&
-                    state.board_positions.charAt(4) === 'X'
+                state => state.move_count === 1 && state.board_positions.charAt(4) === 'X'
             );
 
             expect(centerMoveState).toBeTruthy();
@@ -84,9 +74,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
     });
 
     test.describe('Player Game Records', () => {
-        test('should create game record on start and complete on finish', async ({
-            request,
-        }) => {
+        test('should create game record on start and complete on finish', async ({ request }) => {
             // Use authentication helper
             const auth = addAuth(request);
 
@@ -96,11 +84,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
             const gameSession = await startResponse.json();
 
             // Simulate a complete game (player wins)
-            const winningMoves = [
-                { position: 0 },
-                { position: 1 },
-                { position: 3 },
-            ];
+            const winningMoves = [{ position: 0 }, { position: 1 }, { position: 3 }];
 
             for (let i = 0; i < winningMoves.length; i++) {
                 const move = winningMoves[i];
@@ -136,9 +120,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
             expect(typeof cleanupResult.deletedGames).toBe('number');
         });
 
-        test('should handle completing games that were cleaned up', async ({
-            request,
-        }) => {
+        test('should handle completing games that were cleaned up', async ({ request }) => {
             const auth = addAuth(request);
 
             // Start a game first
@@ -188,9 +170,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
     });
 
     test.describe('Game Statistics', () => {
-        test('should return game statistics for authenticated users', async ({
-            request,
-        }) => {
+        test('should return game statistics for authenticated users', async ({ request }) => {
             // Use authentication helper
             const auth = addAuth(request);
 
@@ -215,15 +195,12 @@ test.describe('Tic Tac Toe Database Integration', () => {
         });
 
         test('should return popular game states', async ({ request }) => {
-            const statesResponse = await request.get(
-                '/api/tic-tac-toe/game_states',
-                {
-                    params: {
-                        limit: 3,
-                        gameId: 'tic-tac-toe',
-                    },
-                }
-            );
+            const statesResponse = await request.get('/api/tic-tac-toe/game_states', {
+                params: {
+                    limit: 3,
+                    gameId: 'tic-tac-toe',
+                },
+            });
             expect(statesResponse.ok()).toBeTruthy();
 
             const states = await statesResponse.json();
@@ -268,9 +245,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
 
         test('should enforce rating constraints', async ({ request }) => {
             // Check the rating constraint exists by examining popular states
-            const statesResponse = await request.get(
-                '/api/tic-tac-toe/game_states?limit=1'
-            );
+            const statesResponse = await request.get('/api/tic-tac-toe/game_states?limit=1');
             expect(statesResponse.ok()).toBeTruthy();
 
             const states = await statesResponse.json();

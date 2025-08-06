@@ -4,9 +4,7 @@ const { addAuth } = require('../helpers/auth-helper');
 
 test.describe('Checkers Database Integration', () => {
     test.describe('Game State Storage', () => {
-        test('should store checkers game states when moves are made', async ({
-            request,
-        }) => {
+        test('should store checkers game states when moves are made', async ({ request }) => {
             const auth = addAuth(request);
 
             // Start a new checkers game
@@ -33,9 +31,7 @@ test.describe('Checkers Database Integration', () => {
             expect(moveResult.success).toBe(true);
 
             // Verify state was stored by checking popular states
-            const statesResponse = await request.get(
-                '/api/checkers/game_states?limit=5'
-            );
+            const statesResponse = await request.get('/api/checkers/game_states?limit=5');
             expect(statesResponse.ok()).toBeTruthy();
 
             const states = await statesResponse.json();
@@ -47,9 +43,7 @@ test.describe('Checkers Database Integration', () => {
             expect(oneMove.board_positions).toMatch(/^[RrBb_]{64}$/);
         });
 
-        test('should increment count for duplicate checkers game states', async ({
-            request,
-        }) => {
+        test('should increment count for duplicate checkers game states', async ({ request }) => {
             const auth = addAuth(request);
 
             // Start two games and make the same first move
@@ -73,14 +67,10 @@ test.describe('Checkers Database Integration', () => {
             }
 
             // Check that the state count increased
-            const statesResponse = await request.get(
-                '/api/checkers/game_states'
-            );
+            const statesResponse = await request.get('/api/checkers/game_states');
             const states = await statesResponse.json();
 
-            const openingMoveState = states.find(
-                state => state.move_count === 1
-            );
+            const openingMoveState = states.find(state => state.move_count === 1);
 
             expect(openingMoveState).toBeTruthy();
             expect(openingMoveState.count).toBeGreaterThanOrEqual(2);
@@ -88,9 +78,7 @@ test.describe('Checkers Database Integration', () => {
     });
 
     test.describe('Player Game Records', () => {
-        test('should create checkers game record on start and complete on finish', async ({
-            request,
-        }) => {
+        test('should create checkers game record on start and complete on finish', async ({ request }) => {
             const auth = addAuth(request);
 
             // Start game with auth
@@ -127,9 +115,7 @@ test.describe('Checkers Database Integration', () => {
             expect(parseInt(stats.total_games)).toBeGreaterThanOrEqual(1);
         });
 
-        test('should handle abandoned checkers game cleanup', async ({
-            request,
-        }) => {
+        test('should handle abandoned checkers game cleanup', async ({ request }) => {
             const auth = addAuth(request);
 
             // Test the cleanup endpoint
@@ -143,9 +129,7 @@ test.describe('Checkers Database Integration', () => {
     });
 
     test.describe('Game Statistics', () => {
-        test('should return checkers game statistics for authenticated users', async ({
-            request,
-        }) => {
+        test('should return checkers game statistics for authenticated users', async ({ request }) => {
             const auth = addAuth(request);
 
             const statsResponse = await auth.get('/api/checkers/stats');
@@ -168,18 +152,13 @@ test.describe('Checkers Database Integration', () => {
             expect(typeof parseInt(stats.losses)).toBe('number');
         });
 
-        test('should return popular checkers game states', async ({
-            request,
-        }) => {
-            const statesResponse = await request.get(
-                '/api/checkers/game_states',
-                {
-                    params: {
-                        limit: 3,
-                        gameId: 'checkers',
-                    },
-                }
-            );
+        test('should return popular checkers game states', async ({ request }) => {
+            const statesResponse = await request.get('/api/checkers/game_states', {
+                params: {
+                    limit: 3,
+                    gameId: 'checkers',
+                },
+            });
             expect(statesResponse.ok()).toBeTruthy();
 
             const states = await statesResponse.json();
@@ -221,13 +200,9 @@ test.describe('Checkers Database Integration', () => {
             expect(moveResponse.status()).toBeGreaterThanOrEqual(400);
         });
 
-        test('should enforce checkers rating constraints', async ({
-            request,
-        }) => {
+        test('should enforce checkers rating constraints', async ({ request }) => {
             // Check the rating constraint exists by examining popular states
-            const statesResponse = await request.get(
-                '/api/checkers/game_states?limit=1'
-            );
+            const statesResponse = await request.get('/api/checkers/game_states?limit=1');
             expect(statesResponse.ok()).toBeTruthy();
 
             const states = await statesResponse.json();

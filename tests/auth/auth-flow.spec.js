@@ -60,9 +60,7 @@ test.describe('Authentication Flow', () => {
         });
 
         await expect(page.locator('#register-error')).toBeVisible();
-        await expect(page.locator('#register-error')).toContainText(
-            'Passwords do not match'
-        );
+        await expect(page.locator('#register-error')).toContainText('Passwords do not match');
     });
 
     test('can navigate between login and register modals', async ({ page }) => {

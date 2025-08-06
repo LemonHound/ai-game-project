@@ -33,9 +33,7 @@ app.set('views', path.join(__dirname, '../frontend/views'));
 // Session configuration
 app.use(
     session({
-        secret:
-            process.env.SESSION_SECRET ||
-            'your-super-secret-key-change-in-production',
+        secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-in-production',
         name: 'sessionId',
         resave: false,
         saveUninitialized: false,
@@ -98,8 +96,7 @@ const games = [
     {
         id: 'tic-tac-toe',
         name: 'Tic Tac Toe',
-        description:
-            'Classic 3x3 grid game with adaptive AI opponent that learns your strategies',
+        description: 'Classic 3x3 grid game with adaptive AI opponent that learns your strategies',
         icon: '⭕',
         difficulty: 'Easy',
         players: 1,
@@ -110,8 +107,7 @@ const games = [
     {
         id: 'dots-and-boxes',
         name: 'Dots and Boxes',
-        description:
-            'Connect dots to complete boxes and claim territory in this strategic paper game',
+        description: 'Connect dots to complete boxes and claim territory in this strategic paper game',
         icon: '⬜',
         difficulty: 'Medium',
         players: 1,
@@ -122,8 +118,7 @@ const games = [
     {
         id: 'connect4',
         name: 'Connect 4',
-        description:
-            'Drop pieces to connect four in a row - vertically, horizontally, or diagonally',
+        description: 'Drop pieces to connect four in a row - vertically, horizontally, or diagonally',
         icon: '🔴',
         difficulty: 'Medium',
         players: 1,
@@ -134,8 +129,7 @@ const games = [
     {
         id: 'chess',
         name: 'Chess',
-        description:
-            'Chess with AI that learns your playing style and adapts its strategy',
+        description: 'Chess with AI that learns your playing style and adapts its strategy',
         icon: '♟️',
         difficulty: 'Expert',
         players: 1,
@@ -146,8 +140,7 @@ const games = [
     {
         id: 'checkers',
         name: 'Checkers',
-        description:
-            'Classic checkers with an AI that adapts to your tactical preferences',
+        description: 'Classic checkers with an AI that adapts to your tactical preferences',
         icon: '⚫',
         difficulty: 'Hard',
         players: 1,
@@ -270,13 +263,7 @@ app.get('/settings', (req, res) => {
 });
 
 // Individual game routes - updated with new games
-const validGames = [
-    'tic-tac-toe',
-    'dots-and-boxes',
-    'connect4',
-    'chess',
-    'checkers',
-];
+const validGames = ['tic-tac-toe', 'dots-and-boxes', 'connect4', 'chess', 'checkers'];
 
 app.get('/game/:gameId', (req, res) => {
     const { gameId } = req.params;
@@ -378,10 +365,7 @@ app.use((err, req, res, next) => {
     if (req.originalUrl.startsWith('/api')) {
         res.status(500).json({
             error: 'Internal server error',
-            message:
-                process.env.NODE_ENV === 'production'
-                    ? 'Something went wrong!'
-                    : err.message,
+            message: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message,
         });
     } else {
         // Render error page for regular requests
@@ -389,10 +373,7 @@ app.use((err, req, res, next) => {
             title: 'Server Error - AI Game Hub',
             currentPage: 'error',
             currentTemplate: '404', // You could create a separate 500.ejs if desired
-            error:
-                process.env.NODE_ENV === 'production'
-                    ? 'Something went wrong!'
-                    : err.message,
+            error: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message,
             ...getTemplateData(req),
         });
     }
@@ -421,12 +402,8 @@ process.on('SIGINT', () => {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Database: ${process.env.DB_NAME}`);
-    console.log(
-        `🔐 Session Secret: ${process.env.SESSION_SECRET ? 'Set' : 'Using default (change this!)'}`
-    );
-    console.log(
-        `🌐 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`
-    );
+    console.log(`🔐 Session Secret: ${process.env.SESSION_SECRET ? 'Set' : 'Using default (change this!)'}`);
+    console.log(`🌐 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
 });
 
 module.exports = app;

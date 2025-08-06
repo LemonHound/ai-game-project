@@ -27,9 +27,7 @@ async function createFreshAuth(request) {
 
     if (!loginResponse.ok()) {
         const errorText = await loginResponse.text();
-        throw new Error(
-            `Fresh auth failed: ${loginResponse.status()} - ${errorText}`
-        );
+        throw new Error(`Fresh auth failed: ${loginResponse.status()} - ${errorText}`);
     }
 
     // Extract session cookie

@@ -62,16 +62,12 @@ class ChessGame {
                 const isLight = (row + col) % 2 === 0;
 
                 square.className = `chess-square w-12 h-12 flex items-center justify-center cursor-pointer transition-all duration-200 relative ${
-                    isLight
-                        ? 'bg-amber-100 hover:bg-amber-200'
-                        : 'bg-amber-700 hover:bg-amber-800'
+                    isLight ? 'bg-amber-100 hover:bg-amber-200' : 'bg-amber-700 hover:bg-amber-800'
                 }`;
 
                 square.setAttribute('data-row', row);
                 square.setAttribute('data-col', col);
-                square.addEventListener('click', () =>
-                    this.handleSquareClick(row, col)
-                );
+                square.addEventListener('click', () => this.handleSquareClick(row, col));
 
                 boardElement.appendChild(square);
             }
@@ -96,20 +92,13 @@ class ChessGame {
                     const piece = this.board[row][col];
 
                     // Clear previous styling and content
-                    square.classList.remove(
-                        'ring-4',
-                        'ring-primary',
-                        'ring-success',
-                        'ring-warning'
-                    );
+                    square.classList.remove('ring-4', 'ring-primary', 'ring-success', 'ring-warning');
                     square.innerHTML = '';
 
                     // Reset base classes with proper square colors
                     const isLight = (displayRow + displayCol) % 2 === 0;
                     square.className = `chess-square w-12 h-12 flex items-center justify-center cursor-pointer transition-all duration-200 relative ${
-                        isLight
-                            ? 'bg-amber-100 hover:bg-amber-200'
-                            : 'bg-amber-700 hover:bg-amber-800'
+                        isLight ? 'bg-amber-100 hover:bg-amber-200' : 'bg-amber-700 hover:bg-amber-800'
                     }`;
 
                     // Add piece image if present
@@ -119,23 +108,14 @@ class ChessGame {
                     }
 
                     // Add highlighting for selected squares and valid moves
-                    if (
-                        this.selectedSquare &&
-                        this.selectedSquare[0] === row &&
-                        this.selectedSquare[1] === col
-                    ) {
+                    if (this.selectedSquare && this.selectedSquare[0] === row && this.selectedSquare[1] === col) {
                         square.classList.add('ring-4', 'ring-primary');
                     }
 
                     // Highlight valid moves with a subtle overlay
-                    if (
-                        this.validMoves.some(
-                            move => move[0] === row && move[1] === col
-                        )
-                    ) {
+                    if (this.validMoves.some(move => move[0] === row && move[1] === col)) {
                         const moveIndicator = document.createElement('div');
-                        moveIndicator.className =
-                            'absolute inset-0 bg-green-400 bg-opacity-40 rounded-full m-2';
+                        moveIndicator.className = 'absolute inset-0 bg-green-400 bg-opacity-40 rounded-full m-2';
                         square.appendChild(moveIndicator);
                     }
                 }
@@ -164,8 +144,7 @@ class ChessGame {
 
         img.src = `/images/${pieceType}_${color}.png`;
         img.alt = `${color} ${pieceType}`;
-        img.className =
-            'w-10 h-10 object-contain pointer-events-none select-none';
+        img.className = 'w-10 h-10 object-contain pointer-events-none select-none';
         img.draggable = false;
 
         return img;
@@ -181,10 +160,7 @@ class ChessGame {
         // If no square is selected, select this square if it has a piece of the current player
         if (!this.selectedSquare) {
             const piece = this.board[actualRow][actualCol];
-            if (
-                piece &&
-                this.isWhitePiece(piece) === (this.currentPlayer === 'white')
-            ) {
+            if (piece && this.isWhitePiece(piece) === (this.currentPlayer === 'white')) {
                 this.selectedSquare = [actualRow, actualCol];
                 this.validMoves = this.getValidMoves(actualRow, actualCol);
                 this.renderBoard();
@@ -193,10 +169,7 @@ class ChessGame {
         }
 
         // If clicking on the same square, deselect
-        if (
-            this.selectedSquare[0] === actualRow &&
-            this.selectedSquare[1] === actualCol
-        ) {
+        if (this.selectedSquare[0] === actualRow && this.selectedSquare[1] === actualCol) {
             this.selectedSquare = null;
             this.validMoves = [];
             this.renderBoard();
@@ -204,25 +177,15 @@ class ChessGame {
         }
 
         // Check if this is a valid move
-        const isValidMove = this.validMoves.some(
-            move => move[0] === actualRow && move[1] === actualCol
-        );
+        const isValidMove = this.validMoves.some(move => move[0] === actualRow && move[1] === actualCol);
 
         if (isValidMove) {
             // Make the move
-            this.makeMove(
-                this.selectedSquare[0],
-                this.selectedSquare[1],
-                actualRow,
-                actualCol
-            );
+            this.makeMove(this.selectedSquare[0], this.selectedSquare[1], actualRow, actualCol);
         } else {
             // Select new piece if it belongs to current player
             const piece = this.board[actualRow][actualCol];
-            if (
-                piece &&
-                this.isWhitePiece(piece) === (this.currentPlayer === 'white')
-            ) {
+            if (piece && this.isWhitePiece(piece) === (this.currentPlayer === 'white')) {
                 this.selectedSquare = [actualRow, actualCol];
                 this.validMoves = this.getValidMoves(actualRow, actualCol);
                 this.renderBoard();
@@ -255,11 +218,8 @@ class ChessGame {
 
             // Handle captured pieces
             if (capturedPiece) {
-                const capturedColor = this.isWhitePiece(capturedPiece)
-                    ? 'white'
-                    : 'black';
-                const capturingColor =
-                    capturedColor === 'white' ? 'black' : 'white';
+                const capturedColor = this.isWhitePiece(capturedPiece) ? 'white' : 'black';
+                const capturingColor = capturedColor === 'white' ? 'black' : 'white';
                 this.capturedPieces[capturingColor].push(capturedPiece);
             }
 
@@ -268,14 +228,7 @@ class ChessGame {
         }
 
         // Add move to history
-        this.addMoveToHistory(
-            piece,
-            fromRow,
-            fromCol,
-            toRow,
-            toCol,
-            capturedPiece
-        );
+        this.addMoveToHistory(piece, fromRow, fromCol, toRow, toCol, capturedPiece);
 
         // Clear selection
         this.selectedSquare = null;
@@ -297,11 +250,7 @@ class ChessGame {
         }
 
         // AI move if vs AI and it's AI's turn
-        if (
-            this.vsAI &&
-            this.currentPlayer !== this.playerColor &&
-            !this.gameOver
-        ) {
+        if (this.vsAI && this.currentPlayer !== this.playerColor && !this.gameOver) {
             this.ai.makeMove(this.currentPlayer);
         }
     }
@@ -344,10 +293,7 @@ class ChessGame {
 
     getValidMoves(row, col) {
         const piece = this.board[row][col];
-        if (
-            !piece ||
-            this.isWhitePiece(piece) !== (this.currentPlayer === 'white')
-        ) {
+        if (!piece || this.isWhitePiece(piece) !== (this.currentPlayer === 'white')) {
             return [];
         }
 
@@ -376,9 +322,7 @@ class ChessGame {
         }
 
         // Filter out moves that would put own king in check
-        return moves.filter(
-            ([toRow, toCol]) => !this.wouldBeInCheck(row, col, toRow, toCol)
-        );
+        return moves.filter(([toRow, toCol]) => !this.wouldBeInCheck(row, col, toRow, toCol));
     }
 
     getPawnMoves(row, col) {
@@ -389,10 +333,7 @@ class ChessGame {
         const moves = [];
 
         // Forward moves
-        if (
-            this.isValidSquare(row + direction, col) &&
-            !this.board[row + direction][col]
-        ) {
+        if (this.isValidSquare(row + direction, col) && !this.board[row + direction][col]) {
             moves.push([row + direction, col]);
 
             // Double move from starting position
@@ -547,11 +488,7 @@ class ChessGame {
 
     canCastle(color, kingside) {
         const rights = this.castlingRights[color];
-        if (
-            this.isInCheck(color) ||
-            !(kingside ? rights.kingside : rights.queenside)
-        )
-            return false;
+        if (this.isInCheck(color) || !(kingside ? rights.kingside : rights.queenside)) return false;
 
         const [kingRow, kingCol] = this.kingPositions[color];
         const rookCol = kingside ? 7 : 0;
@@ -564,9 +501,7 @@ class ChessGame {
 
         // Check if king is in check or would pass through check
         for (let i = 0; i <= 2; i++) {
-            if (
-                this.isSquareAttacked(kingRow, kingCol + i * direction, color)
-            ) {
+            if (this.isSquareAttacked(kingRow, kingCol + i * direction, color)) {
                 return false;
             }
         }
@@ -626,14 +561,9 @@ class ChessGame {
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
                 const piece = this.board[r][c];
-                if (
-                    piece &&
-                    this.isWhitePiece(piece) === (attackingColor === 'white')
-                ) {
+                if (piece && this.isWhitePiece(piece) === (attackingColor === 'white')) {
                     const moves = this.getValidMovesForAttack(r, c);
-                    if (
-                        moves.some(move => move[0] === row && move[1] === col)
-                    ) {
+                    if (moves.some(move => move[0] === row && move[1] === col)) {
                         return true;
                     }
                 }
@@ -781,14 +711,7 @@ class ChessGame {
     }
 
     addMoveToHistory(piece, fromRow, fromCol, toRow, toCol, captured) {
-        const moveNotation = this.getMoveNotation(
-            piece,
-            fromRow,
-            fromCol,
-            toRow,
-            toCol,
-            captured
-        );
+        const moveNotation = this.getMoveNotation(piece, fromRow, fromCol, toRow, toCol, captured);
         this.moveHistory.push({
             notation: moveNotation,
             piece: piece,
@@ -813,28 +736,21 @@ class ChessGame {
         const fromSquare = files[fromCol] + (8 - fromRow);
         const toSquare = files[toCol] + (8 - toRow);
 
-        const pieceSymbol =
-            piece.toUpperCase() === 'P' ? '' : piece.toUpperCase();
+        const pieceSymbol = piece.toUpperCase() === 'P' ? '' : piece.toUpperCase();
         const captureSymbol = captured ? 'x' : '';
 
         return `${pieceSymbol}${captureSymbol}${toSquare}`;
     }
 
     updateCapturedPieces() {
-        const whiteContainers = document.querySelectorAll(
-            '#captured-by-white, #mobile-captured-by-white'
-        );
-        const blackContainers = document.querySelectorAll(
-            '#captured-by-black, #mobile-captured-by-black'
-        );
+        const whiteContainers = document.querySelectorAll('#captured-by-white, #mobile-captured-by-white');
+        const blackContainers = document.querySelectorAll('#captured-by-black, #mobile-captured-by-black');
 
         whiteContainers.forEach(container => {
             if (container) {
                 container.innerHTML = this.capturedPieces.white
                     .map(piece => {
-                        const color = this.isWhitePiece(piece)
-                            ? 'white'
-                            : 'black';
+                        const color = this.isWhitePiece(piece) ? 'white' : 'black';
                         const pieceType = piece.toLowerCase();
                         return `<img src="/images/${pieceType}_${color}.png" alt="${color} ${pieceType}" class="w-6 h-6 object-contain">`;
                     })
@@ -846,9 +762,7 @@ class ChessGame {
             if (container) {
                 container.innerHTML = this.capturedPieces.black
                     .map(piece => {
-                        const color = this.isWhitePiece(piece)
-                            ? 'white'
-                            : 'black';
+                        const color = this.isWhitePiece(piece) ? 'white' : 'black';
                         const pieceType = piece.toLowerCase();
                         return `<img src="/images/${pieceType}_${color}.png" alt="${color} ${pieceType}" class="w-6 h-6 object-contain">`;
                     })
@@ -869,21 +783,15 @@ class ChessGame {
             statusMessage = `🏆 ${winnerName} wins!`;
         }
 
-        const statusElements = document.querySelectorAll(
-            '#game-status, #mobile-game-status'
-        );
+        const statusElements = document.querySelectorAll('#game-status, #mobile-game-status');
         statusElements.forEach(element => {
             if (element) element.textContent = statusMessage;
         });
     }
 
     updateGameStatus() {
-        const statusElements = document.querySelectorAll(
-            '#mobile-chess-game-status, #chess-game-status'
-        );
-        const turnElements = document.querySelectorAll(
-            '#current-player-text, #mobile-current-player-text'
-        );
+        const statusElements = document.querySelectorAll('#mobile-chess-game-status, #chess-game-status');
+        const turnElements = document.querySelectorAll('#current-player-text, #mobile-current-player-text');
 
         statusElements.forEach(element => {
             if (element) {
@@ -893,15 +801,11 @@ class ChessGame {
                     if (this.winner === 'draw') {
                         element.textContent = '🤝 Draw! Good game!';
                     } else {
-                        const winnerName =
-                            this.winner.charAt(0).toUpperCase() +
-                            this.winner.slice(1);
+                        const winnerName = this.winner.charAt(0).toUpperCase() + this.winner.slice(1);
                         element.textContent = `🏆 ${winnerName} wins!`;
                     }
                 } else if (this.isInCheck(this.currentPlayer)) {
-                    const playerName =
-                        this.currentPlayer.charAt(0).toUpperCase() +
-                        this.currentPlayer.slice(1);
+                    const playerName = this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1);
                     element.textContent = `⚠️ ${playerName} is in check!`;
                 } else {
                     element.textContent = ''; // Empty during normal play
@@ -912,9 +816,7 @@ class ChessGame {
         turnElements.forEach(element => {
             if (element) {
                 if (this.gameStarted && !this.gameOver) {
-                    const playerName =
-                        this.currentPlayer.charAt(0).toUpperCase() +
-                        this.currentPlayer.slice(1);
+                    const playerName = this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1);
                     element.textContent = `${playerName}'s Turn`;
                 } else {
                     element.textContent = '';
@@ -934,9 +836,7 @@ function startGame(isWhite) {
     chessGame.setPlayerColor(isWhite);
 
     // Update status
-    const statusElements = document.querySelectorAll(
-        '#game-status, #mobile-game-status'
-    );
+    const statusElements = document.querySelectorAll('#game-status, #mobile-game-status');
     statusElements.forEach(element => {
         if (element) {
             element.textContent = `Playing as ${isWhite ? 'White' : 'Black'}`;

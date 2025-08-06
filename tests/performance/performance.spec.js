@@ -64,9 +64,7 @@ test.describe('Performance Tests', () => {
                 return (
                     aiThoughts &&
                     (aiThoughts.textContent.includes('Ready for a new game') ||
-                        aiThoughts.textContent.includes(
-                            'Make your first move'
-                        ) ||
+                        aiThoughts.textContent.includes('Make your first move') ||
                         aiThoughts.textContent.includes('Your turn'))
                 );
             },

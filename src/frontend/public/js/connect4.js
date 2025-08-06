@@ -15,9 +15,7 @@ class Connect4Game {
 
         this.initializeBoard();
         this.updateGameStatus();
-        this.updateAIThoughts(
-            'Ready to play Connect 4! Drop your red piece in any column.'
-        );
+        this.updateAIThoughts('Ready to play Connect 4! Drop your red piece in any column.');
     }
 
     initializeBoard() {
@@ -164,9 +162,7 @@ class Connect4Game {
 
         this.currentPlayer = 'player';
         this.updateGameStatus();
-        this.updateAIThoughts(
-            'Your turn! Look for opportunities to connect four pieces.'
-        );
+        this.updateAIThoughts('Your turn! Look for opportunities to connect four pieces.');
     }
 
     getBestAIMove() {
@@ -202,9 +198,7 @@ class Connect4Game {
         }
 
         // Prefer center columns
-        const preferredCols = [3, 2, 4, 1, 5, 0, 6].filter(col =>
-            availableCols.includes(col)
-        );
+        const preferredCols = [3, 2, 4, 1, 5, 0, 6].filter(col => availableCols.includes(col));
         return preferredCols[0];
     }
 
@@ -223,13 +217,7 @@ class Connect4Game {
             // Check positive direction
             let r = row + deltaRow;
             let c = col + deltaCol;
-            while (
-                r >= 0 &&
-                r < this.rows &&
-                c >= 0 &&
-                c < this.cols &&
-                this.board[r][c] === player
-            ) {
+            while (r >= 0 && r < this.rows && c >= 0 && c < this.cols && this.board[r][c] === player) {
                 count++;
                 line.push({ row: r, col: c });
                 r += deltaRow;
@@ -239,13 +227,7 @@ class Connect4Game {
             // Check negative direction
             r = row - deltaRow;
             c = col - deltaCol;
-            while (
-                r >= 0 &&
-                r < this.rows &&
-                c >= 0 &&
-                c < this.cols &&
-                this.board[r][c] === player
-            ) {
+            while (r >= 0 && r < this.rows && c >= 0 && c < this.cols && this.board[r][c] === player) {
                 count++;
                 line.unshift({ row: r, col: c });
                 r -= deltaRow;
@@ -264,9 +246,7 @@ class Connect4Game {
 
     highlightWinningLine() {
         this.winningLine.forEach(pos => {
-            const cells = document.querySelectorAll(
-                `[data-row="${pos.row}"][data-col="${pos.col}"]`
-            );
+            const cells = document.querySelectorAll(`[data-row="${pos.row}"][data-col="${pos.col}"]`);
             cells.forEach(cell => {
                 cell.classList.add('ring-4', 'ring-success', 'animate-pulse');
             });
@@ -288,19 +268,13 @@ class Connect4Game {
 
         if (result === 'player') {
             statusMessage = '🎉 You Win! Four in a row!';
-            this.updateAIThoughts(
-                'Excellent strategy! You connected four before me. Well played! 🏆'
-            );
+            this.updateAIThoughts('Excellent strategy! You connected four before me. Well played! 🏆');
         } else if (result === 'ai') {
             statusMessage = '🤖 AI Wins! Four in a row!';
-            this.updateAIThoughts(
-                'Victory! I managed to connect four pieces. Good game! 🎯'
-            );
+            this.updateAIThoughts('Victory! I managed to connect four pieces. Good game! 🎯');
         } else {
             statusMessage = "🤝 It's a Draw! Board is full!";
-            this.updateAIThoughts(
-                'A tie game! The board filled up without either of us connecting four. ⚖️'
-            );
+            this.updateAIThoughts('A tie game! The board filled up without either of us connecting four. ⚖️');
         }
 
         this.updateGameStatus(statusMessage);
@@ -313,9 +287,7 @@ class Connect4Game {
     }
 
     updateGameStatus(message = null) {
-        const statusElements = document.querySelectorAll(
-            '#game-status, #mobile-game-status'
-        );
+        const statusElements = document.querySelectorAll('#game-status, #mobile-game-status');
         const text =
             message ||
             (this.gameOver
@@ -356,9 +328,7 @@ class Connect4Game {
 
         this.initializeBoard();
         this.updateGameStatus();
-        this.updateAIThoughts(
-            'Game restarted! Ready for another round of Connect 4!'
-        );
+        this.updateAIThoughts('Game restarted! Ready for another round of Connect 4!');
 
         if (!this.playerStarts) {
             this.updateAIThoughts("I'll start this round!");
@@ -385,9 +355,7 @@ class Connect4Game {
             this.board[row][col] = 'player';
             if (this.checkWinner(row, col, 'player')) {
                 this.board[row][col] = null;
-                this.updateAIThoughts(
-                    `💡 Hint: You can win by playing column ${col + 1}! 🎯`
-                );
+                this.updateAIThoughts(`💡 Hint: You can win by playing column ${col + 1}! 🎯`);
                 return;
             }
             this.board[row][col] = null;
@@ -399,9 +367,7 @@ class Connect4Game {
             this.board[row][col] = 'ai';
             if (this.checkWinner(row, col, 'ai')) {
                 this.board[row][col] = null;
-                this.updateAIThoughts(
-                    `💡 Hint: Block me by playing column ${col + 1}! 🛡️`
-                );
+                this.updateAIThoughts(`💡 Hint: Block me by playing column ${col + 1}! 🛡️`);
                 return;
             }
             this.board[row][col] = null;
@@ -409,21 +375,13 @@ class Connect4Game {
 
         // General strategy hint
         if (availableCols.includes(3)) {
-            this.updateAIThoughts(
-                '💡 Hint: Try the center column (4) for better control! 🎯'
-            );
+            this.updateAIThoughts('💡 Hint: Try the center column (4) for better control! 🎯');
         } else {
-            const preferredCols = [2, 4, 1, 5].filter(col =>
-                availableCols.includes(col)
-            );
+            const preferredCols = [2, 4, 1, 5].filter(col => availableCols.includes(col));
             if (preferredCols.length > 0) {
-                this.updateAIThoughts(
-                    `💡 Hint: Try column ${preferredCols[0] + 1} for good positioning! 📐`
-                );
+                this.updateAIThoughts(`💡 Hint: Try column ${preferredCols[0] + 1} for good positioning! 📐`);
             } else {
-                this.updateAIThoughts(
-                    '💡 Hint: Look for opportunities to build multiple threats! 🧠'
-                );
+                this.updateAIThoughts('💡 Hint: Look for opportunities to build multiple threats! 🧠');
             }
         }
     }

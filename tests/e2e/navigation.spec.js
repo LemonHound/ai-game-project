@@ -7,11 +7,7 @@ test.describe('Site Navigation', () => {
 
     test('navigation links work correctly', async ({ page }) => {
         // Test Home link (if exists)
-        const homeLink = page
-            .locator(
-                'nav a[href="/"], a:has-text("Home"), [data-testid="home-link"]'
-            )
-            .first();
+        const homeLink = page.locator('nav a[href="/"], a:has-text("Home"), [data-testid="home-link"]').first();
 
         if (await homeLink.isVisible()) {
             await homeLink.click();
@@ -20,11 +16,7 @@ test.describe('Site Navigation', () => {
         }
 
         // Test Games link
-        const gamesLink = page
-            .locator(
-                'nav a[href="/games"], a:has-text("Games"), [data-testid="games-link"]'
-            )
-            .first();
+        const gamesLink = page.locator('nav a[href="/games"], a:has-text("Games"), [data-testid="games-link"]').first();
 
         if (await gamesLink.isVisible()) {
             await gamesLink.click();
@@ -37,11 +29,7 @@ test.describe('Site Navigation', () => {
         }
 
         // Test About link
-        const aboutLink = page
-            .locator(
-                'nav a[href="/about"], a:has-text("About"), [data-testid="about-link"]'
-            )
-            .first();
+        const aboutLink = page.locator('nav a[href="/about"], a:has-text("About"), [data-testid="about-link"]').first();
 
         if (await aboutLink.isVisible()) {
             await aboutLink.click();
@@ -61,8 +49,7 @@ test.describe('Site Navigation', () => {
         // Also check sidebar games since that's where your game links are
         const sidebarGameLinks = page.locator('[data-testid*="game-card"]');
 
-        const allGameLinks =
-            (await gameLinks.count()) + (await sidebarGameLinks.count());
+        const allGameLinks = (await gameLinks.count()) + (await sidebarGameLinks.count());
 
         if (allGameLinks > 0) {
             // Try homepage links first, then sidebar links
@@ -81,15 +68,11 @@ test.describe('Site Navigation', () => {
                 await expect(page.url()).toContain('/game/');
 
                 // Should not be 404
-                await expect(page.locator('h1')).not.toContainText(
-                    /404|Not Found|Error/
-                );
+                await expect(page.locator('h1')).not.toContainText(/404|Not Found|Error/);
             }
         } else {
             // If no game links found, that's okay - just log it
-            console.warn(
-                'No game links found on homepage - this might be expected'
-            );
+            console.warn('No game links found on homepage - this might be expected');
             expect(true).toBe(true); // Pass the test
         }
     });
@@ -98,9 +81,7 @@ test.describe('Site Navigation', () => {
         await page.goto('/games');
 
         // Look for individual game links in the featured games section
-        const gameCards = page.locator(
-            '#featured-games a[href*="/game/"], #featured-games .card a'
-        );
+        const gameCards = page.locator('#featured-games a[href*="/game/"], #featured-games .card a');
 
         if ((await gameCards.count()) > 0) {
             const firstGame = gameCards.first();
@@ -130,9 +111,7 @@ test.describe('Site Navigation', () => {
 
         // Look for breadcrumbs or back links
         const breadcrumbs = page.locator('[data-testid="breadcrumbs"]');
-        const backLink = page.locator(
-            'a:has-text("Back"), button:has-text("Back"), [data-testid="back-btn"]'
-        );
+        const backLink = page.locator('a:has-text("Back"), button:has-text("Back"), [data-testid="back-btn"]');
 
         if ((await breadcrumbs.count()) > 0) {
             // Test breadcrumb navigation
@@ -169,9 +148,7 @@ test.describe('Site Navigation', () => {
             await expect(mobileMenu.first()).toBeVisible();
 
             // Test mobile menu links
-            const mobileGamesLink = mobileMenu
-                .locator('a[href="/games"], a:has-text("Games")')
-                .first();
+            const mobileGamesLink = mobileMenu.locator('a[href="/games"], a:has-text("Games")').first();
             if (await mobileGamesLink.isVisible()) {
                 await mobileGamesLink.click();
                 await expect(page).toHaveURL('/games');
@@ -213,9 +190,7 @@ test.describe('Site Navigation', () => {
             await page.waitForTimeout(1000);
 
             // Look for search results
-            const results = page.locator(
-                '.search-results, .results, .filtered'
-            );
+            const results = page.locator('.search-results, .results, .filtered');
             if ((await results.count()) > 0) {
                 await expect(results.first()).toBeVisible();
             }
@@ -224,9 +199,7 @@ test.describe('Site Navigation', () => {
 
     test('external links open correctly', async ({ page }) => {
         // Look for external links (social media, docs, etc.)
-        const externalLinks = page.locator(
-            'a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"])'
-        );
+        const externalLinks = page.locator('a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"])');
 
         if ((await externalLinks.count()) > 0) {
             const firstExternal = externalLinks.first();

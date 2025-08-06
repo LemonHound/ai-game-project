@@ -1,10 +1,6 @@
 // tests/api/api-endpoints.spec.js
 const { test, expect } = require('@playwright/test');
-const {
-    addAuth,
-    getSessionId,
-    createTestUser,
-} = require('../helpers/auth-helper');
+const { addAuth, getSessionId, createTestUser } = require('../helpers/auth-helper');
 const { verifyApiResponse } = require('../helpers/test-utils');
 
 test.describe('API Endpoints', () => {
@@ -36,9 +32,7 @@ test.describe('API Endpoints', () => {
     });
 
     test.describe('Game API (Authenticated)', () => {
-        test('GET /api/game/:gameId/info returns game info', async ({
-            request,
-        }) => {
+        test('GET /api/game/:gameId/info returns game info', async ({ request }) => {
             const auth = addAuth(request);
             const response = await auth.get('/api/game/tic-tac-toe/info');
 
@@ -53,9 +47,7 @@ test.describe('API Endpoints', () => {
             }
         });
 
-        test('POST /api/game/:gameId/start creates game session', async ({
-            request,
-        }) => {
+        test('POST /api/game/:gameId/start creates game session', async ({ request }) => {
             const auth = addAuth(request);
             const response = await auth.post('/api/game/tic-tac-toe/start');
 
@@ -77,9 +69,7 @@ test.describe('API Endpoints', () => {
     });
 
     test.describe('Authentication API', () => {
-        test('GET /api/auth/me returns 401 when not authenticated', async ({
-            request,
-        }) => {
+        test('GET /api/auth/me returns 401 when not authenticated', async ({ request }) => {
             const response = await request.get('/api/auth/me');
             expect(response.status()).toBe(401);
 
@@ -87,9 +77,7 @@ test.describe('API Endpoints', () => {
             expect(data.error).toContain('No session provided');
         });
 
-        test('POST /api/auth/login with valid credentials', async ({
-            request,
-        }) => {
+        test('POST /api/auth/login with valid credentials', async ({ request }) => {
             const auth = addAuth(request);
             const response = await auth.post('/api/auth/login', {
                 data: {
@@ -119,9 +107,7 @@ test.describe('API Endpoints', () => {
             expect(cookies).toContain('sessionId');
         });
 
-        test('POST /api/auth/login with invalid credentials', async ({
-            request,
-        }) => {
+        test('POST /api/auth/login with invalid credentials', async ({ request }) => {
             // Use addAuth helper to automatically get CSRF token
             const auth = addAuth(request);
             const response = await auth.post('/api/auth/login', {
@@ -137,9 +123,7 @@ test.describe('API Endpoints', () => {
             expect(data.error).toContain('Invalid credentials');
         });
 
-        test('POST /api/auth/register creates new user', async ({
-            request,
-        }) => {
+        test('POST /api/auth/register creates new user', async ({ request }) => {
             const testUser = createTestUser();
 
             // Use addAuth helper to automatically get CSRF token
@@ -169,9 +153,7 @@ test.describe('API Endpoints', () => {
             expect(cookies).toContain('sessionId');
         });
 
-        test('POST /api/auth/register with existing email returns conflict', async ({
-            request,
-        }) => {
+        test('POST /api/auth/register with existing email returns conflict', async ({ request }) => {
             // Use addAuth helper to automatically get CSRF token
             const auth = addAuth(request);
             const response = await auth.post('/api/auth/register', {
@@ -189,9 +171,7 @@ test.describe('API Endpoints', () => {
             expect(data.error).toContain('Email already exists');
         });
 
-        test('authenticated requests work with session ID', async ({
-            request,
-        }) => {
+        test('authenticated requests work with session ID', async ({ request }) => {
             const auth = addAuth(request);
             const response = await auth.get('/api/auth/me');
 
@@ -209,9 +189,7 @@ test.describe('API Endpoints', () => {
             expect(userData.email).toBe('demo@aigamehub.com');
         });
 
-        test('GET /api/auth/stats returns user statistics', async ({
-            request,
-        }) => {
+        test('GET /api/auth/stats returns user statistics', async ({ request }) => {
             const auth = addAuth(request);
 
             // Debug: Let's see what routes are actually being hit
@@ -235,21 +213,14 @@ test.describe('API Endpoints', () => {
                     const healthData = await healthResponse.json();
                     console.log('Auth health data:', healthData);
                 } else {
-                    console.log(
-                        'Auth health failed:',
-                        await healthResponse.text()
-                    );
+                    console.log('Auth health failed:', await healthResponse.text());
                 }
             }
 
             expect(response.ok()).toBeTruthy(); // Should be 200, not 400
 
             const stats = await response.json();
-            verifyApiResponse(stats, [
-                'gamesPlayed',
-                'winRate',
-                'aiContributions',
-            ]);
+            verifyApiResponse(stats, ['gamesPlayed', 'winRate', 'aiContributions']);
 
             expect(typeof stats.gamesPlayed).toBe('number');
             expect(typeof stats.winRate).toBe('number');
@@ -318,9 +289,7 @@ test.describe('API Endpoints', () => {
             expect(response.status()).toBe(404);
         });
 
-        test('malformed JSON requests are handled gracefully', async ({
-            request,
-        }) => {
+        test('malformed JSON requests are handled gracefully', async ({ request }) => {
             const response = await request.post('/api/auth/login', {
                 data: 'invalid json string',
                 headers: {
@@ -331,9 +300,7 @@ test.describe('API Endpoints', () => {
             expect([400, 500]).toContain(response.status());
         });
 
-        test('missing required fields return appropriate errors', async ({
-            request,
-        }) => {
+        test('missing required fields return appropriate errors', async ({ request }) => {
             // Use addAuth helper to automatically get CSRF token
             const auth = addAuth(request);
             const response = await auth.post('/api/auth/login', {
@@ -348,8 +315,7 @@ test.describe('API Endpoints', () => {
         test('CORS headers are present', async ({ request }) => {
             const response = await request.get('/api/health');
 
-            const corsHeader =
-                response.headers()['access-control-allow-origin'];
+            const corsHeader = response.headers()['access-control-allow-origin'];
             // CORS should be configured (either * or specific origin)
             expect(corsHeader).toBeDefined();
         });
