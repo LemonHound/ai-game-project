@@ -24,12 +24,7 @@ class BasicChessAI {
         setTimeout(() => {
             const move = this.selectMove(color);
             if (move) {
-                this.game.makeMove(
-                    move.fromRow,
-                    move.fromCol,
-                    move.toRow,
-                    move.toCol
-                );
+                this.game.makeMove(move.fromRow, move.fromCol, move.toRow, move.toCol);
             }
         }, delay);
     }
@@ -64,17 +59,13 @@ class BasicChessAI {
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const piece = this.game.board[row][col];
-                if (
-                    piece &&
-                    this.game.isWhitePiece(piece) === (color === 'white')
-                ) {
+                if (piece && this.game.isWhitePiece(piece) === (color === 'white')) {
                     const moves = this.game.getValidMoves(row, col);
 
                     for (const [toRow, toCol] of moves) {
                         const target = this.game.board[toRow][toCol];
                         if (target) {
-                            const value =
-                                this.pieceValues[target.toLowerCase()];
+                            const value = this.pieceValues[target.toLowerCase()];
                             if (value > bestValue) {
                                 bestValue = value;
                                 bestMove = {
@@ -100,21 +91,12 @@ class BasicChessAI {
 
         for (const col of centerCols) {
             const piece = this.game.board[pawnRow][col];
-            if (
-                piece &&
-                piece.toLowerCase() === 'p' &&
-                this.game.isWhitePiece(piece) === isWhite
-            ) {
+            if (piece && piece.toLowerCase() === 'p' && this.game.isWhitePiece(piece) === isWhite) {
                 const moves = this.game.getValidMoves(pawnRow, col);
-                const forwardMoves = moves.filter(([toRow]) =>
-                    isWhite ? toRow < pawnRow : toRow > pawnRow
-                );
+                const forwardMoves = moves.filter(([toRow]) => (isWhite ? toRow < pawnRow : toRow > pawnRow));
 
                 if (forwardMoves.length > 0) {
-                    const move =
-                        forwardMoves[
-                            Math.floor(Math.random() * forwardMoves.length)
-                        ];
+                    const move = forwardMoves[Math.floor(Math.random() * forwardMoves.length)];
                     return {
                         fromRow: pawnRow,
                         fromCol: col,
@@ -136,22 +118,12 @@ class BasicChessAI {
         for (const pieceType of developPieces) {
             for (let col = 0; col < 8; col++) {
                 const piece = this.game.board[backRow][col];
-                if (
-                    piece &&
-                    piece.toLowerCase() === pieceType &&
-                    this.game.isWhitePiece(piece) === isWhite
-                ) {
+                if (piece && piece.toLowerCase() === pieceType && this.game.isWhitePiece(piece) === isWhite) {
                     const moves = this.game.getValidMoves(backRow, col);
-                    const safeMoves = moves.filter(
-                        ([toRow, toCol]) =>
-                            !this.isSquareUnderAttack(toRow, toCol, color)
-                    );
+                    const safeMoves = moves.filter(([toRow, toCol]) => !this.isSquareUnderAttack(toRow, toCol, color));
 
                     if (safeMoves.length > 0) {
-                        const move =
-                            safeMoves[
-                                Math.floor(Math.random() * safeMoves.length)
-                            ];
+                        const move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
                         return {
                             fromRow: backRow,
                             fromCol: col,
@@ -171,15 +143,11 @@ class BasicChessAI {
         const moves = this.game.getValidMoves(kingRow, kingCol);
 
         // Look for castling moves (king moves 2 squares)
-        const castleMoves = moves.filter(
-            ([, toCol]) => Math.abs(toCol - kingCol) === 2
-        );
+        const castleMoves = moves.filter(([, toCol]) => Math.abs(toCol - kingCol) === 2);
 
         if (castleMoves.length > 0) {
             // Prefer kingside castling
-            const kingsideCastle = castleMoves.find(
-                ([, toCol]) => toCol > kingCol
-            );
+            const kingsideCastle = castleMoves.find(([, toCol]) => toCol > kingCol);
             const move = kingsideCastle || castleMoves[0];
             return {
                 fromRow: kingRow,
@@ -198,15 +166,9 @@ class BasicChessAI {
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const piece = this.game.board[row][col];
-                if (
-                    piece &&
-                    this.game.isWhitePiece(piece) === (color === 'white')
-                ) {
+                if (piece && this.game.isWhitePiece(piece) === (color === 'white')) {
                     const moves = this.game.getValidMoves(row, col);
-                    const safeMoves = moves.filter(
-                        ([toRow, toCol]) =>
-                            !this.isSquareUnderAttack(toRow, toCol, color)
-                    );
+                    const safeMoves = moves.filter(([toRow, toCol]) => !this.isSquareUnderAttack(toRow, toCol, color));
 
                     for (const [toRow, toCol] of safeMoves) {
                         allMoves.push({
@@ -225,10 +187,7 @@ class BasicChessAI {
             for (let row = 0; row < 8; row++) {
                 for (let col = 0; col < 8; col++) {
                     const piece = this.game.board[row][col];
-                    if (
-                        piece &&
-                        this.game.isWhitePiece(piece) === (color === 'white')
-                    ) {
+                    if (piece && this.game.isWhitePiece(piece) === (color === 'white')) {
                         const moves = this.game.getValidMoves(row, col);
                         for (const [toRow, toCol] of moves) {
                             allMoves.push({
@@ -243,9 +202,7 @@ class BasicChessAI {
             }
         }
 
-        return allMoves.length > 0
-            ? allMoves[Math.floor(Math.random() * allMoves.length)]
-            : null;
+        return allMoves.length > 0 ? allMoves[Math.floor(Math.random() * allMoves.length)] : null;
     }
 
     isSquareUnderAttack(row, col, defendingColor) {

@@ -125,9 +125,7 @@ class TicTacToeEngine extends GameEngineInterface {
 
     serializeState(gameState) {
         const boardState = gameState.board.map(cell => cell || '_').join('');
-        const moveSequence = gameState.moveHistory
-            .map(move => `${move.player}:${move.position}`)
-            .join(',');
+        const moveSequence = gameState.moveHistory.map(move => `${move.player}:${move.position}`).join(',');
 
         return {
             boardState,
@@ -158,10 +156,7 @@ class TicTacToeEngine extends GameEngineInterface {
                 return { position: this._getRandomMove(availablePositions) };
             case 'medium':
                 return {
-                    position: this._getMediumMove(
-                        gameState,
-                        availablePositions
-                    ),
+                    position: this._getMediumMove(gameState, availablePositions),
                 };
             case 'hard':
                 return {
@@ -169,18 +164,13 @@ class TicTacToeEngine extends GameEngineInterface {
                 };
             default:
                 return {
-                    position: this._getMediumMove(
-                        gameState,
-                        availablePositions
-                    ),
+                    position: this._getMediumMove(gameState, availablePositions),
                 };
         }
     }
 
     _getRandomMove(availablePositions) {
-        return availablePositions[
-            Math.floor(Math.random() * availablePositions.length)
-        ];
+        return availablePositions[Math.floor(Math.random() * availablePositions.length)];
     }
 
     _getMediumMove(gameState, availablePositions) {
@@ -196,9 +186,7 @@ class TicTacToeEngine extends GameEngineInterface {
         if (availablePositions.includes(4)) return 4;
 
         // Take corners
-        const corners = [0, 2, 6, 8].filter(pos =>
-            availablePositions.includes(pos)
-        );
+        const corners = [0, 2, 6, 8].filter(pos => availablePositions.includes(pos));
         if (corners.length > 0) {
             return corners[Math.floor(Math.random() * corners.length)];
         }
@@ -227,16 +215,9 @@ class TicTacToeEngine extends GameEngineInterface {
     _findWinningMove(gameState, player) {
         for (const line of this.winningLines) {
             const [a, b, c] = line;
-            const positions = [
-                gameState.board[a],
-                gameState.board[b],
-                gameState.board[c],
-            ];
+            const positions = [gameState.board[a], gameState.board[b], gameState.board[c]];
 
-            if (
-                positions.filter(p => p === player).length === 2 &&
-                positions.filter(p => p === null).length === 1
-            ) {
+            if (positions.filter(p => p === player).length === 2 && positions.filter(p => p === null).length === 1) {
                 // Found a winning opportunity
                 if (gameState.board[a] === null) return a;
                 if (gameState.board[b] === null) return b;

@@ -28,44 +28,26 @@ class GameAuthUtils {
         return window.authManager.waitForReady(maxWaitTime);
     }
 
-    static async checkAuthBeforeAction(
-        actionName = 'play',
-        aiThoughtsElementId = 'ai-thoughts'
-    ) {
+    static async checkAuthBeforeAction(actionName = 'play', aiThoughtsElementId = 'ai-thoughts') {
         const isReady = await this.waitForAuthManager();
 
         if (!isReady || !window.authManager) {
-            this.updateAIThoughts(
-                aiThoughtsElementId,
-                'Authentication system is loading... Please wait.'
-            );
+            this.updateAIThoughts(aiThoughtsElementId, 'Authentication system is loading... Please wait.');
             return false;
         }
 
-        return window.authManager.checkAuthBeforeGameAction(
-            actionName,
-            aiThoughtsElementId
-        );
+        return window.authManager.checkAuthBeforeGameAction(actionName, aiThoughtsElementId);
     }
 
-    static async handleGameApiCall(
-        apiCall,
-        aiThoughtsElementId = 'ai-thoughts'
-    ) {
+    static async handleGameApiCall(apiCall, aiThoughtsElementId = 'ai-thoughts') {
         const isReady = await this.waitForAuthManager();
 
         if (!isReady || !window.authManager) {
-            this.updateAIThoughts(
-                aiThoughtsElementId,
-                'Authentication system is loading... Please wait.'
-            );
+            this.updateAIThoughts(aiThoughtsElementId, 'Authentication system is loading... Please wait.');
             return null;
         }
 
-        return await window.authManager.handleGameApiCall(
-            apiCall,
-            aiThoughtsElementId
-        );
+        return await window.authManager.handleGameApiCall(apiCall, aiThoughtsElementId);
     }
 
     static updateAIThoughts(elementId, message) {
@@ -83,11 +65,7 @@ class GameAuthUtils {
 
     static async isAuthenticated() {
         const isReady = await this.waitForAuthManager();
-        return (
-            isReady &&
-            window.authManager &&
-            window.authManager.isAuthenticatedForGames()
-        );
+        return isReady && window.authManager && window.authManager.isAuthenticatedForGames();
     }
 }
 

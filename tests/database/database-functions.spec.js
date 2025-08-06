@@ -10,9 +10,7 @@ test.describe('Database Functions', () => {
             // This confirms database connectivity for function testing
         });
 
-        test('cleanup_abandoned_tic_tac_toe_games function works', async ({
-            request,
-        }) => {
+        test('cleanup_abandoned_tic_tac_toe_games function works', async ({ request }) => {
             const auth = addAuth(request);
             const cleanupResponse = await auth.post('/api/tic-tac-toe/cleanup');
             expect(cleanupResponse.ok()).toBeTruthy();
@@ -25,9 +23,7 @@ test.describe('Database Functions', () => {
     });
 
     test.describe('Upsert Functions', () => {
-        test('upsert_tic_tac_toe_state handles new and existing states', async ({
-            request,
-        }) => {
+        test('upsert_tic_tac_toe_state handles new and existing states', async ({ request }) => {
             const auth = addAuth(request);
 
             // Make the same move twice (in different games) to test upsert
@@ -46,14 +42,10 @@ test.describe('Database Functions', () => {
             }
 
             // Verify the state count increased
-            const statesResponse = await request.get(
-                '/api/tic-tac-toe/game_states'
-            );
+            const statesResponse = await request.get('/api/tic-tac-toe/game_states');
             const states = await statesResponse.json();
 
-            const centerState = states.find(
-                s => s.board_positions.charAt(4) === 'X' && s.move_count === 1
-            );
+            const centerState = states.find(s => s.board_positions.charAt(4) === 'X' && s.move_count === 1);
             if (centerState) {
                 expect(centerState.count).toBeGreaterThanOrEqual(1);
             }
@@ -61,9 +53,7 @@ test.describe('Database Functions', () => {
     });
 
     test.describe('Game Management Functions', () => {
-        test('start and complete game functions work together', async ({
-            request,
-        }) => {
+        test('start and complete game functions work together', async ({ request }) => {
             const auth = addAuth(request);
 
             // Start game

@@ -12,10 +12,7 @@ function initializePageBehavior() {
     modals.forEach(modal => {
         const observer = new MutationObserver(function (mutations) {
             mutations.forEach(function (mutation) {
-                if (
-                    mutation.type === 'attributes' &&
-                    mutation.attributeName === 'class'
-                ) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                     if (modal.classList.contains('modal-open')) {
                         const firstInput = modal.querySelector('input');
                         if (firstInput) {

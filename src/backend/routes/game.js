@@ -20,8 +20,7 @@ router.post('/:gameId/start', async (req, res) => {
             return res.status(401).json({
                 error: 'Authentication required',
                 message: 'You need to be logged in to play games',
-                aiThought:
-                    'I can only play with authenticated users - please log in first!',
+                aiThought: 'I can only play with authenticated users - please log in first!',
                 requiresAuth: true,
             });
         }
@@ -64,12 +63,13 @@ router.post('/:gameId/move', async (req, res) => {
         const { gameId } = req.params;
         const { sessionId, move } = req.body;
 
+        setTimeout(() => {}, 1000);
+
         if (!req.user || !req.user.id) {
             return res.status(401).json({
                 error: 'Authentication required',
                 message: 'You need to be logged in to make moves',
-                aiThought:
-                    'I can only play with authenticated users - please log in to continue!',
+                aiThought: 'I can only play with authenticated users - please log in to continue!',
                 requiresAuth: true,
             });
         }
@@ -85,9 +85,7 @@ router.post('/:gameId/move', async (req, res) => {
 
         // Check if another request is already processing this session
         if (session.isProcessing) {
-            return res
-                .status(429)
-                .json({ error: 'Move already being processed' });
+            return res.status(429).json({ error: 'Move already being processed' });
         }
 
         // Lock session for processing
@@ -115,14 +113,10 @@ router.post('/:gameId/move', async (req, res) => {
                     // Check if error is due to duplicate key (race condition)
                     if (
                         error.code === '23505' &&
-                        (error.constraint ===
-                            'tic_tac_toe_games_game_session_id_key' ||
-                            error.constraint ===
-                                'checkers_games_game_session_id_key')
+                        (error.constraint === 'tic_tac_toe_games_game_session_id_key' ||
+                            error.constraint === 'checkers_games_game_session_id_key')
                     ) {
-                        console.log(
-                            `Game session ${sessionId} already initialized by another request`
-                        );
+                        console.log(`Game session ${sessionId} already initialized by another request`);
                         session.isPersisted = true;
                     } else {
                         throw error; // Re-throw if it's a different error
@@ -313,15 +307,9 @@ async function updateGameStateInDB(session, engine) {
     const serialized = engine.serializeState(session);
 
     if (engine.getEngineId() === 'tic-tac-toe') {
-        await pool.query('SELECT upsert_tic_tac_toe_state($1, $2)', [
-            serialized.boardState,
-            session.moveCount,
-        ]);
+        await pool.query('SELECT upsert_tic_tac_toe_state($1, $2)', [serialized.boardState, session.moveCount]);
     } else if (engine.getEngineId() === 'checkers') {
-        await pool.query('SELECT upsert_checkers_state($1, $2)', [
-            serialized.boardState,
-            session.moveCount,
-        ]);
+        await pool.query('SELECT upsert_checkers_state($1, $2)', [serialized.boardState, session.moveCount]);
     }
 }
 
@@ -336,30 +324,24 @@ async function completeGameInDB(session, engine) {
         const winner = session.winner === 'tie' ? 'T' : session.winner;
 
         if (engine.getEngineId() === 'tic-tac-toe') {
-            const result = await pool.query(
-                'SELECT complete_tic_tac_toe_game($1, $2, $3, $4, $5, $6)',
-                [
-                    session.sessionId,
-                    serialized.metadata.moveSequence,
-                    winner,
-                    session.moveCount,
-                    0,
-                    session.userId,
-                ]
-            );
+            const result = await pool.query('SELECT complete_tic_tac_toe_game($1, $2, $3, $4, $5, $6)', [
+                session.sessionId,
+                serialized.metadata.moveSequence,
+                winner,
+                session.moveCount,
+                0,
+                session.userId,
+            ]);
             console.log('tic-tac-toe completion result:', result.rows[0]);
         } else if (engine.getEngineId() === 'checkers') {
-            const result = await pool.query(
-                'SELECT complete_checkers_game($1, $2, $3, $4, $5, $6)',
-                [
-                    session.sessionId,
-                    serialized.metadata.moveSequence,
-                    winner,
-                    session.moveCount,
-                    0, // final_score placeholder
-                    session.userId,
-                ]
-            );
+            const result = await pool.query('SELECT complete_checkers_game($1, $2, $3, $4, $5, $6)', [
+                session.sessionId,
+                serialized.metadata.moveSequence,
+                winner,
+                session.moveCount,
+                0, // final_score placeholder
+                session.userId,
+            ]);
             console.log('checkers completion result:', result.rows[0]);
         }
     } catch (error) {
@@ -409,9 +391,7 @@ async function cleanupAbandonedGames(gameId) {
     let result;
 
     if (gameId === 'tic-tac-toe') {
-        result = await pool.query(
-            'SELECT cleanup_abandoned_tic_tac_toe_games()'
-        );
+        result = await pool.query('SELECT cleanup_abandoned_tic_tac_toe_games()');
         return result.rows[0].cleanup_abandoned_tic_tac_toe_games;
     } else if (gameId === 'checkers') {
         result = await pool.query('SELECT cleanup_abandoned_checkers_games()');
@@ -421,14 +401,11 @@ async function cleanupAbandonedGames(gameId) {
     }
 }
 
-// Game metadata helpers (could be moved to game engines)
+// Game metadata helpers
 function getGameDescription(gameId) {
     const descriptions = {
         'tic-tac-toe': 'Classic game with adaptive AI opponent',
-        checkers:
-            'Classic checkers with an AI that adapts to your tactical preferences',
-        snake: 'Snake game with predictive AI assistance',
-        puzzle: 'Dynamic puzzles that adapt to your skill',
+        checkers: 'Classic checkers with an AI that adapts to your tactical preferences',
         chess: 'Chess with AI that learns your style',
     };
     return descriptions[gameId] || 'Fun game with AI features';

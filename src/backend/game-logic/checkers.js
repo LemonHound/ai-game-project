@@ -114,19 +114,11 @@ class CheckersEngine extends GameEngineInterface {
             return false;
         }
 
-        if (
-            gameState.currentPlayer === 'R' &&
-            !piece.includes('R') &&
-            !piece.includes('r')
-        ) {
+        if (gameState.currentPlayer === 'R' && !piece.includes('R') && !piece.includes('r')) {
             console.log('red attempted to move a black piece');
             return false;
         }
-        if (
-            gameState.currentPlayer === 'B' &&
-            !piece.includes('B') &&
-            !piece.includes('b')
-        ) {
+        if (gameState.currentPlayer === 'B' && !piece.includes('B') && !piece.includes('b')) {
             console.log('black attempted to move a red piece');
             return false;
         }
@@ -171,10 +163,7 @@ class CheckersEngine extends GameEngineInterface {
         }
 
         if (Math.abs(rowDiff) === 1) {
-            console.log(
-                'only moved one row. checking for captures.  result:',
-                captures.length
-            );
+            console.log('only moved one row. checking for captures.  result:', captures.length);
             return captures.length === 0;
         }
 
@@ -193,13 +182,9 @@ class CheckersEngine extends GameEngineInterface {
             const capturePos = this.indexToRowCol(captureIndex);
 
             const expectedCaptureRow = fromPos.row + rowDiff / 2;
-            const expectedCaptureCol =
-                fromPos.col + (toPos.col - fromPos.col) / 2;
+            const expectedCaptureCol = fromPos.col + (toPos.col - fromPos.col) / 2;
 
-            if (
-                capturePos.row !== expectedCaptureRow ||
-                capturePos.col !== expectedCaptureCol
-            ) {
+            if (capturePos.row !== expectedCaptureRow || capturePos.col !== expectedCaptureCol) {
                 console.log(
                     'capture position is different than expected. got col',
                     capturePos.col,
@@ -215,19 +200,11 @@ class CheckersEngine extends GameEngineInterface {
 
             const capturedPiece = gameState.board[captureIndex];
 
-            if (
-                gameState.currentPlayer === 'R' &&
-                !capturedPiece.includes('B') &&
-                !capturedPiece.includes('b')
-            ) {
+            if (gameState.currentPlayer === 'R' && !capturedPiece.includes('B') && !capturedPiece.includes('b')) {
                 console.log('red attempted to capture red');
                 return false;
             }
-            if (
-                gameState.currentPlayer === 'B' &&
-                !capturedPiece.includes('R') &&
-                !capturedPiece.includes('r')
-            ) {
+            if (gameState.currentPlayer === 'B' && !capturedPiece.includes('R') && !capturedPiece.includes('r')) {
                 console.log('black attempted to capture black');
                 return false;
             }
@@ -331,15 +308,8 @@ class CheckersEngine extends GameEngineInterface {
             const landCol = fromPos.col + dir.col * 2;
 
             // Check bounds
-            if (
-                captureRow < 0 ||
-                captureRow >= 8 ||
-                captureCol < 0 ||
-                captureCol >= 8
-            )
-                continue;
-            if (landRow < 0 || landRow >= 8 || landCol < 0 || landCol >= 8)
-                continue;
+            if (captureRow < 0 || captureRow >= 8 || captureCol < 0 || captureCol >= 8) continue;
+            if (landRow < 0 || landRow >= 8 || landCol < 0 || landCol >= 8) continue;
 
             // Check if landing square is playable
             if (!this.isPlayableSquare(landRow, landCol)) continue;
@@ -354,12 +324,8 @@ class CheckersEngine extends GameEngineInterface {
 
             // Must capture opponent piece
             const isOpponent =
-                (gameState.currentPlayer === 'R' &&
-                    (capturedPiece.includes('B') ||
-                        capturedPiece.includes('b'))) ||
-                (gameState.currentPlayer === 'B' &&
-                    (capturedPiece.includes('R') ||
-                        capturedPiece.includes('r')));
+                (gameState.currentPlayer === 'R' && (capturedPiece.includes('B') || capturedPiece.includes('b'))) ||
+                (gameState.currentPlayer === 'B' && (capturedPiece.includes('R') || capturedPiece.includes('r')));
 
             if (isOpponent) {
                 captureMoves.push({
@@ -401,15 +367,9 @@ class CheckersEngine extends GameEngineInterface {
         const pieces = [];
         for (let i = 0; i < 64; i++) {
             const piece = gameState.board[i];
-            if (
-                player === 'R' &&
-                (piece.includes('R') || piece.includes('r'))
-            ) {
+            if (player === 'R' && (piece.includes('R') || piece.includes('r'))) {
                 pieces.push(i);
-            } else if (
-                player === 'B' &&
-                (piece.includes('B') || piece.includes('b'))
-            ) {
+            } else if (player === 'B' && (piece.includes('B') || piece.includes('b'))) {
                 pieces.push(i);
             }
         }
@@ -418,10 +378,7 @@ class CheckersEngine extends GameEngineInterface {
 
     getAllValidMoves(gameState) {
         const moves = [];
-        const playerPieces = this.getPiecesForPlayer(
-            gameState,
-            gameState.currentPlayer
-        );
+        const playerPieces = this.getPiecesForPlayer(gameState, gameState.currentPlayer);
 
         // If capturing is forced (i.e. chain captures), only consider moves from that position
         if (gameState.mustCapture !== null) {
@@ -434,9 +391,7 @@ class CheckersEngine extends GameEngineInterface {
         }
 
         // Prioritize capture moves
-        const captureMoves = moves.filter(
-            move => move.captures && move.captures.length > 0
-        );
+        const captureMoves = moves.filter(move => move.captures && move.captures.length > 0);
         return captureMoves.length > 0 ? captureMoves : moves;
     }
 
@@ -474,13 +429,11 @@ class CheckersEngine extends GameEngineInterface {
             const newRow = fromPos.row + dir.row;
             const newCol = fromPos.col + dir.col;
 
-            if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8)
-                continue;
+            if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) continue;
             if (!this.isPlayableSquare(newRow, newCol)) continue;
 
             const toIndex = this.rowColToIndex(newRow, newCol);
-            if (toIndex === -1 || gameState.board[toIndex] !== this.EMPTY)
-                continue;
+            if (toIndex === -1 || gameState.board[toIndex] !== this.EMPTY) continue;
 
             moves.push({
                 from: fromIndex,
@@ -521,15 +474,11 @@ class CheckersEngine extends GameEngineInterface {
         if (validMoves.length === 0) return null;
 
         // Simple AI: prefer captures, otherwise random move
-        const captureMoves = validMoves.filter(
-            move => move.captures && move.captures.length > 0
-        );
+        const captureMoves = validMoves.filter(move => move.captures && move.captures.length > 0);
 
         if (captureMoves.length > 0) {
             // Choose random capture move
-            return captureMoves[
-                Math.floor(Math.random() * captureMoves.length)
-            ];
+            return captureMoves[Math.floor(Math.random() * captureMoves.length)];
         }
 
         // Choose random valid move

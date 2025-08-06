@@ -27,8 +27,7 @@ const fallbackUsers = [
         username: 'demo',
         email: 'demo@aigamehub.com',
         display_name: 'Demo Player',
-        password_hash:
-            '$2b$12$5hKQbDKdI6IaN9VJq8.4TOr4lAgOVGhzVyywtdhJMcGff8mFJK8V2', // password123
+        password_hash: '$2b$12$5hKQbDKdI6IaN9VJq8.4TOr4lAgOVGhzVyywtdhJMcGff8mFJK8V2', // password123
         auth_provider: 'local',
         created_at: new Date(),
         last_login: new Date(),
@@ -38,8 +37,7 @@ const fallbackUsers = [
         username: 'test',
         email: 'test@example.com',
         display_name: 'Test User',
-        password_hash:
-            '$2b$12$5hKQbDKdI6IaN9VJq8.4TOr4lAgOVGhzVyywtdhJMcGff8mFJK8V2', // password123
+        password_hash: '$2b$12$5hKQbDKdI6IaN9VJq8.4TOr4lAgOVGhzVyywtdhJMcGff8mFJK8V2', // password123
         auth_provider: 'local',
         created_at: new Date(),
         last_login: new Date(),
@@ -53,10 +51,11 @@ async function createUserSession(userId) {
 
     if (pool) {
         try {
-            await pool.query(
-                'INSERT INTO user_sessions (session_id, user_id, expires_at) VALUES ($1, $2, $3)',
-                [sessionId, userId, expiresAt]
-            );
+            await pool.query('INSERT INTO user_sessions (session_id, user_id, expires_at) VALUES ($1, $2, $3)', [
+                sessionId,
+                userId,
+                expiresAt,
+            ]);
         } catch (error) {
             console.error('Error creating session in database:', error.message);
             // Fall back to memory
@@ -104,10 +103,7 @@ async function getUserBySession(sessionId) {
 async function findUserByEmail(email) {
     if (pool) {
         try {
-            const result = await pool.query(
-                'SELECT * FROM users WHERE email = $1',
-                [email]
-            );
+            const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
             return result.rows[0] || null;
         } catch (error) {
             console.error('Error finding user by email:', error.message);
@@ -115,9 +111,7 @@ async function findUserByEmail(email) {
             return fallbackUsers.find(u => u.email === email) || null;
         }
     } else {
-        console.log(
-            '!! no pool available for queries !! \n checking for fallback users...'
-        );
+        console.log('!! no pool available for queries !! \n checking for fallback users...');
         return fallbackUsers.find(u => u.email === email) || null;
     }
 }
@@ -163,10 +157,7 @@ async function createUser(userData) {
 // Check if user is authenticated
 router.get('/me', async (req, res) => {
     try {
-        const sessionId =
-            req.cookies?.sessionId ||
-            req.headers['x-session-id'] ||
-            req.query.session;
+        const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] || req.query.session;
 
         if (!sessionId) {
             return res.status(401).json({ error: 'No session provided' });
@@ -176,18 +167,13 @@ router.get('/me', async (req, res) => {
 
         if (!user) {
             res.clearCookie('sessionId');
-            return res
-                .status(401)
-                .json({ error: 'Invalid or expired session' });
+            return res.status(401).json({ error: 'Invalid or expired session' });
         }
 
         // Update last login if using database
         if (pool) {
             try {
-                await pool.query(
-                    'UPDATE users SET last_login = NOW() WHERE id = $1',
-                    [user.id]
-                );
+                await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
             } catch (error) {
                 console.error('Error updating last login:', error.message);
             }
@@ -233,15 +219,11 @@ router.post('/register', async (req, res) => {
 
         // Validation
         if (!username || !email || !password) {
-            return res
-                .status(400)
-                .json({ error: 'Username, email, and password are required' });
+            return res.status(400).json({ error: 'Username, email, and password are required' });
         }
 
         if (password.length < 6) {
-            return res
-                .status(400)
-                .json({ error: 'Password must be at least 6 characters long' });
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         }
 
         // Check if user already exists
@@ -298,9 +280,7 @@ router.post('/login', async (req, res) => {
         const { email, password, rememberMe } = req.body;
 
         if (!email || !password) {
-            return res
-                .status(400)
-                .json({ error: 'Email and password are required' });
+            return res.status(400).json({ error: 'Email and password are required' });
         }
 
         // Find user by email
@@ -312,10 +292,7 @@ router.post('/login', async (req, res) => {
 
         // password check for basic auth users
         if (user.auth_provider === 'local' && user.password_hash) {
-            const isValidPassword = await bcrypt.compare(
-                password,
-                user.password_hash
-            );
+            const isValidPassword = await bcrypt.compare(password, user.password_hash);
             if (!isValidPassword) {
                 return res.status(401).json({ error: 'Invalid credentials' });
             }
@@ -329,9 +306,7 @@ router.post('/login', async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: rememberMe
-                ? 30 * 24 * 60 * 60 * 1000
-                : 7 * 24 * 60 * 60 * 1000, // 30 days if remember me, else 7 days
+            maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000, // 30 days if remember me, else 7 days
         };
 
         res.cookie('sessionId', sessionId, cookieOptions);
@@ -339,10 +314,7 @@ router.post('/login', async (req, res) => {
         // Update last login if using database
         if (pool) {
             try {
-                await pool.query(
-                    'UPDATE users SET last_login = NOW() WHERE id = $1',
-                    [user.id]
-                );
+                await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
             } catch (error) {
                 console.error('Error updating last login:', error.message);
             }
@@ -408,29 +380,22 @@ router.get('/google/callback', async (req, res) => {
         console.log('Received Google auth code, exchanging for tokens...');
 
         // Exchange code for tokens
-        const tokenResponse = await fetch(
-            'https://oauth2.googleapis.com/token',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    client_id: process.env.GOOGLE_CLIENT_ID,
-                    client_secret: process.env.GOOGLE_CLIENT_SECRET,
-                    code: code,
-                    grant_type: 'authorization_code',
-                    redirect_uri:
-                        process.env.BASE_URL + '/api/auth/google/callback',
-                }),
-            }
-        );
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                code: code,
+                grant_type: 'authorization_code',
+                redirect_uri: process.env.BASE_URL + '/api/auth/google/callback',
+            }),
+        });
 
         const tokens = await tokenResponse.json();
-        console.log(
-            'Token exchange result:',
-            tokens.access_token ? 'SUCCESS' : 'FAILED'
-        );
+        console.log('Token exchange result:', tokens.access_token ? 'SUCCESS' : 'FAILED');
 
         if (!tokens.access_token) {
             console.error('Failed to get access token:', tokens);
@@ -438,12 +403,9 @@ router.get('/google/callback', async (req, res) => {
         }
 
         // Get user info from Google
-        const userResponse = await fetch(
-            'https://www.googleapis.com/oauth2/v2/userinfo',
-            {
-                headers: { Authorization: `Bearer ${tokens.access_token}` },
-            }
-        );
+        const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
+        });
 
         const googleUser = await userResponse.json();
         console.log('Google user info received:', googleUser.email);
@@ -463,22 +425,13 @@ router.get('/google/callback', async (req, res) => {
                             email_verified = $4, last_login = NOW()
                         WHERE id = $5
                     `,
-                        [
-                            googleUser.id,
-                            googleUser.name,
-                            googleUser.picture,
-                            googleUser.verified_email,
-                            user.id,
-                        ]
+                        [googleUser.id, googleUser.name, googleUser.picture, googleUser.verified_email, user.id]
                     );
 
                     // Refresh user data
                     user = await findUserByEmail(googleUser.email);
                 } catch (error) {
-                    console.error(
-                        'Error updating user with Google info:',
-                        error
-                    );
+                    console.error('Error updating user with Google info:', error);
                 }
             }
         } else {
@@ -520,23 +473,14 @@ router.get('/google/callback', async (req, res) => {
 // Logout
 router.post('/logout', async (req, res) => {
     try {
-        const sessionId =
-            req.cookies?.sessionId ||
-            req.headers['x-session-id'] ||
-            req.body.sessionId;
+        const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] || req.body.sessionId;
 
         if (sessionId) {
             if (pool) {
                 try {
-                    await pool.query(
-                        'DELETE FROM user_sessions WHERE session_id = $1',
-                        [sessionId]
-                    );
+                    await pool.query('DELETE FROM user_sessions WHERE session_id = $1', [sessionId]);
                 } catch (error) {
-                    console.error(
-                        'Error deleting session from database:',
-                        error.message
-                    );
+                    console.error('Error deleting session from database:', error.message);
                 }
             }
             fallbackSessions.delete(sessionId);

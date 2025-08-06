@@ -10,10 +10,7 @@ class AuthManager {
     async init() {
         this.handleUrlParams();
 
-        if (
-            window.GOOGLE_CLIENT_ID &&
-            window.GOOGLE_CLIENT_ID !== 'YOUR_GOOGLE_CLIENT_ID'
-        ) {
+        if (window.GOOGLE_CLIENT_ID && window.GOOGLE_CLIENT_ID !== 'YOUR_GOOGLE_CLIENT_ID') {
             this.loadGoogleIdentityServices();
         }
         await this.checkAuthStatus();
@@ -62,19 +59,12 @@ class AuthManager {
     }
 
     initializeGoogleAuth() {
-        if (
-            window.google &&
-            window.google.accounts &&
-            window.GOOGLE_CLIENT_ID
-        ) {
+        if (window.google && window.google.accounts && window.GOOGLE_CLIENT_ID) {
             try {
                 window.google.accounts.id.initialize({
                     client_id: window.GOOGLE_CLIENT_ID,
                     callback: response => {
-                        console.log(
-                            'Google auth callback triggered:',
-                            response
-                        );
+                        console.log('Google auth callback triggered:', response);
                         this.handleGoogleAuth(response);
                     },
                 });
@@ -100,9 +90,7 @@ class AuthManager {
         // Registration form
         const registerForm = document.getElementById('register-form');
         if (registerForm) {
-            registerForm.addEventListener('submit', e =>
-                this.handleRegister(e)
-            );
+            registerForm.addEventListener('submit', e => this.handleRegister(e));
         }
 
         // Render Google buttons after initialization
@@ -110,9 +98,7 @@ class AuthManager {
     }
 
     renderGoogleButtons() {
-        const googleLoginSimple = document.getElementById(
-            'google-login-simple'
-        );
+        const googleLoginSimple = document.getElementById('google-login-simple');
         if (googleLoginSimple) {
             googleLoginSimple.addEventListener('click', () => {
                 console.log('Simple Google login clicked');
@@ -146,8 +132,7 @@ class AuthManager {
 
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
-        const rememberMe =
-            document.getElementById('remember-me')?.checked || false;
+        const rememberMe = document.getElementById('remember-me')?.checked || false;
 
         this.hideError('login-error');
 
@@ -171,11 +156,7 @@ class AuthManager {
 
                 // Store user preferences if available
                 if (data.user.preferences) {
-                    this.setCookie(
-                        'userPrefs',
-                        JSON.stringify(data.user.preferences),
-                        30
-                    );
+                    this.setCookie('userPrefs', JSON.stringify(data.user.preferences), 30);
                 }
 
                 this.currentUser = data.user;
@@ -198,12 +179,8 @@ class AuthManager {
         const username = document.getElementById('register-username').value;
         const email = document.getElementById('register-email').value;
         const password = document.getElementById('register-password').value;
-        const confirmPassword = document.getElementById(
-            'register-confirm-password'
-        ).value;
-        const displayName = document.getElementById(
-            'register-display-name'
-        ).value;
+        const confirmPassword = document.getElementById('register-confirm-password').value;
+        const displayName = document.getElementById('register-display-name').value;
 
         this.hideError('register-error');
 
@@ -214,10 +191,7 @@ class AuthManager {
         }
 
         if (password.length < 6) {
-            this.showError(
-                'register-error',
-                'Password must be at least 6 characters long'
-            );
+            this.showError('register-error', 'Password must be at least 6 characters long');
             return;
         }
 
@@ -250,17 +224,11 @@ class AuthManager {
                 this.showSuccessMessage('Account created successfully!');
                 document.getElementById('register-form').reset();
             } else {
-                this.showError(
-                    'register-error',
-                    data.error || 'Registration failed'
-                );
+                this.showError('register-error', data.error || 'Registration failed');
             }
         } catch (error) {
             console.error('Registration error:', error);
-            this.showError(
-                'register-error',
-                'Network error. Please try again.'
-            );
+            this.showError('register-error', 'Network error. Please try again.');
         }
     }
 
@@ -284,11 +252,7 @@ class AuthManager {
             this.showSuccessMessage(`Welcome! Logged in with ${providerText}`);
 
             // Clean up URL
-            window.history.replaceState(
-                {},
-                document.title,
-                window.location.pathname
-            );
+            window.history.replaceState({}, document.title, window.location.pathname);
         } else if (error) {
             let errorMessage = 'Login failed';
             if (error === 'google_auth_failed') {
@@ -297,11 +261,7 @@ class AuthManager {
             this.showError('login-error', errorMessage);
 
             // Clean up URL
-            window.history.replaceState(
-                {},
-                document.title,
-                window.location.pathname
-            );
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
 
@@ -310,10 +270,7 @@ class AuthManager {
 
         if (!response || !response.credential) {
             console.error('No credential in Google response:', response);
-            this.showError(
-                'login-error',
-                'Google authentication failed - no credential received'
-            );
+            this.showError('login-error', 'Google authentication failed - no credential received');
             return;
         }
 
@@ -337,17 +294,11 @@ class AuthManager {
                 this.closeModal('register-modal');
                 this.showSuccessMessage('Welcome!');
             } else {
-                this.showError(
-                    'login-error',
-                    data.error || 'Google authentication failed'
-                );
+                this.showError('login-error', data.error || 'Google authentication failed');
             }
         } catch (error) {
             console.error('Google auth error:', error);
-            this.showError(
-                'login-error',
-                'Google authentication failed - network error'
-            );
+            this.showError('login-error', 'Google authentication failed - network error');
         }
     }
 
@@ -380,8 +331,7 @@ class AuthManager {
 
     showAuthenticated(user) {
         const loggedInElement = document.getElementById('auth-logged-in');
-        const notLoggedInElement =
-            document.getElementById('auth-not-logged-in');
+        const notLoggedInElement = document.getElementById('auth-not-logged-in');
 
         if (loggedInElement && notLoggedInElement) {
             loggedInElement.classList.remove('hidden');
@@ -389,16 +339,14 @@ class AuthManager {
 
             // Update user info in the UI
             const avatarElement = document.getElementById('user-avatar');
-            const displayNameElement =
-                document.getElementById('user-display-name');
+            const displayNameElement = document.getElementById('user-display-name');
             const emailElement = document.getElementById('user-email');
 
             if (avatarElement && user.profilePicture) {
                 avatarElement.src = user.profilePicture;
             }
             if (displayNameElement) {
-                displayNameElement.textContent =
-                    user.displayName || user.username;
+                displayNameElement.textContent = user.displayName || user.username;
             }
             if (emailElement) {
                 emailElement.textContent = user.email;
@@ -408,8 +356,7 @@ class AuthManager {
 
     showNotAuthenticated() {
         const loggedInElement = document.getElementById('auth-logged-in');
-        const notLoggedInElement =
-            document.getElementById('auth-not-logged-in');
+        const notLoggedInElement = document.getElementById('auth-not-logged-in');
 
         if (loggedInElement && notLoggedInElement) {
             loggedInElement.classList.add('hidden');
@@ -437,8 +384,7 @@ class AuthManager {
     showSuccessMessage(message) {
         // Create a temporary success notification
         const notification = document.createElement('div');
-        notification.className =
-            'alert alert-success fixed top-4 right-4 w-auto z-50';
+        notification.className = 'alert alert-success fixed top-4 right-4 w-auto z-50';
         notification.innerHTML = `
             <svg class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -529,10 +475,7 @@ class AuthManager {
         }
     }
 
-    checkAuthBeforeGameAction(
-        actionName = 'play',
-        aiThoughtsElementId = 'ai-thoughts'
-    ) {
+    checkAuthBeforeGameAction(actionName = 'play', aiThoughtsElementId = 'ai-thoughts') {
         if (!this.isAuthenticatedForGames()) {
             this.updateAIThoughts(
                 aiThoughtsElementId,
@@ -552,24 +495,17 @@ class AuthManager {
                 const errorData = await response.json();
 
                 // Handle authentication errors specifically
-                if (
-                    response.status === 401 &&
-                    this.handleGameAuthError(errorData, aiThoughtsElementId)
-                ) {
+                if (response.status === 401 && this.handleGameAuthError(errorData, aiThoughtsElementId)) {
                     return null;
                 }
 
                 // Handle other errors
                 if (errorData.aiThought) {
-                    this.updateAIThoughts(
-                        aiThoughtsElementId,
-                        errorData.aiThought
-                    );
+                    this.updateAIThoughts(aiThoughtsElementId, errorData.aiThought);
                 } else {
                     this.updateAIThoughts(
                         aiThoughtsElementId,
-                        errorData.message ||
-                            'Something went wrong. Please try again.'
+                        errorData.message || 'Something went wrong. Please try again.'
                     );
                 }
 
@@ -579,10 +515,7 @@ class AuthManager {
             return await response.json();
         } catch (error) {
             console.error('Game API call failed:', error);
-            this.updateAIThoughts(
-                aiThoughtsElementId,
-                'Network error. Please check your connection and try again.'
-            );
+            this.updateAIThoughts(aiThoughtsElementId, 'Network error. Please check your connection and try again.');
             return null;
         }
     }
@@ -648,15 +581,9 @@ window.showLoginRequiredModal = function () {
     }
 };
 
-window.checkAuthForGame = function (
-    actionName = 'play',
-    aiThoughtsElementId = 'ai-thoughts'
-) {
+window.checkAuthForGame = function (actionName = 'play', aiThoughtsElementId = 'ai-thoughts') {
     if (window.authManager) {
-        return window.authManager.checkAuthBeforeGameAction(
-            actionName,
-            aiThoughtsElementId
-        );
+        return window.authManager.checkAuthBeforeGameAction(actionName, aiThoughtsElementId);
     }
     return false;
 };

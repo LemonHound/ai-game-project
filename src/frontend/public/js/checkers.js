@@ -22,16 +22,12 @@ class CheckersGame {
         const authReady = await window.GameAuthUtils.waitForAuthManager();
 
         if (!authReady) {
-            this.updateAIThoughts(
-                'Authentication system failed to load. Please refresh the page.'
-            );
+            this.updateAIThoughts('Authentication system failed to load. Please refresh the page.');
             return;
         }
 
         if (!window.authManager.isAuthenticatedForGames()) {
-            this.updateAIThoughts(
-                'I can only play with authenticated users - please log in first!'
-            );
+            this.updateAIThoughts('I can only play with authenticated users - please log in first!');
             return;
         }
 
@@ -59,16 +55,12 @@ class CheckersGame {
             this.gameState = data.state;
 
             // Update UI based on backend state
+            console.log('updating UI - start');
             this.updateUIFromState();
 
             if (!this.gameState.playerStarts) {
                 this.updateAIThoughts("I'll start this game!");
-
-                // Simulate AI thinking time on frontend
-                const thinkingTime =
-                    this.waitTimeMin +
-                    Math.random() * (this.waitTimeMax - this.waitTimeMin);
-                setTimeout(() => this.makeAIMove(), thinkingTime);
+                await this.makeAIMove();
             } else {
                 this.updateAIThoughts(
                     'Ready for checkers! Click a red piece to select it, then click where you want to move.'
@@ -91,8 +83,7 @@ class CheckersGame {
     initializeBoard() {
         const boardElement = document.getElementById('game-board');
         boardElement.innerHTML = '';
-        boardElement.className =
-            'grid grid-cols-8 gap-0 border-4 border-amber-800 mx-auto';
+        boardElement.className = 'grid grid-cols-8 gap-0 border-4 border-amber-800 mx-auto';
         boardElement.style.width = '480px';
         boardElement.style.height = '480px';
 
@@ -119,9 +110,7 @@ class CheckersGame {
                 square.setAttribute('data-col', col);
 
                 if (isPlayable) {
-                    square.addEventListener('click', () =>
-                        this.handleSquareClick(index)
-                    );
+                    square.addEventListener('click', () => this.handleSquareClick(index));
                 }
 
                 boardElement.appendChild(square);
@@ -132,18 +121,12 @@ class CheckersGame {
     async handleSquareClick(index) {
         const isAuthenticated = await window.GameAuthUtils.isAuthenticated();
         if (!isAuthenticated) {
-            this.updateAIThoughts(
-                'I can only play with authenticated users - please log in to continue!'
-            );
+            this.updateAIThoughts('I can only play with authenticated users - please log in to continue!');
             window.GameAuthUtils.showLoginRequiredModal();
             return;
         }
 
-        if (
-            this.isProcessingMove ||
-            !this.gameState ||
-            this.gameState.gameOver
-        ) {
+        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
             return;
         }
 
@@ -179,30 +162,18 @@ class CheckersGame {
 
         this.selectedSquare = index;
         const square = document.querySelector(`[data-index="${index}"]`);
-        square.classList.add(
-            'ring-4',
-            'ring-blue-400',
-            'ring-inset',
-            'selected-index'
-        );
+        square.classList.add('ring-4', 'ring-blue-400', 'ring-inset', 'selected-index');
 
         this.highlightValidMoves(index);
 
         const piece = this.gameState.board[index];
         const pieceType = piece === 'R' ? 'piece' : 'king';
-        this.updateAIThoughts(
-            `Selected your ${pieceType}. Click on a highlighted square to move.`
-        );
+        this.updateAIThoughts(`Selected your ${pieceType}. Click on a highlighted square to move.`);
     }
 
     clearSelection() {
         document.querySelectorAll('.selected-index').forEach(element => {
-            element.classList.remove(
-                'ring-4',
-                'ring-blue-400',
-                'ring-inset',
-                'selected-index'
-            );
+            element.classList.remove('ring-4', 'ring-blue-400', 'ring-inset', 'selected-index');
         });
 
         // Clear move highlights
@@ -269,10 +240,7 @@ class CheckersGame {
                 if (captureIndex !== -1 && landIndex !== -1) {
                     const capturedPiece = this.gameState.board[captureIndex];
 
-                    if (
-                        (capturedPiece === 'B' || capturedPiece === 'b') &&
-                        this.gameState.board[landIndex] === '_'
-                    ) {
+                    if ((capturedPiece === 'B' || capturedPiece === 'b') && this.gameState.board[landIndex] === '_') {
                         moves.push({
                             from: fromIndex,
                             to: landIndex,
@@ -286,32 +254,41 @@ class CheckersGame {
         return moves;
     }
 
-    async attemptMove(from32, to32) {
+    async attemptMove(fromSquare, toSquare) {
         this.isProcessingMove = true;
 
         try {
-            await this.sendMoveToServer(from32, to32);
+            await this.sendMoveToServer(fromSquare, toSquare);
         } catch (error) {
             console.error('Error making move:', error);
-            this.updateAIThoughts(
-                'Something went wrong with your move. Try again!'
-            );
+            this.updateAIThoughts('Something went wrong with your move. Try again!');
         } finally {
             this.isProcessingMove = false;
             this.clearSelection();
         }
     }
 
-    async sendMoveToServer(from32, to32) {
+    async sendMoveToServer(fromSquare, toSquare) {
         if (!this.gameSessionId) {
             console.warn('No game session ID - cannot make move');
             return;
         }
 
         // Find the matching valid move to get capture info
-        const move = this.validMoves.find(
-            m => m.from === from32 && m.to === to32
-        ) || { from: from32, to: to32, captures: [] };
+        const move = this.validMoves.find(m => m.from === fromSquare && m.to === toSquare) || {
+            from: fromSquare,
+            to: toSquare,
+            captures: [],
+        };
+
+        if (move) {
+            const tempMove = this.gameState.board[toSquare];
+            this.gameState.board[toSquare] = this.gameState.board[fromSquare];
+            this.gameState.board[fromSquare] = tempMove;
+            this.updateUIFromState();
+
+            this.updateAIThoughts('Analyzing the board...');
+        }
 
         const data = await window.GameAuthUtils.handleGameApiCall(async () => {
             return fetch(`/api/${this.gameName}/move`, {
@@ -328,34 +305,25 @@ class CheckersGame {
         });
 
         if (data) {
-            this.gameState = data.newState;
-            this.updateUIFromState();
+            const aiSimWaitTime = Math.random() * (this.waitTimeMax - this.waitTimeMin) + this.waitTimeMin;
+            setTimeout(async () => {
+                this.gameState = data.newState;
+                this.updateUIFromState();
 
-            // Handle AI response if game is still ongoing
-            if (data.aiMove) {
-                const aiMove = data.aiMove;
-                this.updateAIThoughts(
-                    `I moved from ${this.formatSquare(aiMove.from)} to ${this.formatSquare(aiMove.to)}${
-                        aiMove.captures.length > 0
-                            ? ' and captured your piece!'
-                            : '.'
-                    } ${this.getGameEndMessage() || 'Your turn!'}`
-                );
-            } else if (
-                !this.gameState.gameOver &&
-                this.gameState.currentPlayer === 'B'
-            ) {
-                // Simulate AI thinking time on frontend
-                const thinkingTime = Math.floor(
-                    this.waitTimeMin +
-                        Math.random() * (this.waitTimeMax - this.waitTimeMin)
-                );
-                setTimeout(() => this.makeAIMove(), thinkingTime);
-            } else if (this.gameState.mustCapture !== null) {
-                this.updateAIThoughts(
-                    'You captured a piece! You must continue capturing if possible.'
-                );
-            }
+                // Handle AI response if game is still ongoing
+                if (data.aiMove) {
+                    const aiMove = data.aiMove;
+                    this.updateAIThoughts(
+                        `I moved from ${this.formatSquare(aiMove.from)} to ${this.formatSquare(aiMove.to)}${
+                            aiMove.captures.length > 0 ? ' and captured your piece!' : '.'
+                        } ${this.getGameEndMessage() || 'Your turn!'}`
+                    );
+                } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'B') {
+                    await this.makeAIMove();
+                } else if (this.gameState.mustCapture !== null) {
+                    this.updateAIThoughts('You captured a piece! You must continue capturing if possible.');
+                }
+            }, aiSimWaitTime);
         }
     }
 
@@ -365,11 +333,7 @@ class CheckersGame {
     }
 
     async makeAIMove() {
-        if (
-            this.isProcessingMove ||
-            !this.gameState ||
-            this.gameState.gameOver
-        ) {
+        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
             return;
         }
 
@@ -396,15 +360,14 @@ class CheckersGame {
 
         if (data) {
             this.gameState = data.newState;
+            console.log('updating UI for AI move');
             this.updateUIFromState();
 
             if (data.aiMove) {
                 const aiMove = data.aiMove;
                 this.updateAIThoughts(
                     `I moved from ${this.formatSquare(aiMove.from)} to ${this.formatSquare(aiMove.to)}${
-                        aiMove.captures.length > 0
-                            ? ' and captured your piece!'
-                            : '.'
+                        aiMove.captures.length > 0 ? ' and captured your piece!' : '.'
                     } ${this.getGameEndMessage() || 'Your turn!'}`
                 );
             }
@@ -424,10 +387,7 @@ class CheckersGame {
         // Clear non-playable squares
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
-                if (
-                    (row % 2 === 0 && col % 2 === 0) ||
-                    (row % 2 === 1 && col % 2 === 1)
-                ) {
+                if ((row % 2 === 0 && col % 2 === 0) || (row % 2 === 1 && col % 2 === 1)) {
                     // Light squares
                     const index = row * 8 + col;
                     this.updateSquare(index, '_');
@@ -441,10 +401,7 @@ class CheckersGame {
 
         // Show/hide must capture indicator
         const mustCaptureEl = document.getElementById('must-capture');
-        if (
-            this.gameState.mustCapture !== null &&
-            this.gameState.currentPlayer === 'R'
-        ) {
+        if (this.gameState.mustCapture !== null && this.gameState.currentPlayer === 'R') {
             mustCaptureEl.classList.remove('hidden');
         } else {
             mustCaptureEl.classList.add('hidden');
@@ -477,16 +434,10 @@ class CheckersGame {
                     pieceElement.textContent = '♔';
                     break;
                 case 'B': // Black piece
-                    pieceElement.classList.add(
-                        'bg-gray-800',
-                        'border-gray-900'
-                    );
+                    pieceElement.classList.add('bg-gray-800', 'border-gray-900');
                     break;
                 case 'b': // Black king
-                    pieceElement.classList.add(
-                        'bg-gray-800',
-                        'border-gray-900'
-                    );
+                    pieceElement.classList.add('bg-gray-800', 'border-gray-900');
                     pieceElement.textContent = '♔';
                     break;
             }
@@ -507,25 +458,21 @@ class CheckersGame {
         if (this.gameState.gameOver) {
             if (this.gameState.winner === 'R') {
                 statusElement.textContent = '🎉 You Win!';
-                statusElement.className =
-                    'text-2xl font-bold text-success mb-2';
+                statusElement.className = 'text-2xl font-bold text-success mb-2';
             } else if (this.gameState.winner === 'B') {
                 statusElement.textContent = '🤖 AI Wins!';
                 statusElement.className = 'text-2xl font-bold text-error mb-2';
             } else {
                 statusElement.textContent = "🤝 It's a Tie!";
-                statusElement.className =
-                    'text-2xl font-bold text-warning mb-2';
+                statusElement.className = 'text-2xl font-bold text-warning mb-2';
             }
         } else {
             if (this.gameState.currentPlayer === 'R') {
                 statusElement.textContent = '🔴 Your Turn';
-                statusElement.className =
-                    'text-2xl font-bold text-primary mb-2';
+                statusElement.className = 'text-2xl font-bold text-primary mb-2';
             } else {
                 statusElement.textContent = '⚫ AI Thinking...';
-                statusElement.className =
-                    'text-2xl font-bold text-secondary mb-2';
+                statusElement.className = 'text-2xl font-bold text-secondary mb-2';
             }
         }
     }
@@ -534,12 +481,8 @@ class CheckersGame {
         const moveInfoElement = document.getElementById('move-info');
         if (!this.gameState) return;
 
-        const redPieces = this.gameState.board.filter(
-            p => p === 'R' || p === 'r'
-        ).length;
-        const blackPieces = this.gameState.board.filter(
-            p => p === 'B' || p === 'b'
-        ).length;
+        const redPieces = this.gameState.board.filter(p => p === 'R' || p === 'r').length;
+        const blackPieces = this.gameState.board.filter(p => p === 'B' || p === 'b').length;
 
         moveInfoElement.textContent = `Move ${this.gameState.moveCount} • Red: ${redPieces} • Black: ${blackPieces}`;
     }
@@ -564,8 +507,7 @@ class CheckersGame {
     }
 
     async restartGame() {
-        const canRestart =
-            await window.GameAuthUtils.checkAuthBeforeAction('restart a game');
+        const canRestart = await window.GameAuthUtils.checkAuthBeforeAction('restart a game');
         if (!canRestart) {
             return;
         }

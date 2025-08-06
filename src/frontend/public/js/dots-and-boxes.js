@@ -40,8 +40,7 @@ class DotsAndBoxesGame {
 
         // Create the game container with proper grid layout
         const gameContainer = document.createElement('div');
-        gameContainer.className =
-            'relative bg-base-100 p-4 rounded-lg border border-base-300';
+        gameContainer.className = 'relative bg-base-100 p-4 rounded-lg border border-base-300';
         gameContainer.style.width = '400px';
         gameContainer.style.height = '400px';
 
@@ -76,9 +75,7 @@ class DotsAndBoxesGame {
                 line.dataset.type = 'horizontal';
                 line.dataset.row = row;
                 line.dataset.col = col;
-                line.addEventListener('click', () =>
-                    this.makeMove('horizontal', row, col)
-                );
+                line.addEventListener('click', () => this.makeMove('horizontal', row, col));
                 gameContainer.appendChild(line);
             }
         }
@@ -96,9 +93,7 @@ class DotsAndBoxesGame {
                 line.dataset.type = 'vertical';
                 line.dataset.row = row;
                 line.dataset.col = col;
-                line.addEventListener('click', () =>
-                    this.makeMove('vertical', row, col)
-                );
+                line.addEventListener('click', () => this.makeMove('vertical', row, col));
                 gameContainer.appendChild(line);
             }
         }
@@ -144,9 +139,7 @@ class DotsAndBoxesGame {
             this.currentPlayer = 'ai';
             this.updateGameStatus();
             this.updateAIThoughts('My turn! Let me analyze the board...');
-            const randWaitTime = Math.trunc(
-                (1 + Math.random()) * this.maxAIWaitTime
-            );
+            const randWaitTime = Math.trunc((1 + Math.random()) * this.maxAIWaitTime);
             setTimeout(() => this.makeAIMove(), randWaitTime);
         } else {
             // Boxes completed, player gets another turn
@@ -182,17 +175,13 @@ class DotsAndBoxesGame {
             // No boxes completed, switch turns
             this.currentPlayer = 'player';
             this.updateGameStatus();
-            this.updateAIThoughts(
-                'Your turn! Look for opportunities to complete boxes.'
-            );
+            this.updateAIThoughts('Your turn! Look for opportunities to complete boxes.');
         } else {
             // Boxes completed, AI gets another turn
             this.updateAIThoughts(
                 `I completed ${completedBoxes.length} box${completedBoxes.length > 1 ? 'es' : ''}! My turn again.`
             );
-            const randWaitTime = Math.trunc(
-                (1 + Math.random()) * this.maxAIWaitTime
-            );
+            const randWaitTime = Math.trunc((1 + Math.random()) * this.maxAIWaitTime);
             setTimeout(() => this.makeAIMove(), randWaitTime);
         }
 
@@ -227,9 +216,7 @@ class DotsAndBoxesGame {
         }
 
         // If all moves give opponent boxes, pick randomly
-        return availableMoves[
-            Math.floor(Math.random() * availableMoves.length)
-        ];
+        return availableMoves[Math.floor(Math.random() * availableMoves.length)];
     }
 
     getAvailableMoves() {
@@ -262,40 +249,12 @@ class DotsAndBoxesGame {
 
         if (type === 'horizontal') {
             // Check boxes above and below
-            if (row > 0)
-                completedBoxes += this.wouldCompleteBox(
-                    row - 1,
-                    col,
-                    'horizontal',
-                    row,
-                    col
-                );
-            if (row < this.gridSize - 1)
-                completedBoxes += this.wouldCompleteBox(
-                    row,
-                    col,
-                    'horizontal',
-                    row,
-                    col
-                );
+            if (row > 0) completedBoxes += this.wouldCompleteBox(row - 1, col, 'horizontal', row, col);
+            if (row < this.gridSize - 1) completedBoxes += this.wouldCompleteBox(row, col, 'horizontal', row, col);
         } else {
             // Check boxes left and right
-            if (col > 0)
-                completedBoxes += this.wouldCompleteBox(
-                    row,
-                    col - 1,
-                    'vertical',
-                    row,
-                    col
-                );
-            if (col < this.gridSize - 1)
-                completedBoxes += this.wouldCompleteBox(
-                    row,
-                    col,
-                    'vertical',
-                    row,
-                    col
-                );
+            if (col > 0) completedBoxes += this.wouldCompleteBox(row, col - 1, 'vertical', row, col);
+            if (col < this.gridSize - 1) completedBoxes += this.wouldCompleteBox(row, col, 'vertical', row, col);
         }
 
         return completedBoxes;
@@ -314,17 +273,11 @@ class DotsAndBoxesGame {
 
         // Add the simulated line
         if (lineType === 'horizontal') {
-            if (
-                (lineRow === boxRow || lineRow === boxRow + 1) &&
-                lineCol === boxCol
-            ) {
+            if ((lineRow === boxRow || lineRow === boxRow + 1) && lineCol === boxCol) {
                 linesCompleted++;
             }
         } else {
-            if (
-                lineRow === boxRow &&
-                (lineCol === boxCol || lineCol === boxCol + 1)
-            ) {
+            if (lineRow === boxRow && (lineCol === boxCol || lineCol === boxCol + 1)) {
                 linesCompleted++;
             }
         }
@@ -338,9 +291,7 @@ class DotsAndBoxesGame {
     }
 
     drawLine(type, row, col) {
-        const element = document.querySelector(
-            `[data-type="${type}"][data-row="${row}"][data-col="${col}"]`
-        );
+        const element = document.querySelector(`[data-type="${type}"][data-row="${row}"][data-col="${col}"]`);
         if (element) {
             element.classList.remove('bg-base-300', 'hover:bg-primary');
             element.classList.add('bg-primary');
@@ -353,10 +304,7 @@ class DotsAndBoxesGame {
 
         for (let row = 0; row < this.gridSize - 1; row++) {
             for (let col = 0; col < this.gridSize - 1; col++) {
-                if (
-                    this.boxes[row][col] === null &&
-                    this.isBoxComplete(row, col)
-                ) {
+                if (this.boxes[row][col] === null && this.isBoxComplete(row, col)) {
                     this.boxes[row][col] = this.currentPlayer;
                     newlyCompleted.push({ row, col });
                     this.drawBox(row, col);
@@ -378,9 +326,7 @@ class DotsAndBoxesGame {
     }
 
     drawBox(row, col) {
-        const element = document.querySelector(
-            `[data-type="box"][data-row="${row}"][data-col="${col}"]`
-        );
+        const element = document.querySelector(`[data-type="box"][data-row="${row}"][data-col="${col}"]`);
         if (element) {
             const isPlayer = this.currentPlayer === 'player';
             element.classList.remove('border-transparent');
@@ -409,19 +355,13 @@ class DotsAndBoxesGame {
 
         if (this.scores.player > this.scores.ai) {
             statusMessage = `🎉 You Win! ${this.scores.player} - ${this.scores.ai}`;
-            this.updateAIThoughts(
-                `Congratulations! You completed ${this.scores.player} boxes. Well played! 🏆`
-            );
+            this.updateAIThoughts(`Congratulations! You completed ${this.scores.player} boxes. Well played! 🏆`);
         } else if (this.scores.ai > this.scores.player) {
             statusMessage = `🤖 AI Wins! ${this.scores.ai} - ${this.scores.player}`;
-            this.updateAIThoughts(
-                `Victory! I completed ${this.scores.ai} boxes. Good game! 🎯`
-            );
+            this.updateAIThoughts(`Victory! I completed ${this.scores.ai} boxes. Good game! 🎯`);
         } else {
             statusMessage = `🤝 It's a Tie! ${this.scores.player} - ${this.scores.ai}`;
-            this.updateAIThoughts(
-                `A perfect tie! We both completed ${this.scores.player} boxes. Impressive! ⚖️`
-            );
+            this.updateAIThoughts(`A perfect tie! We both completed ${this.scores.player} boxes. Impressive! ⚖️`);
         }
 
         this.updateGameStatus(statusMessage);
@@ -434,8 +374,7 @@ class DotsAndBoxesGame {
         } else if (this.gameOver) {
             statusElement.textContent = 'Game Over!';
         } else if (this.currentPlayer === 'player') {
-            statusElement.textContent =
-                'Your turn! Click on a line to draw it.';
+            statusElement.textContent = 'Your turn! Click on a line to draw it.';
         } else {
             statusElement.textContent = 'AI is thinking...';
         }
@@ -445,8 +384,7 @@ class DotsAndBoxesGame {
         const playerScoreElement = document.getElementById('player-score');
         const aiScoreElement = document.getElementById('ai-score');
 
-        if (playerScoreElement)
-            playerScoreElement.textContent = this.scores.player;
+        if (playerScoreElement) playerScoreElement.textContent = this.scores.player;
         if (aiScoreElement) aiScoreElement.textContent = this.scores.ai;
     }
 
@@ -466,8 +404,7 @@ class DotsAndBoxesGame {
         const historyElement = document.getElementById('move-history');
         if (historyElement) {
             if (this.moveHistory.length === 0) {
-                historyElement.innerHTML =
-                    '<div class="text-sm opacity-70">No moves yet</div>';
+                historyElement.innerHTML = '<div class="text-sm opacity-70">No moves yet</div>';
             } else {
                 historyElement.innerHTML = this.moveHistory
                     .map(
@@ -514,9 +451,7 @@ class DotsAndBoxesGame {
     toggleStarter() {
         this.playerStarts = !this.playerStarts;
         this.restart();
-        const starterText = this.playerStarts
-            ? "You'll start next game!"
-            : 'AI will start next game!';
+        const starterText = this.playerStarts ? "You'll start next game!" : 'AI will start next game!';
         this.updateAIThoughts(starterText);
     }
 
@@ -550,14 +485,10 @@ class DotsAndBoxesGame {
 
         if (safeMoves.length > 0) {
             const move = safeMoves[0];
-            const lineDesc =
-                move.type === 'horizontal'
-                    ? `horizontal line`
-                    : `vertical line`;
+            const lineDesc = move.type === 'horizontal' ? `horizontal line` : `vertical line`;
             hintMessage += `Draw a ${lineDesc} that won't give me a box! 🛡️`;
         } else {
-            hintMessage +=
-                'All moves give me boxes - pick the least harmful one! 🤔';
+            hintMessage += 'All moves give me boxes - pick the least harmful one! 🤔';
         }
 
         this.updateAIThoughts(hintMessage);

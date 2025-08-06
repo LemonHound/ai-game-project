@@ -19,16 +19,12 @@ class TicTacToeGame {
         const authReady = await window.GameAuthUtils.waitForAuthManager();
 
         if (!authReady) {
-            this.updateAIThoughts(
-                'Authentication system failed to load. Please refresh the page.'
-            );
+            this.updateAIThoughts('Authentication system failed to load. Please refresh the page.');
             return;
         }
 
         if (!window.authManager.isAuthenticatedForGames()) {
-            this.updateAIThoughts(
-                'I can only play with authenticated users - please log in first!'
-            );
+            this.updateAIThoughts('I can only play with authenticated users - please log in first!');
             return;
         }
 
@@ -65,14 +61,10 @@ class TicTacToeGame {
                 this.updateAIThoughts("I'll start this game!");
 
                 // Simulate AI thinking time on frontend
-                const thinkingTime =
-                    this.waitTimeMin +
-                    Math.random() * (this.waitTimeMax - this.waitTimeMin);
+                const thinkingTime = this.waitTimeMin + Math.random() * (this.waitTimeMax - this.waitTimeMin);
                 setTimeout(() => this.makeAIMove(), thinkingTime);
             } else {
-                this.updateAIThoughts(
-                    'Ready for a new game! Make your first move.'
-                );
+                this.updateAIThoughts('Ready for a new game! Make your first move.');
             }
         }
     }
@@ -95,19 +87,13 @@ class TicTacToeGame {
         // Use the utility to check authentication (it will wait if needed)
         const isAuthenticated = await window.GameAuthUtils.isAuthenticated();
         if (!isAuthenticated) {
-            this.updateAIThoughts(
-                'I can only play with authenticated users - please log in to continue!'
-            );
+            this.updateAIThoughts('I can only play with authenticated users - please log in to continue!');
             window.GameAuthUtils.showLoginRequiredModal();
             return;
         }
 
         // Prevent moves during processing or if game is over
-        if (
-            this.isProcessingMove ||
-            !this.gameState ||
-            this.gameState.gameOver
-        ) {
+        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
             return;
         }
 
@@ -119,9 +105,7 @@ class TicTacToeGame {
 
         // Check if position is valid (basic client-side validation)
         if (this.gameState.board[position] !== null) {
-            this.updateAIThoughts(
-                'That square is already taken! Choose another one.'
-            );
+            this.updateAIThoughts('That square is already taken! Choose another one.');
             return;
         }
 
@@ -131,25 +115,19 @@ class TicTacToeGame {
             await this.sendMoveToServer(position, 'X');
         } catch (error) {
             console.error('Error making player move:', error);
-            this.updateAIThoughts(
-                'Something went wrong with your move. Try again!'
-            );
+            this.updateAIThoughts('Something went wrong with your move. Try again!');
         } finally {
             this.isProcessingMove = false;
         }
     }
 
     async makeAIMove() {
-        if (
-            this.isProcessingMove ||
-            !this.gameState ||
-            this.gameState.gameOver
-        ) {
+        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
             return;
         }
 
         if (this.gameState.currentPlayer !== 'O') {
-            return; // Not AI's turn
+            return;
         }
 
         this.isProcessingMove = true;
@@ -174,9 +152,7 @@ class TicTacToeGame {
             this.updateUIFromState();
 
             if (data.aiMove) {
-                this.updateAIThoughts(
-                    `I chose square ${data.aiMove.position + 1}. Your turn!`
-                );
+                this.updateAIThoughts(`I chose square ${data.aiMove.position + 1}. Your turn!`);
             }
         }
 
@@ -188,6 +164,10 @@ class TicTacToeGame {
             console.warn('No game session ID - cannot make move');
             return;
         }
+
+        // Update UI with player move before making API call to back-end
+        this.gameState.board[position] = this.gameState.currentPlayer;
+        this.updateUIFromState();
 
         const data = await window.GameAuthUtils.handleGameApiCall(async () => {
             return fetch(`/api/${this.gameName}/move`, {
@@ -207,26 +187,21 @@ class TicTacToeGame {
         });
 
         if (data) {
-            this.gameState = data.newState;
-            this.updateUIFromState();
+            const aiSimWaitTime = Math.random() * (this.waitTimeMax - this.waitTimeMin) + this.waitTimeMin;
+            setTimeout(async () => {
+                this.gameState = data.newState;
+                this.updateUIFromState();
 
-            // Handle AI response if game is still ongoing and it's AI's turn
-            if (data.aiMove) {
-                // AI move was made automatically by backend
-                const aiPosition = data.aiMove.position;
-                this.updateAIThoughts(
-                    `I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || 'Your turn!'}`
-                );
-            } else if (
-                !this.gameState.gameOver &&
-                this.gameState.currentPlayer === 'O'
-            ) {
-                // Simulate AI thinking time on frontend
-                const thinkingTime =
-                    this.waitTimeMin +
-                    Math.random() * (this.waitTimeMax - this.waitTimeMin);
-                setTimeout(() => this.makeAIMove(), thinkingTime);
-            }
+                if (data.aiMove) {
+                    // AI move was made automatically by backend
+                    const aiPosition = data.aiMove.position;
+                    this.updateAIThoughts(
+                        `I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || 'Your turn!'}`
+                    );
+                } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'O') {
+                    await this.makeAIMove();
+                }
+            }, aiSimWaitTime);
         }
     }
 
@@ -281,25 +256,21 @@ class TicTacToeGame {
         if (this.gameState.gameOver) {
             if (this.gameState.winner === 'X') {
                 statusElement.textContent = '🎉 You Win!';
-                statusElement.className =
-                    'text-2xl font-bold text-success mb-4';
+                statusElement.className = 'text-2xl font-bold text-success mb-4';
             } else if (this.gameState.winner === 'O') {
                 statusElement.textContent = '🤖 AI Wins!';
                 statusElement.className = 'text-2xl font-bold text-error mb-4';
             } else {
                 statusElement.textContent = "🤝 It's a Tie!";
-                statusElement.className =
-                    'text-2xl font-bold text-warning mb-4';
+                statusElement.className = 'text-2xl font-bold text-warning mb-4';
             }
         } else {
             if (this.gameState.currentPlayer === 'X') {
                 statusElement.textContent = '🎯 Your Turn';
-                statusElement.className =
-                    'text-2xl font-bold text-primary mb-4';
+                statusElement.className = 'text-2xl font-bold text-primary mb-4';
             } else {
                 statusElement.textContent = '🤖 AI Thinking...';
-                statusElement.className =
-                    'text-2xl font-bold text-secondary mb-4';
+                statusElement.className = 'text-2xl font-bold text-secondary mb-4';
             }
         }
     }
@@ -324,8 +295,7 @@ class TicTacToeGame {
     }
 
     async restartGame() {
-        const canRestart =
-            await window.GameAuthUtils.checkAuthBeforeAction('restart a game');
+        const canRestart = await window.GameAuthUtils.checkAuthBeforeAction('restart a game');
         if (!canRestart) {
             return;
         }

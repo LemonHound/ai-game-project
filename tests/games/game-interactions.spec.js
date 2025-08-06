@@ -34,9 +34,7 @@ test.describe('Game Interaction Tests', () => {
             await expect(page.locator('#game-board')).toBeVisible();
 
             // Check that board has 9 squares
-            const squares = page.locator(
-                '#game-board button, #game-board .square, [data-index]'
-            );
+            const squares = page.locator('#game-board button, #game-board .square, [data-index]');
             await expect(squares).toHaveCount(9);
 
             // Make a move by clicking first square
@@ -52,14 +50,10 @@ test.describe('Game Interaction Tests', () => {
             // Wait for AI move with a more reliable check
             // Either wait for an O to appear, or timeout after 5 seconds
             try {
-                await expect(
-                    page.locator('#game-board button:has-text("O")').first()
-                ).toBeVisible({ timeout: 5000 });
+                await expect(page.locator('#game-board button:has-text("O")').first()).toBeVisible({ timeout: 5000 });
             } catch (error) {
                 // If AI doesn't move in 5 seconds, that's okay - the game still loaded and player move worked
-                console.warn(
-                    '⚠️ AI did not make a move within 5 seconds, but game is functional'
-                );
+                console.warn('⚠️ AI did not make a move within 5 seconds, but game is functional');
 
                 // At minimum, verify the game is interactive (player move worked)
                 await expect(firstSquare).toContainText('X');
@@ -68,18 +62,12 @@ test.describe('Game Interaction Tests', () => {
 
         test('tic-tac-toe restart functionality works', async ({ page }) => {
             // Make a move first
-            const firstSquare = page
-                .locator('#game-board button, [data-index="0"]')
-                .first();
+            const firstSquare = page.locator('#game-board button, [data-index="0"]').first();
             await firstSquare.click();
             await page.waitForTimeout(500);
 
             // Click restart button
-            const restartButton = page
-                .locator(
-                    'button:has-text("Restart"), [data-testid="restart-btn"]'
-                )
-                .first();
+            const restartButton = page.locator('button:has-text("Restart"), [data-testid="restart-btn"]').first();
             if (await restartButton.isVisible()) {
                 await restartButton.click();
 
@@ -88,9 +76,7 @@ test.describe('Game Interaction Tests', () => {
                 await (aiThoughts.textContent.toString() === 'Game restarted!');
 
                 // Check that board is cleared
-                const squares = page.locator(
-                    '#game-board button, #game-board .square'
-                );
+                const squares = page.locator('#game-board button, #game-board .square');
                 for (let i = 0; i < 9; i++) {
                     const square = squares.nth(i);
                     await (square.textContent.toString() === '');
@@ -191,9 +177,7 @@ test.describe('Game Interaction Tests', () => {
             await expect(aiThoughts).toContainText(/I moved from/i, {});
         });
 
-        test('checkers piece selection and movement works', async ({
-            page,
-        }) => {
+        test('checkers piece selection and movement works', async ({ page }) => {
             // Wait for board to load
             await page.waitForTimeout(2000);
 
@@ -247,11 +231,7 @@ test.describe('Game Interaction Tests', () => {
             }
 
             // Click restart button
-            const restartButton = page
-                .locator(
-                    'button:has-text("Restart"), [data-testid="restart-btn"]'
-                )
-                .first();
+            const restartButton = page.locator('button:has-text("Restart"), [data-testid="restart-btn"]').first();
 
             if (await restartButton.isVisible()) {
                 await restartButton.click();
@@ -271,9 +251,7 @@ test.describe('Game Interaction Tests', () => {
             }
         });
 
-        test('checkers displays move information correctly', async ({
-            page,
-        }) => {
+        test('checkers displays move information correctly', async ({ page }) => {
             // Wait for game to load
             await page.waitForTimeout(2000);
 
@@ -305,9 +283,7 @@ test.describe('Game Interaction Tests', () => {
                 await page.waitForTimeout(500);
 
                 // AI thoughts should update with selection guidance
-                await expect(aiThoughts).toContainText(
-                    /selected|click|highlighted/i
-                );
+                await expect(aiThoughts).toContainText(/selected|click|highlighted/i);
             }
         });
     });
@@ -323,9 +299,7 @@ test.describe('Game Interaction Tests', () => {
             // Wait for UI elements
             await page.waitForFunction(
                 () => {
-                    const columnButtons = document.querySelectorAll(
-                        '#column-buttons button[data-col]'
-                    );
+                    const columnButtons = document.querySelectorAll('#column-buttons button[data-col]');
                     const gameBoard = document.getElementById('game-board');
                     return columnButtons.length === 7 && gameBoard;
                 },
@@ -334,9 +308,7 @@ test.describe('Game Interaction Tests', () => {
         });
 
         test('connect4 game loads and accepts moves', async ({ page }) => {
-            const columnButtons = page.locator(
-                '#column-buttons button[data-col]'
-            );
+            const columnButtons = page.locator('#column-buttons button[data-col]');
             await expect(columnButtons).toHaveCount(7);
 
             // The UI button clicks don't work in tests, but the game logic does
@@ -355,25 +327,19 @@ test.describe('Game Interaction Tests', () => {
             expect(gameState).toBe('player');
 
             // Verify the piece is visually rendered
-            const bottomCell = page.locator(
-                '#game-board [data-row="5"][data-col="0"]'
-            );
+            const bottomCell = page.locator('#game-board [data-row="5"][data-col="0"]');
             await expect(bottomCell).toContainText('🔴');
         });
 
         test('connect4 shows game controls', async ({ page }) => {
             // Check for restart button
-            const restartButton = page.locator(
-                'button:has-text("Restart"), [data-testid="restart-btn"]'
-            );
+            const restartButton = page.locator('button:has-text("Restart"), [data-testid="restart-btn"]');
             if ((await restartButton.count()) > 0) {
                 await expect(restartButton.first()).toBeVisible();
             }
 
             // Check for hint button or other controls
-            const hintButton = page.locator(
-                'button:has-text("Hint"), [data-testid="hint-btn"]'
-            );
+            const hintButton = page.locator('button:has-text("Hint"), [data-testid="hint-btn"]');
             if ((await hintButton.count()) > 0) {
                 await expect(hintButton.first()).toBeVisible();
             }
@@ -386,13 +352,9 @@ test.describe('Game Interaction Tests', () => {
             await page.waitForLoadState('networkidle');
         });
 
-        test('dots and boxes game loads with interactive elements', async ({
-            page,
-        }) => {
+        test('dots and boxes game loads with interactive elements', async ({ page }) => {
             // Check game board is visible
-            await expect(
-                page.locator('#game-board, .game-board')
-            ).toBeVisible();
+            await expect(page.locator('#game-board, .game-board')).toBeVisible();
 
             // Look for lines that can be clicked
             const lines = page.locator(
@@ -426,9 +388,7 @@ test.describe('Game Interaction Tests', () => {
 
         test('dots and boxes has score tracking', async ({ page }) => {
             // Look for score display
-            const scoreElements = page.locator(
-                '.score, #score, [data-testid="score"], .player-score, .ai-score'
-            );
+            const scoreElements = page.locator('.score, #score, [data-testid="score"], .player-score, .ai-score');
 
             if ((await scoreElements.count()) > 0) {
                 await expect(scoreElements.first()).toBeVisible();
@@ -444,9 +404,7 @@ test.describe('Game Interaction Tests', () => {
         const games = ['tic-tac-toe', 'connect4', 'dots-and-boxes'];
 
         for (const gameId of games) {
-            test(`${gameId} has AI thoughts/status display`, async ({
-                page,
-            }) => {
+            test(`${gameId} has AI thoughts/status display`, async ({ page }) => {
                 await page.goto(`/game/${gameId}`);
                 await page.waitForLoadState('networkidle');
 
@@ -464,9 +422,7 @@ test.describe('Game Interaction Tests', () => {
                 }
             });
 
-            test(`${gameId} has game rules/help available`, async ({
-                page,
-            }) => {
+            test(`${gameId} has game rules/help available`, async ({ page }) => {
                 await page.goto(`/game/${gameId}`);
                 await page.waitForLoadState('networkidle');
 
@@ -479,16 +435,12 @@ test.describe('Game Interaction Tests', () => {
                     await rulesButton.first().click({ force: true });
 
                     // Should open modal or show rules
-                    const rulesModal = page.locator(
-                        '#rules-modal, .modal, .rules, [data-testid="rules-modal"]'
-                    );
+                    const rulesModal = page.locator('#rules-modal, .modal, .rules, [data-testid="rules-modal"]');
                     await expect(rulesModal.first()).toBeVisible();
                 }
             });
 
-            test(`${gameId} loads without critical errors`, async ({
-                page,
-            }) => {
+            test(`${gameId} loads without critical errors`, async ({ page }) => {
                 // Track console errors
                 const errors = [];
                 page.on('console', msg => {
