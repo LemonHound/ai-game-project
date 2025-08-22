@@ -204,7 +204,6 @@ test.describe('Tic Tac Toe Database Integration', () => {
             expect(statesResponse.ok()).toBeTruthy();
 
             const states = await statesResponse.json();
-            console.log('states', states);
             expect(Array.isArray(states)).toBeTruthy();
             expect(states.length).toBeLessThanOrEqual(3);
 

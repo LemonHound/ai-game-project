@@ -35,7 +35,6 @@ describe('Smoke Tests', () => {
             expect(result.rows).toHaveLength(1);
             expect(result.rows[0]).toHaveProperty('now');
             client.release();
-            console.log('✅ Database connection test passed');
         } catch (error) {
             console.error('❌ Database connection failed:', error.message);
             // Fail the test if DB is configured but connection fails

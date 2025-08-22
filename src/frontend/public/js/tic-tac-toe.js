@@ -6,9 +6,6 @@ class TicTacToeGame {
         this.isProcessingMove = false;
 
         this.initializeGame();
-
-        this.waitTimeMin = 200;
-        this.waitTimeMax = 1200;
     }
 
     async initializeGame() {
@@ -59,10 +56,7 @@ class TicTacToeGame {
             // If AI should start first, it will be handled by the backend
             if (!this.gameState.playerStarts) {
                 this.updateAIThoughts("I'll start this game!");
-
-                // Simulate AI thinking time on frontend
-                const thinkingTime = this.waitTimeMin + Math.random() * (this.waitTimeMax - this.waitTimeMin);
-                setTimeout(() => this.makeAIMove(), thinkingTime);
+                await this.makeAIMove();
             } else {
                 this.updateAIThoughts('Ready for a new game! Make your first move.');
             }
@@ -187,21 +181,16 @@ class TicTacToeGame {
         });
 
         if (data) {
-            const aiSimWaitTime = Math.random() * (this.waitTimeMax - this.waitTimeMin) + this.waitTimeMin;
-            setTimeout(async () => {
-                this.gameState = data.newState;
-                this.updateUIFromState();
+            this.gameState = data.newState;
+            this.updateUIFromState();
 
-                if (data.aiMove) {
-                    // AI move was made automatically by backend
-                    const aiPosition = data.aiMove.position;
-                    this.updateAIThoughts(
-                        `I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || 'Your turn!'}`
-                    );
-                } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'O') {
-                    await this.makeAIMove();
-                }
-            }, aiSimWaitTime);
+            if (data.aiMove) {
+                // AI move was made automatically by backend
+                const aiPosition = data.aiMove.position;
+                this.updateAIThoughts(`I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || 'Your turn!'}`);
+            } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'O') {
+                await this.makeAIMove();
+            }
         }
     }
 

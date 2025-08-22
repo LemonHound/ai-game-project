@@ -41,8 +41,6 @@ test.describe('Performance Tests', () => {
 
             expect(response.ok()).toBeTruthy();
             expect(responseTime).toBeLessThan(2000); // Should respond within 2 seconds
-
-            console.log(`${endpoint} responded in ${responseTime}ms`);
         }
     });
 
@@ -101,8 +99,6 @@ test.describe('Performance Tests', () => {
 
         // Should respond to clicks within 3000ms (reasonable for CI with auth)
         expect(responseTime).toBeLessThan(3000);
-
-        console.log(`Game interaction responded in ${responseTime}ms`);
 
         // Verify the square actually contains 'X'
         await expect(firstSquare).toContainText('X');

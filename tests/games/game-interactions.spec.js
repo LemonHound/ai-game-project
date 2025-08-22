@@ -204,12 +204,6 @@ test.describe('Game Interaction Tests', () => {
 
                 // Selection should be cleared after move
                 await expect(selectedRing).not.toBeVisible();
-
-                // AI should respond or game status should update
-                const gameStatus = page.locator('#game-status');
-                await expect(gameStatus).toContainText(/AI|thinking|turn/i, {
-                    timeout: 3000,
-                });
             }
         });
 
@@ -247,7 +241,7 @@ test.describe('Game Interaction Tests', () => {
 
                 // Game status should reset
                 const gameStatus = page.locator('#game-status');
-                await expect(gameStatus).toContainText(/turn|ready/i);
+                await expect(gameStatus).toContainText(/Your Turn/i);
             }
         });
 
@@ -401,7 +395,7 @@ test.describe('Game Interaction Tests', () => {
     });
 
     test.describe('General Game Features', () => {
-        const games = ['tic-tac-toe', 'connect4', 'dots-and-boxes'];
+        const games = ['tic-tac-toe', 'connect4', 'dots-and-boxes', 'chess', 'checkers'];
 
         for (const gameId of games) {
             test(`${gameId} has AI thoughts/status display`, async ({ page }) => {

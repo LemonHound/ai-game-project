@@ -63,8 +63,6 @@ router.post('/:gameId/move', async (req, res) => {
         const { gameId } = req.params;
         const { sessionId, move } = req.body;
 
-        setTimeout(() => {}, 1000);
-
         if (!req.user || !req.user.id) {
             return res.status(401).json({
                 error: 'Authentication required',
@@ -295,6 +293,13 @@ async function initializeGameInDB(session, engine) {
         ]);
     } else if (engine.getEngineId() === 'checkers') {
         await pool.query('SELECT start_checkers_game($1, $2, $3, $4)', [
+            session.userId,
+            session.sessionId,
+            session.playerStarts,
+            session.difficulty,
+        ]);
+    } else if (engine.getEngineId() === 'pong') {
+        await pool.query('SELECT start_pong_game($1, $2, $3, $4)', [
             session.userId,
             session.sessionId,
             session.playerStarts,

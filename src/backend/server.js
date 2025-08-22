@@ -148,6 +148,17 @@ const games = [
         category: 'strategy',
         tags: ['Strategy', '1 Player', 'Classic'],
     },
+    {
+        id: 'pong',
+        name: 'Pong',
+        description: 'Classic pong game, popularized by Atari',
+        icon: '🕹️',
+        difficulty: 'Easy',
+        players: 1,
+        status: 'active',
+        category: 'arcade',
+        tags: ['arcade', '1 Player', 'Classic'],
+    },
 ];
 
 // Helper function to pass auth data to templates
@@ -263,7 +274,7 @@ app.get('/settings', (req, res) => {
 });
 
 // Individual game routes - updated with new games
-const validGames = ['tic-tac-toe', 'dots-and-boxes', 'connect4', 'chess', 'checkers'];
+const validGames = ['tic-tac-toe', 'dots-and-boxes', 'connect4', 'chess', 'checkers', 'pong'];
 
 app.get('/game/:gameId', (req, res) => {
     const { gameId } = req.params;

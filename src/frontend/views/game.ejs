@@ -41,8 +41,6 @@
         <div class="flex-1 overflow-hidden flex flex-col">
             <div class="card bg-base-200 shadow-xl h-full">
                 <div class="card-body h-full flex flex-col">
-                    <h2 class="card-title mb-4 flex-shrink-0">Game Board</h2>
-
                     <!-- Game Board - Takes remaining space -->
                     <div class="flex-1 flex items-center justify-center overflow-hidden">
                         <% if (currentGame.id === 'tic-tac-toe') { %>
@@ -55,42 +53,14 @@
                             <%- include('partials/connect4-board') %>
                         <% } else if (currentGame.id === 'dots-and-boxes') { %>
                             <%- include('partials/dots-and-boxes-board') %>
+                        <% } else if (currentGame.id === 'pong') { %>
+                            <%- include('partials/pong-board') %>
                         <% } else { %>
                             <div class="text-center">
                                 <h3 class="text-xl font-semibold mb-2">Coming Soon!</h3>
                                 <p class="opacity-70">This game is currently in development.</p>
                             </div>
                         <% } %>
-                    </div>
-
-                    <!-- Game Status - Fixed at bottom -->
-                    <div class="text-center mt-4 flex-shrink-0">
-                        <div id="game-status" class="text-lg font-semibold mb-2">
-                            <% if (currentGame.id === 'tic-tac-toe') { %>
-                                Your turn! Choose a square.
-                            <% } else if (currentGame.id === 'chess') { %>
-                                Choose your color to start playing!
-                            <% } else if (currentGame.id === 'connect4') { %>
-                                Your turn! Choose a column to drop your red piece.
-                            <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                                Your turn! Click on any line to start.
-                            <% } else { %>
-                                Game will start when available.
-                            <% } %>
-                        </div>
-                        <div id="game-info" class="text-sm opacity-70">
-                            <% if (currentGame.id === 'tic-tac-toe') { %>
-                                Make your first move.
-                            <% } else if (currentGame.id === 'chess') { %>
-                                Click a piece to see valid moves.
-                            <% } else if (currentGame.id === 'connect4') { %>
-                                Drop pieces to connect four in a row!
-                            <% } else if (currentGame.id === 'dots-and-boxes') { %>
-                                Complete boxes by drawing their fourth side.
-                            <% } else { %>
-                                AI analysis will be available when the game launches.
-                            <% } %>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -116,9 +86,11 @@
                             <% } else if (currentGame.id === 'chess') { %>
                                 Select your color and start practicing!
                             <% } else if (currentGame.id === 'connect4') { %>
-                                Ready to play Connect 4! Drop your red piece in any column.
+                                Ready to play Connect 4! Drop your piece in any column.
                             <% } else if (currentGame.id === 'dots-and-boxes') { %>
                                 Ready to play! Click on any line to draw it.
+                            <% } else if (currentGame.id === 'pong') { %>
+                                Ready to play! Click on either side of the board to begin.
                             <% } else { %>
                                 This game is currently in development. Stay tuned for AI-powered gameplay!
                             <% } %>
@@ -174,6 +146,10 @@
                                 <p>• Avoid giving away boxes to your opponent</p>
                                 <p>• Count the chains to plan ahead</p>
                                 <p>• Force your opponent into bad positions</p>
+                            <% } else if (currentGame.id === 'pong') { %>
+                                <p>• Move your paddle to hit the ball</p>
+                                <p>• Use your paddle momentum and edges to hit at steeper angles</p>
+                                <p>• The paddle movement speed is capped</p>
                             <% } else { %>
                                 <p>• Tips will be available when the game launches</p>
                                 <p>• Stay tuned for AI-powered strategies</p>
@@ -184,7 +160,7 @@
             </div>
 
             <!-- Score Display (for supported games) -->
-            <% if (currentGame.id === 'tic-tac-toe' || currentGame.id === 'connect4' || currentGame.id === 'dots-and-boxes') { %>
+            <% if (currentGame.id === 'tic-tac-toe' || currentGame.id === 'connect4' || currentGame.id === 'dots-and-boxes' || currentGame.id === 'pong') { %>
                 <div class="card bg-base-200 shadow-lg">
                     <div class="card-body">
                         <h3 class="card-title text-base">🏆 Score</h3>
@@ -247,6 +223,11 @@
                     <p>👑 <strong>Kings:</strong> Reach the opposite end to promote your piece to a king</p>
                     <p>🏆 <strong>Winning:</strong> Capture all enemy pieces or block all their moves!</p>
                     <p>🧠 <strong>Strategy:</strong> Control the center and create multiple capture threats</p>
+            <% } else if (currentGame.id === 'pong') { %>
+                <p>🎯 <strong>Objective:</strong> Use your mouse to move the paddle up and down</p>
+                <p>🎮 <strong>How to Play:</strong> Your goal is to get the ball past your opponent's paddle</p>
+                <p>👑 <strong>Kings:</strong> Score one point each time the ball passes your opponent's paddle</p>
+                <p>🧠 <strong>Strategy:</strong> The first player to 7 points wins!</p>
             <% } else { %>
                 <p>📋 Rules for <%= currentGame.name %> will be available when the game launches.</p>
                 <p>🚀 This game is currently in development and will be available soon!</p>
@@ -279,5 +260,9 @@
 <% } else if (currentGame.id === 'dots-and-boxes') { %>
     <script>
         var pageScripts = ['dots-and-boxes.js'];
+    </script>
+<% } else if (currentGame.id === 'pong') { %>
+    <script>
+        var pageScripts = ['pong.js'];
     </script>
 <% } %>
