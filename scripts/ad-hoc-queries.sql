@@ -1,5 +1,4 @@
 SELECT table_name FROM information_schema.tables
-WHERE table_name IN ('tic_tac_toe_states', 'tic_tac_toe_games');
 
 SELECT * FROM public.tic_tac_toe_states;
 select * from public.tic_tac_toe_games;

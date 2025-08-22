@@ -7,17 +7,17 @@ module.exports = defineConfig({
     testDir: './tests',
     /* Only include Playwright test files, exclude Jest tests */
     testMatch: [
-        '**/tests/smoke/**/*.spec.js',
-        '**/tests/auth/**/*.spec.js',
-        '**/tests/games/**/*.spec.js',
-        '**/tests/e2e/**/*.spec.js',
         '**/tests/api/**/*.spec.js',
-        '**/tests/performance/**/*.spec.js',
+        '**/tests/auth/**/*.spec.js',
         '**/tests/database/**/*.spec.js',
+        '**/tests/e2e/**/*.spec.js',
+        '**/tests/games/**/*.spec.js',
+        '**/tests/performance/**/*.spec.js',
+        '**/tests/smoke/**/*.spec.js',
     ],
     /* Ignore Jest test files */
     testIgnore: ['**/tests/unit/**/*'],
-    /* Run tests in files in parallel */
+    /* Run tests in parallel */
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
     forbidOnly: !!process.env.CI,

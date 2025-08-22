@@ -97,7 +97,6 @@ test.describe('Site Navigation', () => {
             // Check if games are displayed but not clickable
             const gameElements = page.locator('#featured-games .card');
             if ((await gameElements.count()) > 0) {
-                console.log('Games are displayed but may not be clickable yet');
                 expect(true).toBe(true); // Pass - games are shown
             } else {
                 throw new Error('No games found on games page');
@@ -240,12 +239,7 @@ test.describe('Site Navigation', () => {
 
         // Look for navigation back to home
         const homeLink = page.locator('[data-testid="home-button"]');
-        if ((await homeLink.count()) > 0) {
-            await homeLink.first().click();
-            await expect(page).toHaveURL('/');
-        } else {
-            // If no home link on 404 page, that's okay - just verify 404 shows
-            console.log('404 page works but no home link found');
-        }
+        await homeLink.first().click();
+        await expect(page).toHaveURL('/');
     });
 });

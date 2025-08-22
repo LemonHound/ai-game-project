@@ -175,9 +175,6 @@ test.describe('API Endpoints', () => {
             const auth = addAuth(request);
             const response = await auth.get('/api/auth/me');
 
-            console.log('Auth /me test - Status:', response.status());
-            console.log('Auth /me test - OK:', response.ok());
-
             if (!response.ok()) {
                 const errorText = await response.text();
                 console.log('Auth /me test - Error:', errorText);
@@ -191,22 +188,12 @@ test.describe('API Endpoints', () => {
 
         test('GET /api/auth/stats returns user statistics', async ({ request }) => {
             const auth = addAuth(request);
-
-            // Debug: Let's see what routes are actually being hit
-            console.log('Making request to /api/auth/stats');
-
             const response = await auth.get('/api/auth/stats');
-
-            // Debug: Log what we're getting
-            console.log('Stats response status:', response.status());
-            console.log('Stats response headers:', response.headers());
 
             if (!response.ok()) {
                 const errorBody = await response.text();
                 console.log('Stats error response:', errorBody);
 
-                // Let's also try to see if the auth route exists at all
-                console.log('Testing if /api/auth/health works...');
                 const healthResponse = await auth.get('/api/auth/health');
                 console.log('Auth health status:', healthResponse.status());
                 if (healthResponse.ok()) {

@@ -1,5 +1,6 @@
 const TicTacToeEngine = require('./tic-tac-toe');
 const CheckersEngine = require('./checkers');
+const PongEngine = require('./pong');
 
 class GameFactory {
     constructor() {
@@ -13,6 +14,9 @@ class GameFactory {
 
         const checkers = new CheckersEngine();
         this.engines.set(checkers.getEngineId(), checkers);
+
+        const pong = new PongEngine();
+        this.engines.set(pong.getEngineId(), pong);
     }
 
     getEngine(gameId) {
