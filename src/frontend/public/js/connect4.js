@@ -327,6 +327,7 @@ class Connect4Game {
         this.moveHistory = [];
 
         this.initializeBoard();
+        this.renderBoard();
         this.updateGameStatus();
         this.updateAIThoughts('Game restarted! Ready for another round of Connect 4!');
 
