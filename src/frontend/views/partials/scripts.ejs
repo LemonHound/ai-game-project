@@ -57,8 +57,12 @@
     }
 
     async function restartGame() {
-        if (game && game.restartGame) {
-            await game.restartGame();
+        if (game) {
+            if (game.restartGame) {
+                await game.restartGame();
+            } else if (game.restart) {
+                game.restart();
+            }
         }
     }
 </script>
