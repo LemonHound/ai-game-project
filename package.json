@@ -3,7 +3,9 @@
     "version": "1.0.0",
     "scripts": {
         "dev": "concurrently \"npm run build-css:watch\" \"nodemon src/backend/server.js\"",
+        "dev:full": "",
         "start": "npm run build-css && node src/backend/server.js",
+        "start:full": "",
         "test": "npm run test:unit && npm run test:e2e",
         "test:unit": "jest tests/unit",
         "test:unit:coverage": "jest tests/unit --coverage --watchAll=false",
@@ -22,7 +24,8 @@
         "deps:update": "npx npm-check-updates --upgrade --target minor && npm install",
         "deps:update:major": "npx npm-check-updates --upgrade && npm install",
         "build-css": "tailwindcss -i ./src/frontend/public/css/input.css -o ./src/frontend/public/css/output.css --minify",
-        "build-css:watch": "tailwindcss -i ./src/frontend/public/css/input.css -o ./src/frontend/public/css/output.css --watch"
+        "build-css:watch": "tailwindcss -i ./src/frontend/public/css/input.css -o ./src/frontend/public/css/output.css --watch",
+        "dev:python": "C:/Users/seiwe/miniconda3/envs/AIGameWebsite/python.exe src/backend/app.py"
     },
     "dependencies": {
         "@parcel/watcher": "^2.5.1",

@@ -2,55 +2,25 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const session = require('express-session');
 const path = require('path');
-// const cleanupService = require('./services/cleanup-scheduler');
 const cookieParser = require('cookie-parser');
-const csrf = require('csurf');
-const { authMiddleware, dynamicAuthMiddleware } = require('./middleware/auth');
 
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// cookie management
+// Cookie management (keep for reading cookies, but not auth)
 app.use(cookieParser());
-app.use(authMiddleware);
-
-const csrfProtection = csrf({
-    cookie: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-    },
-});
 
 // Template engine setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../frontend/views'));
 
-// Session configuration
-app.use(
-    session({
-        secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-in-production',
-        name: 'sessionId',
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-            secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-            httpOnly: true,
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            sameSite: 'strict',
-        },
-        store: undefined, // will implement a database store later
-    })
-);
-
 // Middleware
 app.use(
     helmet({
-        contentSecurityPolicy: false, // Disable CSP for development
+        contentSecurityPolicy: false,
     })
 );
 app.use(
@@ -68,30 +38,20 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from frontend
 app.use(express.static(path.join(__dirname, '../frontend/public')));
 
-// Apply auth middleware to all routes
-app.use(authMiddleware);
+// REMOVE all auth imports and routes:
+// const authRoutes = require('./routes/auth');
+// const { authMiddleware, dynamicAuthMiddleware } = require('./middleware/auth');
+// app.use(authMiddleware);
+// app.use('/api/auth', authRoutes);
 
-// Import route modules
+// Keep game and AI routes if needed, or remove if moving to Python
 const aiRoutes = require('./routes/ai');
 const gameRoutes = require('./routes/game');
-const authRoutes = require('./routes/auth');
 
-// make CSRF token fetch publicly accessible
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
-});
-
-// Apply CSRF protection ONLY to specific auth endpoints that need it
-app.use('/api/auth/login', csrfProtection);
-app.use('/api/auth/register', csrfProtection);
-app.use('/api/auth/logout', csrfProtection);
-
-// API Routes - now with conditional authentication
-app.use('/api/auth', authRoutes); // Auth routes first
 app.use('/api/ai', aiRoutes);
-app.use('/api', gameRoutes); // Generic game routes last
+app.use('/api', gameRoutes);
 
-// Updated game data with new games
+// Updated game data
 const games = [
     {
         id: 'tic-tac-toe',
@@ -161,11 +121,11 @@ const games = [
     },
 ];
 
-// Helper function to pass auth data to templates
+// Helper function - SIMPLIFIED (no auth data)
 const getTemplateData = (req, additionalData = {}) => {
     return {
-        isAuthenticated: req.isAuthenticated || false,
-        currentUser: req.user || null,
+        isAuthenticated: false, // Always false - auth handled by Python
+        currentUser: null, // Always null - frontend will check via API
         games: games.slice(0, 5),
         ...additionalData,
     };
@@ -178,7 +138,6 @@ app.get('/api/health', (req, res) => {
         message: 'Server is running!',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        authenticated: req.isAuthenticated || false,
     });
 });
 
@@ -191,7 +150,6 @@ app.get('/api/test-db', async (req, res) => {
             status: 'Database connected!',
             userCount: result.rows[0].count,
             timestamp: new Date().toISOString(),
-            authenticated: req.isAuthenticated || false,
         });
     } catch (error) {
         console.error('Database test error:', error);
@@ -201,20 +159,10 @@ app.get('/api/test-db', async (req, res) => {
 
 // Games API endpoint
 app.get('/api/games', (req, res) => {
-    res.json({
-        games,
-        authenticated: req.isAuthenticated || false,
-        user: req.user
-            ? {
-                  id: req.user.id,
-                  username: req.user.username,
-                  displayName: req.user.display_name,
-              }
-            : null,
-    });
+    res.json({ games });
 });
 
-// Page Routes with Templates
+// Page Routes - REMOVE auth checks
 app.get('/', (req, res) => {
     res.render('layout', {
         title: 'AI Game Hub - Intelligent Gaming Experience',
@@ -245,12 +193,8 @@ app.get('/about', (req, res) => {
     });
 });
 
-// Profile page (requires authentication)
+// Profile page - REMOVE auth check, frontend will handle
 app.get('/profile', (req, res) => {
-    if (!req.isAuthenticated) {
-        return res.redirect('/?login=required');
-    }
-
     res.render('layout', {
         title: 'Profile - AI Game Hub',
         currentPage: 'profile',
@@ -259,12 +203,8 @@ app.get('/profile', (req, res) => {
     });
 });
 
-// Settings page (requires authentication)
+// Settings page - REMOVE auth check
 app.get('/settings', (req, res) => {
-    if (!req.isAuthenticated) {
-        return res.redirect('/?login=required');
-    }
-
     res.render('layout', {
         title: 'Settings - AI Game Hub',
         currentPage: 'settings',
@@ -273,7 +213,7 @@ app.get('/settings', (req, res) => {
     });
 });
 
-// Individual game routes - updated with new games
+// Individual game routes
 const validGames = ['tic-tac-toe', 'dots-and-boxes', 'connect4', 'chess', 'checkers', 'pong'];
 
 app.get('/game/:gameId', (req, res) => {
@@ -290,16 +230,7 @@ app.get('/game/:gameId', (req, res) => {
 
     const currentGame = games.find(g => g.id === gameId);
 
-    if (!currentGame) {
-        return res.status(404).render('layout', {
-            title: 'Game Not Found - AI Game Hub',
-            currentPage: 'error',
-            currentTemplate: '404',
-            ...getTemplateData(req),
-        });
-    }
-
-    if (currentGame.status === 'coming-soon') {
+    if (!currentGame || currentGame.status === 'coming-soon') {
         return res.redirect(`/games?highlight=${gameId}`);
     }
 
@@ -309,17 +240,17 @@ app.get('/game/:gameId', (req, res) => {
         currentTemplate: 'game',
         currentGame: currentGame,
         gameStats: {
-            gamesPlayed: req.isAuthenticated ? 12 : 0,
-            winRate: req.isAuthenticated ? 67 : 0,
-            bestStreak: req.isAuthenticated ? 5 : 0,
+            gamesPlayed: 0,
+            winRate: 0,
+            bestStreak: 0,
             aiLevel: 3,
         },
-        pageScripts: [`${gameId}.js`], // This loads the corresponding JS file - NAME MUST MATCH
+        pageScripts: [`${gameId}.js`],
         ...getTemplateData(req),
     });
 });
 
-// API route to get specific game information
+// API route for game info
 app.get('/api/game/:gameId/info', (req, res) => {
     const { gameId } = req.params;
     const game = games.find(g => g.id === gameId);
@@ -328,24 +259,13 @@ app.get('/api/game/:gameId/info', (req, res) => {
         return res.status(404).json({ error: 'Game not found' });
     }
 
-    res.json({
-        game,
-        authenticated: req.isAuthenticated || false,
-        user: req.user
-            ? {
-                  id: req.user.id,
-                  username: req.user.username,
-                  displayName: req.user.display_name,
-              }
-            : null,
-    });
+    res.json({ game });
 });
 
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
-});
+// REMOVE CSRF endpoint - Python handles this now
+// app.get('/api/csrf-token', csrfProtection, (req, res) => { ... });
 
-// API 404 handler - for routes starting with /api (Express 5 compatible)
+// 404 handlers
 app.use((req, res, next) => {
     if (req.originalUrl.startsWith('/api')) {
         res.status(404).json({
@@ -358,7 +278,6 @@ app.use((req, res, next) => {
     }
 });
 
-// Regular 404 handler for all other routes (pages)
 app.use((req, res) => {
     res.status(404).render('layout', {
         title: 'Page Not Found - AI Game Hub',
@@ -368,53 +287,29 @@ app.use((req, res) => {
     });
 });
 
-// Error handling middleware (must have 4 parameters!)
+// Error handling
 app.use((err, req, res, next) => {
     console.error('Server Error:', err.stack);
 
-    // Check if this is an API request
     if (req.originalUrl.startsWith('/api')) {
         res.status(500).json({
             error: 'Internal server error',
             message: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message,
         });
     } else {
-        // Render error page for regular requests
         res.status(500).render('layout', {
             title: 'Server Error - AI Game Hub',
             currentPage: 'error',
-            currentTemplate: '404', // You could create a separate 500.ejs if desired
+            currentTemplate: '404',
             error: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message,
             ...getTemplateData(req),
         });
     }
 });
 
-/**
- * Cleanup service for database storage of game states and player games
- */
-/*
-cleanupService.start(5); // Run every 5 minutes
-
-// Shutdowns
-process.on('SIGTERM', () => {
-    cleanupService.stop();
-    process.exit(0);
-});
-process.on('SIGINT', () => {
-    cleanupService.stop();
-    process.exit(0);
-});
-*/
-
-/**
- * Start the app listening for events.
- */
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 Database: ${process.env.DB_NAME}`);
-    console.log(`🔐 Session Secret: ${process.env.SESSION_SECRET ? 'Set' : 'Using default (change this!)'}`);
-    console.log(`🌐 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
+    console.log(`🚀 Frontend server running on http://localhost:${PORT}`);
+    console.log(`🔐 Auth handled by Python backend on port 8000`);
 });
 
 module.exports = app;
