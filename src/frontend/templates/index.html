@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="/static/css/output.css" />
+    </head>
+    <body class="min-h-screen bg-base-200">
+        <!-- Navigation -->
+        <nav class="navbar bg-base-100 shadow-lg">
+            <div class="container mx-auto">
+                <div class="flex-1">
+                    <a href="/src/frontend/public" class="btn btn-ghost text-xl">🎮 AI Game Hub</a>
+                </div>
+                <div class="flex-none gap-2">
+                    <a href="/games" class="btn btn-ghost">Games</a>
+                    <a href="/about" class="btn btn-ghost">About</a>
+                    <div class="dropdown dropdown-end">
+                        <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+                            <div class="bg-neutral text-neutral-content rounded-full w-10">
+                                <span>👤</span>
+                            </div>
+                        </label>
+                        <ul
+                            tabindex="0"
+                            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                            <li><a href="/profile">Profile</a></li>
+                            <li><a href="/settings">Settings</a></li>
+                            <li><a id="logout-btn">Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="hero min-h-[60vh] bg-gradient-to-br from-primary to-secondary">
+            <div class="hero-content text-center">
+                <div class="max-w-3xl">
+                    <h1 class="text-5xl md:text-7xl font-bold text-white mb-6">Play Against Adaptive AI</h1>
+                    <p class="text-xl md:text-2xl text-white/90 mb-8">
+                        Challenge yourself with AI opponents that learn and adapt to your playing style
+                    </p>
+                    <a href="/games" class="btn btn-lg btn-accent"> Browse Games </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Featured Games -->
+        <section class="container mx-auto px-4 py-16">
+            <h2 class="text-4xl font-bold text-center mb-12">Featured Games</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for game in featured_games %}
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+                    <div class="card-body">
+                        <div class="text-6xl mb-4 text-center">{{ game.icon }}</div>
+                        <h3 class="card-title justify-center">{{ game.name }}</h3>
+                        <p class="text-center text-base-content/70">{{ game.description[:80] }}...</p>
+                        <div class="card-actions justify-center mt-4">
+                            <div class="badge badge-outline">{{ game.difficulty }}</div>
+                            <div class="badge badge-primary">1 Player</div>
+                        </div>
+                        <a href="/game/{{ game.id }}" class="btn btn-primary mt-4"> Play Now </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Features -->
+        <section class="bg-base-300 py-16">
+            <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-bold text-center mb-12">Why AI Game Hub?</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="text-center">
+                        <div class="text-5xl mb-4">🧠</div>
+                        <h3 class="text-2xl font-bold mb-2">Adaptive AI</h3>
+                        <p class="text-base-content/70">AI that learns from your moves and adapts its strategy</p>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="text-5xl mb-4">📊</div>
+                        <h3 class="text-2xl font-bold mb-2">Track Progress</h3>
+                        <p class="text-base-content/70">See your stats and improvement over time</p>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="text-5xl mb-4">🎯</div>
+                        <h3 class="text-2xl font-bold mb-2">Multiple Difficulties</h3>
+                        <p class="text-base-content/70">From beginner to expert, find your perfect challenge</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer footer-center p-10 bg-base-100 text-base-content">
+            <div>
+                <p class="font-bold">AI Game Hub</p>
+                <p>Intelligent gaming experiences powered by adaptive AI</p>
+                <p>© 2024 - All rights reserved</p>
+            </div>
+        </footer>
+
+        <script>
+            // Simple auth check
+            fetch('/api/auth/me', { credentials: 'include' })
+                .then(r => (r.ok ? r.json() : null))
+                .then(data => {
+                    if (data) {
+                        console.log('Logged in as:', data.username);
+                    }
+                })
+                .catch(() => {});
+
+            // Logout handler
+            document.getElementById('logout-btn')?.addEventListener('click', async () => {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                window.location.reload();
+            });
+        </script>
+    </body>
+</html>

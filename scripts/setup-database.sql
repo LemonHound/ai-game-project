@@ -78,6 +78,40 @@ CREATE TABLE ai_training_data (
 );
 
 -- ============================================
+-- Create Games Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS games (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    icon VARCHAR(10),
+    difficulty VARCHAR(20),
+    players INTEGER DEFAULT 1,
+    status VARCHAR(20) DEFAULT 'active',
+    category VARCHAR(50),
+    tags TEXT[],
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO games (id, name, description, icon, difficulty, players, status, category, tags) VALUES
+('tic-tac-toe', 'Tic Tac Toe', 'Classic 3x3 grid game with adaptive AI opponent that learns your strategies', '⭕', 'Easy', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Quick Play']),
+('dots-and-boxes', 'Dots and Boxes', 'Connect dots to complete boxes and claim territory in this strategic paper game', '⬜', 'Medium', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Territory']),
+('connect4', 'Connect 4', 'Drop pieces to connect four in a row - vertically, horizontally, or diagonally', '🔴', 'Medium', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Classic']),
+('chess', 'Chess', 'Chess with AI that learns your playing style and adapts its strategy', '♟️', 'Expert', 1, 'coming-soon', 'strategy', ARRAY['Strategy', '1 Player', 'Coming Soon']),
+('checkers', 'Checkers', 'Classic checkers with an AI that adapts to your tactical preferences', '⚫', 'Hard', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Classic']),
+('pong', 'Pong', 'Classic pong game, popularized by Atari', '🕹️', 'Easy', 1, 'active', 'arcade', ARRAY['arcade', '1 Player', 'Classic'])
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    icon = EXCLUDED.icon,
+    difficulty = EXCLUDED.difficulty,
+    status = EXCLUDED.status,
+    category = EXCLUDED.category,
+    tags = EXCLUDED.tags,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- ============================================
 -- Create Tic Tac Toe Tables
 -- ============================================
 

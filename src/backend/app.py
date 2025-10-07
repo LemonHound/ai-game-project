@@ -1,13 +1,17 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
 import uvicorn
 
 from database import init_db_pool, close_db_pool, get_db_connection, return_db_connection
 from auth import router as auth_router
+from games import router as games_router
 
 load_dotenv()
 
@@ -18,30 +22,81 @@ async def lifespan(app: FastAPI):
     close_db_pool()
 
 app = FastAPI(
-    title="AI Game Hub API",
-    description="Python backend for AI Game Hub",
+    title="AI Game Hub",
+    description="AI-powered gaming platform",
     version="1.0.0",
     lifespan=lifespan
 )
 
+# Setup paths
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "frontend" / "public"
+TEMPLATES_DIR = BASE_DIR / "frontend" / "templates"
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Setup Jinja2 templates
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv('FRONTEND_URL', 'http://localhost:3000')],
+    allow_origins=[os.getenv('FRONTEND_URL', 'http://localhost:8000')],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "Accept", "X-CSRF-Token"],
     expose_headers=["Set-Cookie"],
 )
 
+# Include API routers
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(games_router, prefix="/api", tags=["Games"])
+
+# ============================================
+# PAGE ROUTES
+# ============================================
 
 @app.get("/")
-async def root():
-    return {
-        "message": "AI Game Hub Python Backend",
-        "version": "1.0.0",
-        "docs": "/docs"
-    }
+async def home(request: Request):
+    """Landing page"""
+    conn = None
+    try:
+        # Get featured games from database
+        conn = get_db_connection()
+        featured_games = []
+
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, name, description, icon, difficulty, status FROM games WHERE status = 'active' LIMIT 6"
+            )
+            rows = cursor.fetchall()
+            cursor.close()
+
+            featured_games = [{
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'icon': row[3],
+                'difficulty': row[4],
+                'status': row[5]
+            } for row in rows]
+
+        return templates.TemplateResponse(
+            "index.html",
+            {
+                "request": request,
+                "title": "AI Game Hub - Play Games with Adaptive AI",
+                "featured_games": featured_games
+            }
+        )
+    finally:
+        if conn:
+            return_db_connection(conn)
+
+# ============================================
+# API ROUTES
+# ============================================
 
 @app.get("/api/health")
 async def health_check():
@@ -58,7 +113,10 @@ async def test_database():
     try:
         conn = get_db_connection()
         if not conn:
-            raise HTTPException(status_code=500, detail="Database connection not available")
+            return {
+                "status": "Database not configured",
+                "timestamp": datetime.now().isoformat()
+            }
 
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM users")
@@ -72,7 +130,11 @@ async def test_database():
             "database": os.getenv('DB_NAME')
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "status": "Database error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
     finally:
         if conn:
             return_db_connection(conn)
@@ -84,4 +146,3 @@ if __name__ == "__main__":
         port=8000,
         reload=True
     )
-
