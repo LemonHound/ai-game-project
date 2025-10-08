@@ -29,6 +29,35 @@ class LoginRequest(BaseModel):
 class LogoutRequest(BaseModel):
     sessionId: Optional[str] = None
 
+def set_session_cookie(response: Response, session_id: str, max_age: int = 7 * 24 * 60 * 60):
+    """Helper to set session cookie with consistent parameters"""
+    response.set_cookie(
+        key="sessionId",
+        value=session_id,
+        httponly=True,
+        secure=os.getenv('NODE_ENV') == 'production',
+        samesite='lax',
+        max_age=max_age,
+        path='/'
+    )
+
+def delete_session_cookie(response: Response):
+    """Helper to delete session cookie with matching parameters"""
+    response.delete_cookie(
+        key="sessionId",
+        path='/',
+        domain=None,
+        secure=os.getenv('NODE_ENV') == 'production',
+        httponly=True,
+        samesite='lax'
+    )
+    response.set_cookie(
+        key="sessionId",
+        value="",
+        max_age=0,
+        path='/'
+    )
+
 @router.get("/csrf-token")
 async def get_csrf_token(response: Response):
     token = secrets.token_urlsafe(32)
@@ -56,7 +85,7 @@ async def get_current_user(
     user = await auth_service.get_user_by_session(session_id)
 
     if not user:
-        response.delete_cookie("sessionId")
+        delete_session_cookie(response)
         raise HTTPException(status_code=401, detail="Invalid or expired session")
 
     await auth_service.update_last_login(user['id'])
@@ -97,15 +126,7 @@ async def register(request: RegisterRequest, response: Response):
     )
 
     session_id = await auth_service.create_session(user['id'])
-
-    response.set_cookie(
-        key="sessionId",
-        value=session_id,
-        httponly=True,
-        secure=os.getenv('NODE_ENV') == 'production',
-        samesite='strict',
-        max_age=7 * 24 * 60 * 60
-    )
+    set_session_cookie(response, session_id, max_age=7 * 24 * 60 * 60)
 
     return {
         "message": "User registered successfully",
@@ -130,17 +151,8 @@ async def login(request: LoginRequest, response: Response):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
     session_id = await auth_service.create_session(user['id'])
-
     max_age = 30 * 24 * 60 * 60 if request.rememberMe else 7 * 24 * 60 * 60
-
-    response.set_cookie(
-        key="sessionId",
-        value=session_id,
-        httponly=True,
-        secure=os.getenv('NODE_ENV') == 'production',
-        samesite='strict',
-        max_age=max_age
-    )
+    set_session_cookie(response, session_id, max_age=max_age)
 
     await auth_service.update_last_login(user['id'])
 
@@ -159,16 +171,16 @@ async def login(request: LoginRequest, response: Response):
 @router.post("/logout")
 async def logout(
         response: Response,
-        request: LogoutRequest,
+        request: LogoutRequest = None,
         sessionId: Optional[str] = Cookie(None),
         x_session_id: Optional[str] = None
 ):
-    session_id = sessionId or x_session_id or request.sessionId
+    session_id = sessionId or x_session_id or (request.sessionId if request else None)
 
     if session_id:
         await auth_service.delete_session(session_id)
 
-    response.delete_cookie("sessionId")
+    delete_session_cookie(response)
 
     return {"message": "Logout successful"}
 
@@ -193,7 +205,6 @@ async def google_auth(request: GoogleAuthRequest, response: Response):
         if not client_id:
             raise HTTPException(status_code=501, detail="Google OAuth not configured")
 
-        # Verify the token with Google
         idinfo = id_token.verify_oauth2_token(
             request.token,
             google_requests.Request(),
@@ -205,11 +216,9 @@ async def google_auth(request: GoogleAuthRequest, response: Response):
         picture = idinfo.get('picture', '')
         google_id = idinfo['sub']
 
-        # Find or create user
         user = await auth_service.find_user_by_email(email)
 
         if not user:
-            # Create new user from Google account
             user = await auth_service.create_google_user(
                 email=email,
                 google_id=google_id,
@@ -217,17 +226,8 @@ async def google_auth(request: GoogleAuthRequest, response: Response):
                 profile_picture=picture
             )
 
-        # Create session
         session_id = await auth_service.create_session(user['id'])
-
-        response.set_cookie(
-            key="sessionId",
-            value=session_id,
-            httponly=True,
-            secure=os.getenv('NODE_ENV') == 'production',
-            samesite='strict',
-            max_age=30 * 24 * 60 * 60
-        )
+        set_session_cookie(response, session_id, max_age=30 * 24 * 60 * 60)
 
         await auth_service.update_last_login(user['id'])
 
@@ -253,8 +253,7 @@ async def google_login(request: Request):
     if not client_id:
         raise HTTPException(status_code=501, detail="Google OAuth not configured")
 
-    # Build Google OAuth URL
-    redirect_uri = f"{os.getenv('PYTHON_BACKEND_URL', 'http://localhost:8000')}/api/auth/google/callback"
+    redirect_uri = "http://localhost:8000/api/auth/google/callback"
 
     google_auth_url = (
         "https://accounts.google.com/o/oauth2/v2/auth?"
@@ -266,44 +265,34 @@ async def google_login(request: Request):
         "prompt=select_account"
     )
 
-    print(f"Redirecting to Google OAuth: {google_auth_url}")
     return RedirectResponse(url=google_auth_url)
 
 @router.get("/google/callback")
-async def google_callback(code: str = None, error: str = None, response: Response = None):
+async def google_callback(code: str = None, error: str = None):
     """Handle Google OAuth callback"""
     try:
         if error:
-            print(f"Google OAuth error: {error}")
-            return RedirectResponse(url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?error=google_auth_failed")
+            return RedirectResponse(url="/?error=google_auth_failed")
 
         if not code:
-            print("No authorization code received")
-            return RedirectResponse(url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?error=google_auth_failed")
+            return RedirectResponse(url="/?error=google_auth_failed")
 
-        print("Received Google auth code, exchanging for tokens...")
-
-        # Exchange code for tokens
         token_url = "https://oauth2.googleapis.com/token"
         token_data = {
             "client_id": os.getenv('GOOGLE_CLIENT_ID'),
             "client_secret": os.getenv('GOOGLE_CLIENT_SECRET'),
             "code": code,
             "grant_type": "authorization_code",
-            "redirect_uri": f"{os.getenv('PYTHON_BACKEND_URL', 'http://localhost:8000')}/api/auth/google/callback",
+            "redirect_uri": "http://localhost:8000/api/auth/google/callback",
         }
 
         async with httpx.AsyncClient() as client:
             token_response = await client.post(token_url, data=token_data)
             tokens = token_response.json()
 
-        print("Token exchange result:", "SUCCESS" if tokens.get('access_token') else "FAILED")
-
         if not tokens.get('access_token'):
-            print(f"Failed to get access token: {tokens}")
-            return RedirectResponse(url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?error=google_auth_failed")
+            return RedirectResponse(url="/?error=google_auth_failed")
 
-        # Get user info from Google
         userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
         async with httpx.AsyncClient() as client:
             user_response = await client.get(
@@ -312,13 +301,9 @@ async def google_callback(code: str = None, error: str = None, response: Respons
             )
             google_user = user_response.json()
 
-        print(f"Google user info received: {google_user.get('email')}")
-
-        # Find or create user
         user = await auth_service.find_user_by_email(google_user['email'])
 
         if not user:
-            print("Creating new user from Google account...")
             user = await auth_service.create_google_user(
                 email=google_user['email'],
                 google_id=google_user['id'],
@@ -326,30 +311,15 @@ async def google_callback(code: str = None, error: str = None, response: Respons
                 profile_picture=google_user.get('picture', '')
             )
         else:
-            print("Existing user found, updating last login...")
             await auth_service.update_last_login(user['id'])
 
-        # Create session
         session_id = await auth_service.create_session(user['id'])
 
-        # Build redirect response to frontend
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-        redirect_response = RedirectResponse(url=f"{frontend_url}/?login=success&provider=google")
+        redirect_response = RedirectResponse(url="/?login=success&provider=google")
+        set_session_cookie(redirect_response, session_id, max_age=30 * 24 * 60 * 60)
 
-        # Set session cookie
-        redirect_response.set_cookie(
-            key="sessionId",
-            value=session_id,
-            httponly=True,
-            secure=os.getenv('NODE_ENV') == 'production',
-            samesite='lax',  # Changed from 'strict' to 'lax' for cross-site redirects
-            max_age=30 * 24 * 60 * 60,
-            domain='localhost',  # Explicit domain for localhost
-        )
-
-        print("Session cookie set, redirecting to frontend")
         return redirect_response
 
     except Exception as e:
         print(f"Google OAuth callback error: {e}")
-        return RedirectResponse(url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/?error=google_auth_failed")
+        return RedirectResponse(url="/?error=google_auth_failed")

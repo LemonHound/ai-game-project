@@ -14,6 +14,4 @@ SELECT schemaname, tablename
 FROM pg_tables
 WHERE tablename LIKE 'tic_tac_toe%';
 
-SELECT proname FROM pg_proc WHERE proname LIKE '%tic_tac_toe%';
-
 select * from games;

@@ -1,42 +1,20 @@
 /** @type {import('tailwindcss').Config} */
-
 module.exports = {
-    content: [
-        './src/frontend/views/**/*.ejs',
-        './src/frontend/views/**/*.html',
-        './src/frontend/public/**/*.{html,js}',
-        './src/frontend/public/js/**/*.js',
-    ],
+    content: ['./src/frontend/templates/**/*.html', './src/frontend/public/**/*.js'],
+    theme: {
+        extend: {},
+    },
     plugins: [require('daisyui')],
     daisyui: {
-        themes: [
-            'light',
-            'synthware',
-            'retro',
-            'garden',
-            'halloween',
-            'forest',
-            'aqua',
-            'fantasy',
-            'luxury',
-            'dracula',
-            'autumn',
-            'business',
-            'acid',
-            'night',
-            'coffee',
-            'dim',
-            'nord',
-            'sunset',
-            'caramellatte',
-            'abyss',
-            'silk',
-        ],
-        darkTheme: 'luxury',
-        lightTheme: 'garden',
+        themes: ['light', 'dark', 'cupcake', 'cyberpunk', 'synthwave'],
+        darkTheme: 'dark',
         base: true,
         styled: true,
         utils: true,
-        logs: true,
     },
+    safelist: [
+        {
+            pattern: /./,
+        },
+    ],
 };

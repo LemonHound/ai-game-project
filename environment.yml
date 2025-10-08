@@ -13,3 +13,6 @@ dependencies:
   - fastapi
   - pydantic[email]
   - httpx
+  - httpx
+  - protobuf
+  - httpx

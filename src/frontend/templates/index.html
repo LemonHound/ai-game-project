@@ -5,44 +5,58 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ title }}</title>
         <link rel="stylesheet" href="/static/css/output.css" />
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
     </head>
     <body class="min-h-screen bg-base-200">
         <!-- Navigation -->
         <nav class="navbar bg-base-100 shadow-lg">
             <div class="container mx-auto">
                 <div class="flex-1">
-                    <a href="/src/frontend/public" class="btn btn-ghost text-xl">🎮 AI Game Hub</a>
+                    <a href="/" class="btn btn-ghost text-xl">🎮 AI Game Hub</a>
                 </div>
                 <div class="flex-none gap-2">
                     <a href="/games" class="btn btn-ghost">Games</a>
                     <a href="/about" class="btn btn-ghost">About</a>
-                    <div class="dropdown dropdown-end">
-                        <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
-                            <div class="bg-neutral text-neutral-content rounded-full w-10">
-                                <span>👤</span>
-                            </div>
-                        </label>
-                        <ul
-                            tabindex="0"
-                            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-                            <li><a href="/profile">Profile</a></li>
-                            <li><a href="/settings">Settings</a></li>
-                            <li><a id="logout-btn">Logout</a></li>
-                        </ul>
+
+                    <!-- Not Authenticated -->
+                    <div id="auth-logged-out" class="hidden">
+                        <button class="btn btn-primary" onclick="openLoginModal()">Log In</button>
+                    </div>
+
+                    <!-- Authenticated -->
+                    <div id="auth-logged-in" class="hidden">
+                        <div class="dropdown dropdown-end">
+                            <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+                                <div class="bg-neutral text-neutral-content rounded-full w-10">
+                                    <img id="user-avatar" class="hidden rounded-full" alt="User avatar" />
+                                    <span id="user-initial">👤</span>
+                                </div>
+                            </label>
+                            <ul
+                                tabindex="0"
+                                class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                                <li class="menu-title">
+                                    <span id="user-display-name">User</span>
+                                </li>
+                                <li><a href="/profile">Profile</a></li>
+                                <li><a href="/settings">Settings</a></li>
+                                <li><a id="logout-btn">Logout</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </nav>
 
         <!-- Hero Section -->
-        <section class="hero min-h-[60vh] bg-gradient-to-br from-primary to-secondary">
+        <section class="hero bg-gradient-to-br from-primary to-secondary min-h-[400px]">
             <div class="hero-content text-center">
-                <div class="max-w-3xl">
+                <div class="max-w-xl">
                     <h1 class="text-5xl md:text-7xl font-bold text-white mb-6">Play Against Adaptive AI</h1>
                     <p class="text-xl md:text-2xl text-white/90 mb-8">
                         Challenge yourself with AI opponents that learn and adapt to your playing style
                     </p>
-                    <a href="/games" class="btn btn-lg btn-accent"> Browse Games </a>
+                    <a href="/games" class="btn btn-lg btn-accent">Browse Games</a>
                 </div>
             </div>
         </section>
@@ -62,7 +76,7 @@
                             <div class="badge badge-outline">{{ game.difficulty }}</div>
                             <div class="badge badge-primary">1 Player</div>
                         </div>
-                        <a href="/game/{{ game.id }}" class="btn btn-primary mt-4"> Play Now </a>
+                        <a href="/game/{{ game.id }}" class="btn btn-primary mt-4">Play Now</a>
                     </div>
                 </div>
                 {% endfor %}
@@ -101,29 +115,186 @@
             <div>
                 <p class="font-bold">AI Game Hub</p>
                 <p>Intelligent gaming experiences powered by adaptive AI</p>
-                <p>© 2024 - All rights reserved</p>
+                <p>© 2025 - All rights reserved</p>
             </div>
         </footer>
 
-        <script>
-            // Simple auth check
-            fetch('/api/auth/me', { credentials: 'include' })
-                .then(r => (r.ok ? r.json() : null))
-                .then(data => {
-                    if (data) {
-                        console.log('Logged in as:', data.username);
-                    }
-                })
-                .catch(() => {});
+        <!-- Auth Modals -->
+        {% include 'partials/auth-modal.html' %}
 
-            // Logout handler
-            document.getElementById('logout-btn')?.addEventListener('click', async () => {
-                await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    credentials: 'include',
-                });
-                window.location.reload();
+        <script>
+            let currentUser = null;
+
+            function deleteCookie(name) {
+                document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = name + '=; Path=/; Domain=localhost; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            }
+
+            async function checkAuthStatus() {
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        credentials: 'include',
+                        headers: { Accept: 'application/json' },
+                        cache: 'no-cache',
+                    });
+
+                    if (response.ok) {
+                        currentUser = await response.json();
+                        updateUIForAuthenticatedUser(currentUser);
+                    } else {
+                        updateUIForUnauthenticatedUser();
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    updateUIForUnauthenticatedUser();
+                }
+            }
+
+            function updateUIForAuthenticatedUser(user) {
+                document.getElementById('auth-logged-out').classList.add('hidden');
+                document.getElementById('auth-logged-in').classList.remove('hidden');
+
+                document.getElementById('user-display-name').textContent = user.displayName || user.username;
+
+                if (user.profilePicture) {
+                    document.getElementById('user-avatar').src = user.profilePicture;
+                    document.getElementById('user-avatar').classList.remove('hidden');
+                    document.getElementById('user-initial').classList.add('hidden');
+                } else {
+                    const initial = (user.displayName || user.username || 'U')[0].toUpperCase();
+                    document.getElementById('user-initial').textContent = initial;
+                }
+            }
+
+            function updateUIForUnauthenticatedUser() {
+                document.getElementById('auth-logged-out').classList.remove('hidden');
+                document.getElementById('auth-logged-in').classList.add('hidden');
+                currentUser = null;
+            }
+
+            function openLoginModal() {
+                document.getElementById('login-modal').showModal();
+            }
+
+            function openRegisterModal() {
+                document.getElementById('register-modal').showModal();
+            }
+
+            function switchToRegister() {
+                document.getElementById('login-modal').close();
+                document.getElementById('register-modal').showModal();
+            }
+
+            function switchToLogin() {
+                document.getElementById('register-modal').close();
+                document.getElementById('login-modal').showModal();
+            }
+
+            document.getElementById('login-form').addEventListener('submit', async e => {
+                e.preventDefault();
+                const errorDiv = document.getElementById('login-error');
+                errorDiv.classList.add('hidden');
+
+                const formData = new FormData(e.target);
+                const data = {
+                    email: formData.get('email'),
+                    password: formData.get('password'),
+                    rememberMe: formData.get('rememberMe') === 'on',
+                };
+
+                try {
+                    const response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        document.getElementById('login-modal').close();
+                        e.target.reset();
+                        await checkAuthStatus();
+                    } else {
+                        errorDiv.querySelector('span').textContent = result.detail || 'Login failed';
+                        errorDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    errorDiv.querySelector('span').textContent = 'Network error. Please try again.';
+                    errorDiv.classList.remove('hidden');
+                }
             });
+
+            document.getElementById('register-form').addEventListener('submit', async e => {
+                e.preventDefault();
+                const errorDiv = document.getElementById('register-error');
+                errorDiv.classList.add('hidden');
+
+                const formData = new FormData(e.target);
+                const data = {
+                    username: formData.get('username'),
+                    email: formData.get('email'),
+                    password: formData.get('password'),
+                    displayName: formData.get('displayName') || formData.get('username'),
+                };
+
+                try {
+                    const response = await fetch('/api/auth/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        document.getElementById('register-modal').close();
+                        e.target.reset();
+                        await checkAuthStatus();
+                    } else {
+                        errorDiv.querySelector('span').textContent = result.detail || 'Registration failed';
+                        errorDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    errorDiv.querySelector('span').textContent = 'Network error. Please try again.';
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+
+                    deleteCookie('sessionId');
+                    updateUIForUnauthenticatedUser();
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                }
+            });
+
+            function handleGoogleAuth() {
+                window.location.href = '/api/auth/google';
+            }
+
+            document.getElementById('google-login-btn').addEventListener('click', handleGoogleAuth);
+            document.getElementById('google-register-btn').addEventListener('click', handleGoogleAuth);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('login') === 'success') {
+                checkAuthStatus();
+                window.history.replaceState({}, document.title, '/');
+            } else if (urlParams.get('error')) {
+                alert('Authentication failed. Please try again.');
+                window.history.replaceState({}, document.title, '/');
+            }
+
+            checkAuthStatus();
         </script>
     </body>
 </html>

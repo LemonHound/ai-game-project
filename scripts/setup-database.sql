@@ -98,7 +98,7 @@ INSERT INTO games (id, name, description, icon, difficulty, players, status, cat
 ('tic-tac-toe', 'Tic Tac Toe', 'Classic 3x3 grid game with adaptive AI opponent that learns your strategies', '⭕', 'Easy', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Quick Play']),
 ('dots-and-boxes', 'Dots and Boxes', 'Connect dots to complete boxes and claim territory in this strategic paper game', '⬜', 'Medium', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Territory']),
 ('connect4', 'Connect 4', 'Drop pieces to connect four in a row - vertically, horizontally, or diagonally', '🔴', 'Medium', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Classic']),
-('chess', 'Chess', 'Chess with AI that learns your playing style and adapts its strategy', '♟️', 'Expert', 1, 'coming-soon', 'strategy', ARRAY['Strategy', '1 Player', 'Coming Soon']),
+('chess', 'Chess', 'Chess with AI that learns your playing style and adapts its strategy', '♟️', 'Expert', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Coming Soon']),
 ('checkers', 'Checkers', 'Classic checkers with an AI that adapts to your tactical preferences', '⚫', 'Hard', 1, 'active', 'strategy', ARRAY['Strategy', '1 Player', 'Classic']),
 ('pong', 'Pong', 'Classic pong game, popularized by Atari', '🕹️', 'Easy', 1, 'active', 'arcade', ARRAY['arcade', '1 Player', 'Classic'])
 ON CONFLICT (id) DO UPDATE SET
