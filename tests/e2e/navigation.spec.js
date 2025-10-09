@@ -80,8 +80,8 @@ test.describe('Site Navigation', () => {
     test('game navigation from games page', async ({ page }) => {
         await page.goto('/games');
 
-        // Look for individual game links in the featured games section
-        const gameCards = page.locator('#featured-games a[href*="/game/"], #featured-games .card a');
+        // Look for individual game links in the active games section
+        const gameCards = page.locator('#active-games a[href*="/game/"], #active-games .card a');
 
         if ((await gameCards.count()) > 0) {
             const firstGame = gameCards.first();

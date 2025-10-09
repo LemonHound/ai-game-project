@@ -13,7 +13,7 @@ router = APIRouter()
 # GAME METADATA ENDPOINTS
 # ============================================
 
-@router.get("/games")
+@router.get("/games_list")
 async def get_games(category: Optional[str] = None, status: Optional[str] = None):
     """Get list of all available games from database"""
     conn = None

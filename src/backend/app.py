@@ -61,19 +61,19 @@ async def home(request: Request):
     """Landing page"""
     conn = None
     try:
-        # Get featured games from database
+        # Get active games from database
         conn = get_db_connection()
-        featured_games = []
+        active_games = []
 
         if conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, name, description, icon, difficulty, status FROM games WHERE status = 'active' LIMIT 6"
+                "SELECT id, name, description, icon, difficulty, status FROM games WHERE status = 'active'"
             )
             rows = cursor.fetchall()
             cursor.close()
 
-            featured_games = [{
+            active_games = [{
                 'id': row[0],
                 'name': row[1],
                 'description': row[2],
@@ -87,12 +87,56 @@ async def home(request: Request):
             {
                 "request": request,
                 "title": "AI Game Hub - Play Games with Adaptive AI",
-                "featured_games": featured_games
+                "active_games": active_games
             }
         )
     finally:
         if conn:
             return_db_connection(conn)
+
+@app.get("/profile")
+async def profile(request: Request):
+    """User profile page"""
+    return templates.TemplateResponse(
+        "profile.html",
+        {
+            "request": request,
+            "title": "Profile - AI Game Hub"
+        }
+    )
+
+@app.get("/settings")
+async def settings(request: Request):
+    """User settings page"""
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "title": "Settings - AI Game Hub"
+        }
+    )
+
+@app.get("/games")
+async def games_page(request: Request):
+    """Games listing page"""
+    return templates.TemplateResponse(
+        "games.html",
+        {
+            "request": request,
+            "title": "Games - AI Game Hub"
+        }
+    )
+
+@app.get("/about")
+async def about(request: Request):
+    """About page"""
+    return templates.TemplateResponse(
+        "about.html",
+        {
+            "request": request,
+            "title": "About - AI Game Hub"
+        }
+    )
 
 # ============================================
 # API ROUTES

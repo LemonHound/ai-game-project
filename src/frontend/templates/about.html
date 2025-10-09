@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="/static/css/output.css" />
+    </head>
+    <body class="min-h-screen bg-base-200">
+        {% include 'partials/navbar.html' %}
+
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+            <h1 class="text-4xl font-bold mb-8">About AI Game Hub</h1>
+
+            <div class="card bg-base-100 shadow-xl mb-8">
+                <div class="card-body">
+                    <h2 class="card-title text-3xl mb-4">Our Mission</h2>
+                    <p class="text-lg leading-relaxed mb-4">
+                        AI Game Hub is dedicated to creating intelligent gaming experiences that evolve alongside our
+                        players. We believe that the best AI opponents are those that learn from real human players,
+                        adapting and improving with every match played.
+                    </p>
+                    <p class="text-lg leading-relaxed">
+                        Unlike traditional game AI that relies on pre-programmed strategies, our adaptive AI systems are
+                        trained exclusively through player interactions. Every game you play contributes to making our
+                        AI more challenging, more realistic, and more engaging for everyone.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card bg-base-100 shadow-xl mb-8">
+                <div class="card-body">
+                    <h2 class="card-title text-3xl mb-6">Our Philosophy</h2>
+
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Human-Driven Learning</h3>
+                            <p class="leading-relaxed">
+                                We believe AI should learn from humans, not replace them. Every move you make teaches
+                                our AI something new about strategy, creativity, and the human approach to
+                                problem-solving. This human-centered training creates opponents that feel natural and
+                                challenging.
+                            </p>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Continuous Evolution</h3>
+                            <p class="leading-relaxed">
+                                Our AI never stops learning. As more players join and contribute their unique playing
+                                styles, our models become more sophisticated and diverse. The AI you face today will be
+                                different from the one you face tomorrow, constantly adapting to new strategies and
+                                patterns.
+                            </p>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Privacy and Transparency</h3>
+                            <p class="leading-relaxed">
+                                Your gameplay data is used solely to improve our AI models. We are committed to
+                                maintaining your privacy and being transparent about how your contributions help shape
+                                the gaming experience for our entire community.
+                            </p>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">Accessible Intelligence</h3>
+                            <p class="leading-relaxed">
+                                Great AI experiences should be available to everyone. We strive to create games that are
+                                approachable for beginners while still providing depth and challenge for experienced
+                                players, with AI that scales to match your skill level.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-base-100 shadow-xl mb-8">
+                <div class="card-body">
+                    <h2 class="card-title text-3xl mb-6">Meet the Team</h2>
+
+                    <div class="overflow-x-auto">
+                        <div class="flex gap-6 pb-4" style="scroll-snap-type: x mandatory">
+                            <div class="card bg-base-200 shadow-lg flex-shrink-0 w-80" style="scroll-snap-align: start">
+                                <div class="card-body items-center text-center">
+                                    <div class="avatar placeholder mb-4">
+                                        <div class="bg-primary text-primary-content rounded-full w-24">
+                                            <span class="text-3xl">JD</span>
+                                        </div>
+                                    </div>
+                                    <h3 class="card-title text-xl">John Doe</h3>
+                                    <p class="text-base-content/70 mb-2">Co-Founder & Lead Developer</p>
+                                    <p class="text-sm leading-relaxed">
+                                        Passionate about AI and game development, John brings years of experience in
+                                        machine learning and full-stack development to create engaging gaming
+                                        experiences.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="card bg-base-200 shadow-lg flex-shrink-0 w-80" style="scroll-snap-align: start">
+                                <div class="card-body items-center text-center">
+                                    <div class="avatar placeholder mb-4">
+                                        <div class="bg-secondary text-secondary-content rounded-full w-24">
+                                            <span class="text-3xl">JS</span>
+                                        </div>
+                                    </div>
+                                    <h3 class="card-title text-xl">Jane Smith</h3>
+                                    <p class="text-base-content/70 mb-2">Co-Founder & AI Architect</p>
+                                    <p class="text-sm leading-relaxed">
+                                        With a background in neural networks and reinforcement learning, Jane designs
+                                        the adaptive AI systems that power our games and make them truly intelligent.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="card bg-base-200 shadow-lg flex-shrink-0 w-80" style="scroll-snap-align: start">
+                                <div class="card-body items-center text-center">
+                                    <div class="avatar placeholder mb-4">
+                                        <div class="bg-accent text-accent-content rounded-full w-24">
+                                            <span class="text-3xl">+</span>
+                                        </div>
+                                    </div>
+                                    <h3 class="card-title text-xl">Join Our Team</h3>
+                                    <p class="text-base-content/70 mb-2">Future Team Member</p>
+                                    <p class="text-sm leading-relaxed">
+                                        We're always looking for talented individuals who share our passion for AI and
+                                        gaming. Want to help shape the future of adaptive gaming AI?
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-gradient-to-br from-primary to-secondary text-white shadow-xl">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-3xl justify-center mb-4">Join the Community</h2>
+                    <p class="text-lg mb-6">
+                        Every game you play makes our AI smarter. Be part of something bigger and help create the next
+                        generation of intelligent gaming experiences.
+                    </p>
+                    <div class="card-actions justify-center">
+                        <a href="/games" class="btn btn-accent btn-lg">Start Playing</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
+
+        <script>
+            let currentUser = null;
+
+            function deleteCookie(name) {
+                document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = name + '=; Path=/; Domain=localhost; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            }
+
+            async function checkAuthStatus() {
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        credentials: 'include',
+                        headers: { Accept: 'application/json' },
+                        cache: 'no-cache',
+                    });
+
+                    if (response.ok) {
+                        currentUser = await response.json();
+                        updateUIForAuthenticatedUser(currentUser);
+                    } else {
+                        updateUIForUnauthenticatedUser();
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    updateUIForUnauthenticatedUser();
+                }
+            }
+
+            function updateUIForAuthenticatedUser(user) {
+                document.getElementById('auth-logged-out').classList.add('hidden');
+                document.getElementById('auth-logged-in').classList.remove('hidden');
+
+                document.getElementById('user-display-name').textContent = user.displayName || user.username;
+
+                const initial = (user.displayName || user.username || 'U')[0].toUpperCase();
+                document.getElementById('user-initial').textContent = initial;
+
+                if (user.profilePicture) {
+                    document.getElementById('user-avatar').src = user.profilePicture;
+                    document.getElementById('user-avatar').classList.remove('hidden');
+                    document.getElementById('user-initial').classList.add('hidden');
+                }
+            }
+
+            function updateUIForUnauthenticatedUser() {
+                document.getElementById('auth-logged-out').classList.remove('hidden');
+                document.getElementById('auth-logged-in').classList.add('hidden');
+                currentUser = null;
+            }
+
+            function openLoginModal() {
+                document.getElementById('login-modal').showModal();
+            }
+
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+
+                    deleteCookie('sessionId');
+                    updateUIForUnauthenticatedUser();
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                }
+            });
+
+            checkAuthStatus();
+        </script>
+    </body>
+</html>
