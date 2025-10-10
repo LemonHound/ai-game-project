@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="/static/css/output.css" />
+        <style>
+            .chess-square {
+                position: relative;
+                user-select: none;
+                width: 60px;
+                height: 60px;
+            }
+            .chess-piece {
+                cursor: grab;
+                transition: opacity 0.1s;
+            }
+            .chess-piece:active {
+                cursor: grabbing;
+            }
+            .chess-piece.dragging {
+                opacity: 0.5;
+                cursor: grabbing;
+            }
+            .move-indicator {
+                position: absolute;
+                inset: 0;
+                margin: auto;
+                width: 25%;
+                height: 25%;
+                background-color: rgba(34, 197, 94, 0.7);
+                border-radius: 50%;
+                pointer-events: none;
+            }
+            .capture-indicator {
+                position: absolute;
+                inset: 0;
+                border: 4px solid rgba(34, 197, 94, 0.7);
+                border-radius: 8px;
+                pointer-events: none;
+            }
+            .last-move-highlight {
+                box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.6);
+            }
+            #drag-piece {
+                position: fixed;
+                pointer-events: none;
+                z-index: 1000;
+                width: 60px;
+                height: 60px;
+                opacity: 0.8;
+            }
+        </style>
+    </head>
+    <body class="min-h-screen bg-base-200">
+        {% include 'partials/navbar.html' %}
+
+        <main class="container mx-auto px-4 py-8">
+            <!-- Game Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold mb-2">Chess</h1>
+                <p class="text-base-content/70">Play against the AI</p>
+            </div>
+
+            <!-- Auth Gate -->
+            <div id="auth-gate" class="hidden">
+                <div class="alert alert-info max-w-md mx-auto">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        class="stroke-current shrink-0 w-6 h-6">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <h3 class="font-bold">Authentication Required</h3>
+                        <div class="text-xs">Please log in to start playing</div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="openLoginModal()">Log In</button>
+                </div>
+            </div>
+
+            <!-- Game Container -->
+            <div id="game-container" class="hidden">
+                <!-- Color Selection Overlay -->
+                <div
+                    id="color-selection-overlay"
+                    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div class="card bg-base-100 shadow-xl">
+                        <div class="card-body text-center">
+                            <h2 class="card-title justify-center text-2xl mb-4">Choose Your Color</h2>
+                            <div class="flex gap-4">
+                                <button onclick="startGame(true)" class="btn btn-lg btn-outline">
+                                    <span class="text-4xl">♔</span>
+                                    <span>Play as White</span>
+                                </button>
+                                <button onclick="startGame(false)" class="btn btn-lg btn-outline">
+                                    <span class="text-4xl">♚</span>
+                                    <span>Play as Black</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Layout -->
+                <div class="flex flex-col lg:flex-row gap-6 justify-center">
+                    <!-- Left Side: Captured Pieces & Info -->
+                    <div class="flex flex-col gap-4 lg:w-64">
+                        <!-- AI Captured Pieces -->
+                        <div class="card bg-base-100 shadow">
+                            <div class="card-body p-4">
+                                <h3 class="font-bold text-sm mb-2">AI Captured</h3>
+                                <div id="ai-captured" class="flex flex-wrap gap-1 min-h-[40px]"></div>
+                            </div>
+                        </div>
+
+                        <!-- Game Status -->
+                        <div class="card bg-base-100 shadow">
+                            <div class="card-body p-4">
+                                <div id="current-turn" class="text-lg font-bold text-center mb-2">White's Turn</div>
+                                <div id="game-status" class="text-center text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Chess Board -->
+                    <div class="flex justify-center">
+                        <div class="inline-block p-4 bg-base-300 rounded-lg shadow-xl">
+                            <div id="chess-board" class="grid grid-cols-8" style="width: 480px; height: 480px">
+                                <!-- Board will be generated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Move History & Controls -->
+                    <div class="flex flex-col gap-4 lg:w-64">
+                        <!-- Player Captured Pieces -->
+                        <div class="card bg-base-100 shadow">
+                            <div class="card-body p-4">
+                                <h3 class="font-bold text-sm mb-2">You Captured</h3>
+                                <div id="player-captured" class="flex flex-wrap gap-1 min-h-[40px]"></div>
+                            </div>
+                        </div>
+
+                        <!-- Move History -->
+                        <div class="card bg-base-100 shadow flex-1">
+                            <div class="card-body p-4">
+                                <h3 class="font-bold text-sm mb-2">Move History</h3>
+                                <div id="move-history" class="overflow-y-auto max-h-64 text-sm space-y-1"></div>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="flex flex-col gap-2">
+                            <button id="new-game-btn" class="btn btn-primary">New Game</button>
+                            <button id="flip-board-btn" class="btn btn-ghost">Flip Board</button>
+                            <button id="quit-game-btn" class="btn btn-ghost">Back to Games</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Drag Piece (follows cursor) -->
+        <img id="drag-piece" class="hidden" />
+
+        <!-- Promotion Modal -->
+        <div id="promotion-overlay" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title justify-center mb-4">Promote Pawn</h2>
+                    <div class="grid grid-cols-4 gap-4">
+                        <button onclick="selectPromotion('q')" class="btn btn-square btn-lg hover:btn-primary">
+                            <img id="promotion-queen" src="" alt="Queen" class="w-12 h-12 object-contain" />
+                        </button>
+                        <button onclick="selectPromotion('r')" class="btn btn-square btn-lg hover:btn-primary">
+                            <img id="promotion-rook" src="" alt="Rook" class="w-12 h-12 object-contain" />
+                        </button>
+                        <button onclick="selectPromotion('b')" class="btn btn-square btn-lg hover:btn-primary">
+                            <img id="promotion-bishop" src="" alt="Bishop" class="w-12 h-12 object-contain" />
+                        </button>
+                        <button onclick="selectPromotion('n')" class="btn btn-square btn-lg hover:btn-primary">
+                            <img id="promotion-knight" src="" alt="Knight" class="w-12 h-12 object-contain" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
+
+        <script src="/static/js/chess.js"></script>
+    </body>
+</html>

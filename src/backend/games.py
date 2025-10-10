@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException
-from typing import Optional, List, Dict, Any
-from datetime import datetime
-import uuid
+from typing import Optional
 
-from models import GameInfo, StartGameRequest, MoveRequest, CompleteGameRequest, TrainAIRequest
+from models import StartGameRequest, MoveRequest, CompleteGameRequest
 from database import get_db_connection, return_db_connection
-from tic_tac_toe import tic_tac_toe_game
+from game_logic.tic_tac_toe import tic_tac_toe_game
+from game_logic.dots_and_boxes import dots_and_boxes_game
 
 router = APIRouter()
 
@@ -139,9 +138,13 @@ async def start_game(game_id: str, request: StartGameRequest):
             )
             return result
 
-        # TODO: Add other game types
-        # elif game_id == "checkers":
-        #     return checkers_game.start_game(...)
+        elif game_id == "dots-and-boxes":
+            result = dots_and_boxes_game.start_game(
+                user_id=request.userId,
+                difficulty=request.difficulty,
+                player_starts=request.playerStarts
+            )
+            return result
 
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
     except HTTPException:
@@ -161,9 +164,13 @@ async def make_move(game_id: str, request: MoveRequest):
             )
             return result
 
-        # TODO: Add other game types
-        # elif game_id == "checkers":
-        #     return checkers_game.make_move(...)
+        elif game_id == "dots-and-boxes":
+            result = dots_and_boxes_game.make_move(
+                session_id=request.gameSessionId,
+                move=request.move,  # This will be a dict with type, row, col
+                user_id=request.userId
+            )
+            return result
 
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
     except ValueError as e:

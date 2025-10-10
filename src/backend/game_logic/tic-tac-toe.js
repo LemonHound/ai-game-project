@@ -1,4 +1,4 @@
-// src/backend/game-logic/tic-tac-toe.js
+// src/backend/game_logic/tic-tac-toe.js
 const GameEngineInterface = require('./game-engine-interface');
 const pool = require('../../shared/database/connection');
 const express = require('express');

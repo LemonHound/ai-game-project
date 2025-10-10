@@ -138,6 +138,39 @@ async def about(request: Request):
         }
     )
 
+@app.get("/game/tic-tac-toe")
+async def tic_tac_toe(request: Request):
+    """Tic-Tac-Toe game page"""
+    return templates.TemplateResponse(
+        "tic-tac-toe.html",
+        {
+            "request": request,
+            "title": "Tic-Tac-Toe - AI Game Hub"
+        }
+    )
+
+@app.get("/game/dots-and-boxes")
+async def dots_and_boxes(request: Request):
+    """Dots and Boxes game page"""
+    return templates.TemplateResponse(
+        "dots-and-boxes.html",
+        {
+            "request": request,
+            "title": "Dots and Boxes - AI Game Hub"
+        }
+    )
+
+@app.get("/game/chess")
+async def chess(request: Request):
+    """Chess game page"""
+    return templates.TemplateResponse(
+        "chess.html",
+        {
+            "request": request,
+            "title": "Chess - AI Game Hub"
+        }
+    )
+
 # ============================================
 # API ROUTES
 # ============================================

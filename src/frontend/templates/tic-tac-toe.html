@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="/static/css/output.css" />
+    </head>
+    <body class="min-h-screen bg-base-200">
+        {% include 'partials/navbar.html' %}
+
+        <main class="container mx-auto px-4 py-8">
+            <!-- Game Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold mb-2">Tic-Tac-Toe</h1>
+                <p class="text-base-content/70">Play against the AI</p>
+            </div>
+
+            <!-- Auth Gate - Hidden when logged in -->
+            <div id="auth-gate" class="hidden">
+                <div class="alert alert-info max-w-md mx-auto">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        class="stroke-current shrink-0 w-6 h-6">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <h3 class="font-bold">Authentication Required</h3>
+                        <div class="text-xs">Please log in to start playing</div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="openLoginModal()">Log In</button>
+                </div>
+            </div>
+
+            <!-- Game Container - Hidden until authenticated -->
+            <div id="game-container" class="hidden">
+                <!-- Game Status -->
+                <div class="text-center mb-6">
+                    <div id="game-status" class="text-2xl font-bold text-primary">Your Turn (X)</div>
+                </div>
+
+                <!-- Tic-Tac-Toe Board -->
+                <div class="flex justify-center mb-6">
+                    <div class="inline-grid grid-cols-3 gap-0.5 p-2 bg-base-300 rounded-lg">
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="0"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="1"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="2"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="3"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="4"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="5"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="6"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="7"></button>
+                        <button
+                            class="game-cell btn btn-square text-5xl w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 p-0 min-h-0"
+                            data-cell="8"></button>
+                    </div>
+                </div>
+
+                <!-- Game Controls -->
+                <div class="flex justify-center gap-4 mb-8">
+                    <button id="new-game-btn" class="btn btn-primary">New Game</button>
+                    <button id="quit-game-btn" class="btn btn-ghost">Back to Games</button>
+                </div>
+
+                <!-- Game Stats -->
+                <div class="stats shadow max-w-sm mx-auto">
+                    <div class="stat place-items-center">
+                        <div class="stat-title">Wins</div>
+                        <div id="wins-count" class="stat-value text-success">0</div>
+                    </div>
+                    <div class="stat place-items-center">
+                        <div class="stat-title">Losses</div>
+                        <div id="losses-count" class="stat-value text-error">0</div>
+                    </div>
+                    <div class="stat place-items-center">
+                        <div class="stat-title">Draws</div>
+                        <div id="draws-count" class="stat-value">0</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
+
+        <script src="/static/js/tic-tac-toe.js"></script>
+    </body>
+</html>
