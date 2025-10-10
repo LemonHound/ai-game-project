@@ -171,6 +171,17 @@ async def chess(request: Request):
         }
     )
 
+@app.get("/game/connect4")
+async def connect4(request: Request):
+    """Connect 4 game page"""
+    return templates.TemplateResponse(
+        "connect4.html",
+        {
+            "request": request,
+            "title": "Connect 4 - AI Game Hub"
+        }
+    )
+
 # ============================================
 # API ROUTES
 # ============================================

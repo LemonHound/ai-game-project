@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="/static/css/output.css" />
+        <style>
+            .connect4-board {
+                display: grid;
+                grid-template-columns: repeat(7, 70px);
+                grid-template-rows: repeat(6, 70px);
+                gap: 8px;
+                background: linear-gradient(145deg, #1e3a8a, #1e40af);
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                position: relative;
+            }
+            .connect4-cell {
+                width: 70px;
+                height: 70px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s;
+                position: relative;
+            }
+            .connect4-cell:hover {
+                background: rgba(255, 255, 255, 0.2);
+                transform: scale(1.05);
+            }
+            .connect4-cell.disabled {
+                cursor: default;
+            }
+            .connect4-cell.disabled:hover {
+                transform: none;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .connect4-piece {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                box-shadow:
+                    inset 0 -2px 5px rgba(0, 0, 0, 0.3),
+                    0 2px 5px rgba(0, 0, 0, 0.2);
+                animation: dropPiece 0.3s ease-out;
+            }
+            .connect4-piece.player {
+                background: radial-gradient(circle at 30% 30%, #fbbf24, #f59e0b);
+            }
+            .connect4-piece.ai {
+                background: radial-gradient(circle at 30% 30%, #ef4444, #dc2626);
+            }
+            @keyframes dropPiece {
+                from {
+                    transform: translateY(-400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes winPulse {
+                0%,
+                100% {
+                    transform: scale(1);
+                    box-shadow:
+                        inset 0 -2px 5px rgba(0, 0, 0, 0.3),
+                        0 2px 5px rgba(0, 0, 0, 0.2),
+                        0 0 20px rgba(255, 255, 255, 0.5);
+                }
+                50% {
+                    transform: scale(1.1);
+                    box-shadow:
+                        inset 0 -2px 5px rgba(0, 0, 0, 0.3),
+                        0 2px 5px rgba(0, 0, 0, 0.2),
+                        0 0 30px rgba(255, 255, 255, 0.8);
+                }
+            }
+            .column-hover {
+                position: absolute;
+                top: -45px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.2s;
+                pointer-events: none;
+            }
+            .connect4-cell:hover .column-hover {
+                opacity: 1;
+            }
+            .hover-piece {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: radial-gradient(circle at 30% 30%, #fbbf24, #f59e0b);
+                opacity: 0.7;
+            }
+        </style>
+    </head>
+    <body class="min-h-screen bg-base-200">
+        {% include 'partials/navbar.html' %}
+
+        <main class="container mx-auto px-4 py-8">
+            <!-- Game Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold mb-2">Connect 4</h1>
+                <p class="text-base-content/70">Connect four pieces in a row to win</p>
+            </div>
+
+            <!-- Auth Gate -->
+            <div id="auth-gate" class="hidden">
+                <div class="alert alert-info max-w-md mx-auto">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        class="stroke-current shrink-0 w-6 h-6">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <h3 class="font-bold">Authentication Required</h3>
+                        <div class="text-xs">Please log in to start playing</div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="openLoginModal()">Log In</button>
+                </div>
+            </div>
+
+            <!-- Game Container -->
+            <div id="game-container" class="hidden">
+                <!-- Game Layout -->
+                <div class="flex flex-col items-center gap-6">
+                    <!-- Game Status -->
+                    <div class="card bg-base-100 shadow-xl w-full max-w-2xl">
+                        <div class="card-body p-4 text-center">
+                            <div
+                                id="game-status"
+                                class="text-2xl font-bold min-h-[4rem] flex items-center justify-center">
+                                <span id="current-turn">Click "New Game" to start</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connect 4 Board -->
+                    <div class="flex justify-center">
+                        <div id="connect4-board" class="connect4-board">
+                            <!-- Board will be generated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="card bg-base-100 shadow-xl w-full max-w-2xl">
+                        <div class="card-body p-4">
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                <button id="new-game-btn" class="btn btn-primary">New Game</button>
+                                <button id="ai-first-btn" class="btn btn-secondary hidden">AI First Move</button>
+                                <button id="quit-game-btn" class="btn btn-ghost">Back to Games</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Game Legend -->
+                    <div class="card bg-base-100 shadow w-full max-w-2xl">
+                        <div class="card-body p-4">
+                            <div class="flex justify-around items-center text-sm">
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        class="w-8 h-8 rounded-full"
+                                        style="background: radial-gradient(circle at 30% 30%, #fbbf24, #f59e0b)"></div>
+                                    <span>You (Yellow)</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        class="w-8 h-8 rounded-full"
+                                        style="background: radial-gradient(circle at 30% 30%, #ef4444, #dc2626)"></div>
+                                    <span>AI (Red)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
+
+        <script src="/static/js/connect4.js"></script>
+    </body>
+</html>

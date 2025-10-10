@@ -5,6 +5,8 @@ from models import StartGameRequest, MoveRequest, CompleteGameRequest
 from database import get_db_connection, return_db_connection
 from game_logic.tic_tac_toe import tic_tac_toe_game
 from game_logic.dots_and_boxes import dots_and_boxes_game
+from game_logic.chess import chess_game
+from game_logic.connect4 import connect4_game
 
 router = APIRouter()
 
@@ -146,6 +148,22 @@ async def start_game(game_id: str, request: StartGameRequest):
             )
             return result
 
+        elif game_id == "chess":
+            result = chess_game.start_game(
+                user_id=request.userId,
+                difficulty=request.difficulty,
+                playerStarts=request.playerStarts
+            )
+            return result
+
+        elif game_id == "connect4":
+            result = connect4_game.start_game(
+                user_id=request.userId,
+                difficulty=request.difficulty,
+                playerStarts=request.playerStarts
+            )
+            return result
+
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
     except HTTPException:
         raise
@@ -167,7 +185,23 @@ async def make_move(game_id: str, request: MoveRequest):
         elif game_id == "dots-and-boxes":
             result = dots_and_boxes_game.make_move(
                 session_id=request.gameSessionId,
-                move=request.move,  # This will be a dict with type, row, col
+                move=request.move,
+                user_id=request.userId
+            )
+            return result
+
+        elif game_id == "chess":
+            result = chess_game.make_move(
+                session_id=request.gameSessionId,
+                move=request.move,
+                user_id=request.userId
+            )
+            return result
+
+        elif game_id == "connect4":
+            result = connect4_game.make_move(
+                session_id=request.gameSessionId,
+                move=request.move,
                 user_id=request.userId
             )
             return result
@@ -189,6 +223,25 @@ async def complete_game(game_id: str, request: CompleteGameRequest):
         "message": "Game completed successfully"
     }
 
+@router.post("/game/{game_id}/ai-first")
+async def ai_first_move(game_id: str, request: MoveRequest):
+    """Let AI make the first move"""
+    try:
+        if game_id == "connect4":
+            result = connect4_game.ai_first_move(
+                session_id=request.gameSessionId,
+                user_id=request.userId
+            )
+            return result
+
+        raise HTTPException(status_code=501, detail=f"AI first move not supported for '{game_id}'")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/game/{game_id}/session/{session_id}")
 async def get_game_session(game_id: str, session_id: str):
     """Get current state of a game session"""
@@ -200,7 +253,28 @@ async def get_game_session(game_id: str, session_id: str):
             game_state = tic_tac_toe_game.sessions[session_id]
             return tic_tac_toe_game._get_client_state(game_state)
 
-        # TODO: Add other game types
+        elif game_id == "chess":
+            if session_id not in chess_game.sessions:
+                raise HTTPException(status_code=404, detail="Session not found")
+
+            game_state = chess_game.sessions[session_id]
+            return {
+                'boardState': game_state['board'],
+                'currentPlayer': game_state['currentPlayer'],
+                'playerColor': game_state['playerColor'],
+                'gameActive': game_state['gameActive']
+            }
+
+        elif game_id == "connect4":
+            if session_id not in connect4_game.sessions:
+                raise HTTPException(status_code=404, detail="Session not found")
+
+            game_state = connect4_game.sessions[session_id]
+            return {
+                'boardState': game_state['board'],
+                'currentPlayer': game_state['currentPlayer'],
+                'gameActive': game_state['gameActive']
+            }
 
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
     except HTTPException:
