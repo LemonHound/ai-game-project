@@ -29,18 +29,14 @@ function deleteCookie(name) {
 
 async function checkAuthStatus() {
     try {
-        console.log('Checking auth status...');
         const response = await fetch('/api/auth/me', {
             credentials: 'include',
             headers: { Accept: 'application/json' },
             cache: 'no-cache',
         });
 
-        console.log('Auth response status:', response.status);
-
         if (response.ok) {
             currentUser = await response.json();
-            console.log('Current user:', currentUser);
             updateUIForAuthenticatedUser(currentUser);
             showGameContainer();
             initializeGame();
@@ -456,7 +452,6 @@ function updateGameStatus(customMessage = null) {
     }
 
     if (!gameActive) {
-        // Message already set by game end handlers
         return;
     }
 

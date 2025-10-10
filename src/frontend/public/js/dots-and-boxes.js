@@ -168,7 +168,6 @@ async function startNewGame() {
 
         drawBoard();
         updateGameStatus();
-        console.log('Game started:', gameSessionId);
     } catch (error) {
         console.error('Error starting game:', error);
         updateGameStatus('Error starting game. Please try again.');

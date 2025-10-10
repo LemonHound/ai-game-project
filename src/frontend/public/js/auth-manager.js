@@ -62,7 +62,6 @@ class AuthManager {
                 window.google.accounts.id.initialize({
                     client_id: window.GOOGLE_CLIENT_ID,
                     callback: response => {
-                        console.log('Google auth callback triggered:', response);
                         this.handleGoogleAuth(response);
                     },
                 });
@@ -71,7 +70,7 @@ class AuthManager {
                 console.error('Google auth initialization failed:', error);
             }
         } else {
-            console.log('Google services not ready');
+            console.warn('Google services not ready');
         }
     }
 
@@ -94,7 +93,7 @@ class AuthManager {
 
     renderGoogleButtons() {
         if (!window.google || !window.google.accounts) {
-            console.log('Google Sign-In not ready yet');
+            console.warn('Google Sign-In not ready yet');
             return;
         }
 
@@ -254,7 +253,6 @@ class AuthManager {
         const error = urlParams.get('error');
 
         if (loginStatus === 'success' && sessionId) {
-            console.log('Google OAuth success, storing session...');
             localStorage.setItem('sessionId', sessionId);
             this.sessionId = sessionId;
 
@@ -280,8 +278,6 @@ class AuthManager {
     }
 
     async handleGoogleAuth(response) {
-        console.log('=== Google Auth Callback Triggered ===');
-
         if (!response || !response.credential) {
             console.error('No credential in Google response:', response);
             this.showError('login-error', 'Google authentication failed - no credential received');
