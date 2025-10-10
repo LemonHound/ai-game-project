@@ -1,0 +1,18 @@
+name: aigamehub
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pydantic
+  - bcrypt
+  - python-dotenv
+  - psycopg2-binary
+  - uvicorn
+  - fastapi
+  - pydantic[email]
+  - httpx
+  - httpx
+  - protobuf
+  - httpx

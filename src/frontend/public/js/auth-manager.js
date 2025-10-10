@@ -1,9 +1,7 @@
-// File: src/frontend/public/js/auth-manager.js
-// Authentication manager for handling login, registration, and Google OAuth
-
 class AuthManager {
     constructor() {
         this.currentUser = null;
+        this.authBackendUrl = window.AUTH_BACKEND_URL || 'http://localhost:8000';
         this.init();
     }
 
@@ -68,15 +66,12 @@ class AuthManager {
                         this.handleGoogleAuth(response);
                     },
                 });
+                this.renderGoogleButtons();
             } catch (error) {
                 console.error('Google auth initialization failed:', error);
             }
         } else {
-            console.log('Google services not ready:', {
-                google: !!window.google,
-                accounts: !!(window.google && window.google.accounts),
-                clientId: !!window.GOOGLE_CLIENT_ID,
-            });
+            console.log('Google services not ready');
         }
     }
 
@@ -98,18 +93,37 @@ class AuthManager {
     }
 
     renderGoogleButtons() {
-        const googleLoginSimple = document.getElementById('google-login-simple');
-        if (googleLoginSimple) {
-            googleLoginSimple.addEventListener('click', () => {
-                console.log('Simple Google login clicked');
-                window.google.accounts.id.prompt();
+        if (!window.google || !window.google.accounts) {
+            console.log('Google Sign-In not ready yet');
+            return;
+        }
+
+        // Render button for login modal
+        const googleLoginContainer = document.getElementById('google-login-button');
+        if (googleLoginContainer && !googleLoginContainer.hasChildNodes()) {
+            window.google.accounts.id.renderButton(googleLoginContainer, {
+                theme: 'outline',
+                size: 'large',
+                width: '100%',
+                text: 'continue_with',
+            });
+        }
+
+        // Render button for register modal
+        const googleRegisterContainer = document.getElementById('google-register-button');
+        if (googleRegisterContainer && !googleRegisterContainer.hasChildNodes()) {
+            window.google.accounts.id.renderButton(googleRegisterContainer, {
+                theme: 'outline',
+                size: 'large',
+                width: '100%',
+                text: 'signup_with',
             });
         }
     }
 
     async checkAuthStatus() {
         try {
-            const response = await fetch('/api/auth/me', {
+            const response = await fetch(`${this.authBackendUrl}/api/auth/me`, {
                 credentials: 'include',
             });
 
@@ -138,7 +152,7 @@ class AuthManager {
 
         try {
             const csrfToken = await this.getCsrfToken();
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch(`${this.authBackendUrl}/api/auth/login`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -197,7 +211,7 @@ class AuthManager {
 
         try {
             const csrfToken = await this.getCsrfToken();
-            const response = await fetch('/api/auth/register', {
+            const response = await fetch(`${this.authBackendUrl}/api/auth/register`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -306,7 +320,7 @@ class AuthManager {
         try {
             const csrfToken = await this.getCsrfToken();
             if (this.sessionId) {
-                await fetch('/api/auth/logout', {
+                await fetch(`${this.authBackendUrl}/api/auth/register`, {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
@@ -522,7 +536,7 @@ class AuthManager {
 
     async getCsrfToken() {
         try {
-            const response = await fetch('/api/csrf-token', {
+            const response = await fetch(`${this.authBackendUrl}/api/auth/csrf-token`, {
                 credentials: 'include',
             });
 

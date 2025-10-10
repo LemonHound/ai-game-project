@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../../shared/database/connection');
-const gameFactory = require('../game-logic/game-factory');
+const gameFactory = require('../game_logic/game-factory');
 
 // In-memory game session storage (consider Redis for production)
 const gameSessions = new Map();

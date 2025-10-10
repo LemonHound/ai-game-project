@@ -1,0 +1,37 @@
+<nav class="navbar bg-base-100 shadow-lg">
+    <div class="container mx-auto flex w-full">
+        <div class="flex flex-1 justify-start">
+            <a href="/" class="btn btn-ghost text-xl">AI Game Hub</a>
+        </div>
+        <div class="flex flex-1 justify-center">
+            <a href="/games" class="btn btn-ghost">Games</a>
+            <a href="/about" class="btn btn-ghost">About</a>
+        </div>
+        <div class="flex flex-1 justify-end">
+            <div id="auth-logged-out" class="hidden">
+                <button class="btn btn-primary" onclick="openLoginModal()">Log In</button>
+            </div>
+
+            <div id="auth-logged-in" class="hidden">
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+                        <div class="bg-neutral text-neutral-content rounded-full w-10">
+                            <img id="user-avatar" class="hidden rounded-full" alt="User avatar" />
+                            <span id="user-initial">👤</span>
+                        </div>
+                    </label>
+                    <ul
+                        tabindex="0"
+                        class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                        <li class="menu-title">
+                            <span id="user-display-name">User</span>
+                        </li>
+                        <li><a href="/profile">Profile</a></li>
+                        <li><a href="/settings">Settings</a></li>
+                        <li><a id="logout-btn">Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

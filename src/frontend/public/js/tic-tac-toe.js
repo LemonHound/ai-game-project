@@ -1,333 +1,365 @@
-class TicTacToeGame {
-    constructor() {
-        this.gameSessionId = null;
-        this.gameState = null;
-        this.gameName = 'tic-tac-toe';
-        this.isProcessingMove = false;
+// Tic-Tac-Toe Game with AI Integration
+let gameSessionId = null;
+let gameBoard = ['', '', '', '', '', '', '', '', ''];
+let currentPlayer = 'X';
+let gameActive = false;
+let currentUser = null;
+let isProcessingMove = false;
 
-        this.initializeGame();
-    }
+// Cookie utility function
+function deleteCookie(name) {
+    document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = name + '=; Path=/; Domain=localhost; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
 
-    async initializeGame() {
-        this.initializeBoard();
-        this.updateGameStatus('Starting new game...');
-        this.updateAIThoughts('Checking authentication...');
-
-        const authReady = await window.GameAuthUtils.waitForAuthManager();
-
-        if (!authReady) {
-            this.updateAIThoughts('Authentication system failed to load. Please refresh the page.');
-            return;
-        }
-
-        if (!window.authManager.isAuthenticatedForGames()) {
-            this.updateAIThoughts('I can only play with authenticated users - please log in first!');
-            return;
-        }
-
-        this.updateAIThoughts('Starting new game...');
-        await this.startGameOnServer();
-    }
-
-    async startGameOnServer() {
-        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
-            return fetch(`/api/${this.gameName}/start`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    playerStarts: true,
-                    difficulty: 'medium',
-                }),
-            });
+// Check authentication status
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/auth/me', {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+            cache: 'no-cache',
         });
 
-        if (data) {
-            this.gameSessionId = data.sessionId;
-            this.gameState = data.state;
-
-            console.log('Game session started:', this.gameSessionId);
-
-            // Update UI based on backend state
-            this.updateUIFromState();
-
-            // If AI should start first, it will be handled by the backend
-            if (!this.gameState.playerStarts) {
-                this.updateAIThoughts("I'll start this game!");
-                await this.makeAIMove();
-            } else {
-                this.updateAIThoughts('Ready for a new game! Make your first move.');
-            }
-        }
-    }
-
-    initializeBoard() {
-        const boardElement = document.getElementById('game-board');
-        boardElement.innerHTML = '';
-
-        for (let i = 0; i < 9; i++) {
-            const square = document.createElement('button');
-            square.className =
-                'btn btn-lg btn-neutral w-20 h-20 text-3xl font-bold hover:btn-primary transition-all duration-200';
-            square.setAttribute('data-index', i);
-            square.addEventListener('click', () => this.makePlayerMove(i));
-            boardElement.appendChild(square);
-        }
-    }
-
-    async makePlayerMove(position) {
-        // Use the utility to check authentication (it will wait if needed)
-        const isAuthenticated = await window.GameAuthUtils.isAuthenticated();
-        if (!isAuthenticated) {
-            this.updateAIThoughts('I can only play with authenticated users - please log in to continue!');
-            window.GameAuthUtils.showLoginRequiredModal();
-            return;
-        }
-
-        // Prevent moves during processing or if game is over
-        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
-            return;
-        }
-
-        // Check if it's the player's turn
-        if (this.gameState.currentPlayer !== 'X') {
-            this.updateAIThoughts("It's my turn! Please wait...");
-            return;
-        }
-
-        // Check if position is valid (basic client-side validation)
-        if (this.gameState.board[position] !== null) {
-            this.updateAIThoughts('That square is already taken! Choose another one.');
-            return;
-        }
-
-        this.isProcessingMove = true;
-
-        try {
-            await this.sendMoveToServer(position, 'X');
-        } catch (error) {
-            console.error('Error making player move:', error);
-            this.updateAIThoughts('Something went wrong with your move. Try again!');
-        } finally {
-            this.isProcessingMove = false;
-        }
-    }
-
-    async makeAIMove() {
-        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
-            return;
-        }
-
-        if (this.gameState.currentPlayer !== 'O') {
-            return;
-        }
-
-        this.isProcessingMove = true;
-        this.updateAIThoughts('Thinking...');
-
-        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
-            return fetch(`/api/${this.gameName}/move`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    sessionId: this.gameSessionId,
-                    move: { player: 'O', requestAIMove: true },
-                }),
-            });
-        });
-
-        if (data) {
-            this.gameState = data.newState;
-            this.updateUIFromState();
-
-            if (data.aiMove) {
-                this.updateAIThoughts(`I chose square ${data.aiMove.position + 1}. Your turn!`);
-            }
-        }
-
-        this.isProcessingMove = false;
-    }
-
-    async sendMoveToServer(position, player) {
-        if (!this.gameSessionId) {
-            console.warn('No game session ID - cannot make move');
-            return;
-        }
-
-        // Update UI with player move before making API call to back-end
-        this.gameState.board[position] = this.gameState.currentPlayer;
-        this.updateUIFromState();
-
-        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
-            return fetch(`/api/${this.gameName}/move`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    sessionId: this.gameSessionId,
-                    move: {
-                        position: position,
-                        player: player,
-                    },
-                }),
-            });
-        });
-
-        if (data) {
-            this.gameState = data.newState;
-            this.updateUIFromState();
-
-            if (data.aiMove) {
-                // AI move was made automatically by backend
-                const aiPosition = data.aiMove.position;
-                this.updateAIThoughts(`I chose square ${aiPosition + 1}. ${this.getGameEndMessage() || 'Your turn!'}`);
-            } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'O') {
-                await this.makeAIMove();
-            }
-        }
-    }
-
-    updateUIFromState() {
-        if (!this.gameState) return;
-
-        // Update board display
-        this.gameState.board.forEach((cell, index) => {
-            if (cell !== null) {
-                this.updateSquare(index, cell);
-            }
-        });
-
-        // Update game status
-        this.updateGameStatus();
-
-        // Update AI thoughts based on game state
-        if (this.gameState.gameOver) {
-            this.updateAIThoughts(this.getGameEndMessage());
-        }
-    }
-
-    updateSquare(index, player) {
-        const square = document.querySelector(`[data-index="${index}"]`);
-        if (square && square.textContent === '') {
-            square.textContent = player;
-            if (player === 'X') {
-                square.classList.remove('btn-neutral', 'hover:btn-primary');
-                square.classList.add('btn-success');
-            } else {
-                square.classList.remove('btn-neutral', 'hover:btn-primary');
-                square.classList.add('btn-error');
-            }
-        }
-    }
-
-    updateGameStatus(customMessage = null) {
-        const statusElement = document.getElementById('game-status');
-
-        if (customMessage) {
-            statusElement.textContent = customMessage;
-            statusElement.className = 'text-2xl font-bold text-info mb-4';
-            return;
-        }
-
-        if (!this.gameState) {
-            statusElement.textContent = 'Loading...';
-            statusElement.className = 'text-2xl font-bold text-info mb-4';
-            return;
-        }
-
-        if (this.gameState.gameOver) {
-            if (this.gameState.winner === 'X') {
-                statusElement.textContent = '🎉 You Win!';
-                statusElement.className = 'text-2xl font-bold text-success mb-4';
-            } else if (this.gameState.winner === 'O') {
-                statusElement.textContent = '🤖 AI Wins!';
-                statusElement.className = 'text-2xl font-bold text-error mb-4';
-            } else {
-                statusElement.textContent = "🤝 It's a Tie!";
-                statusElement.className = 'text-2xl font-bold text-warning mb-4';
-            }
+        if (response.ok) {
+            currentUser = await response.json();
+            updateUIForAuthenticatedUser(currentUser);
+            showGameContainer();
+            initializeGame();
         } else {
-            if (this.gameState.currentPlayer === 'X') {
-                statusElement.textContent = '🎯 Your Turn';
-                statusElement.className = 'text-2xl font-bold text-primary mb-4';
-            } else {
-                statusElement.textContent = '🤖 AI Thinking...';
-                statusElement.className = 'text-2xl font-bold text-secondary mb-4';
-            }
+            showAuthGate();
         }
-    }
-
-    updateAIThoughts(thought) {
-        const thoughtsElement = document.getElementById('ai-thoughts');
-        if (thoughtsElement) {
-            thoughtsElement.textContent = thought;
-        }
-    }
-
-    getGameEndMessage() {
-        if (!this.gameState || !this.gameState.gameOver) return null;
-
-        if (this.gameState.winner === 'X') {
-            return 'Well played! You won this round. Want to try again?';
-        } else if (this.gameState.winner === 'O') {
-            return 'I won this time! Your strategy is improving though.';
-        } else {
-            return "A tie! We're evenly matched. Let's play again!";
-        }
-    }
-
-    async restartGame() {
-        const canRestart = await window.GameAuthUtils.checkAuthBeforeAction('restart a game');
-        if (!canRestart) {
-            return;
-        }
-
-        // Reset local state
-        this.gameSessionId = null;
-        this.gameState = null;
-        this.isProcessingMove = false;
-
-        // Clear the board
-        const boardElement = document.getElementById('game-board');
-        const squares = boardElement.querySelectorAll('button');
-        squares.forEach(square => {
-            square.textContent = '';
-            square.className =
-                'btn btn-lg btn-neutral w-20 h-20 text-3xl font-bold hover:btn-primary transition-all duration-200';
-        });
-
-        // Start a new game
-        await this.initializeGame();
-    }
-
-    async toggleFirstPlayer() {
-        // TODO: Add logic for this
-        this.restartGame();
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        showAuthGate();
     }
 }
 
-// Initialize game when page loads
-let game;
+// Update UI for authenticated user
+function updateUIForAuthenticatedUser(user) {
+    const loggedOut = document.getElementById('auth-logged-out');
+    const loggedIn = document.getElementById('auth-logged-in');
+
+    if (loggedOut) loggedOut.classList.add('hidden');
+    if (loggedIn) loggedIn.classList.remove('hidden');
+
+    const displayName = document.getElementById('user-display-name');
+    if (displayName) {
+        displayName.textContent = user.displayName || user.username;
+    }
+
+    const initial = (user.displayName || user.username || 'U')[0].toUpperCase();
+    const userInitial = document.getElementById('user-initial');
+    if (userInitial) {
+        userInitial.textContent = initial;
+    }
+
+    if (user.profilePicture) {
+        const avatar = document.getElementById('user-avatar');
+        if (avatar) {
+            avatar.src = user.profilePicture;
+            avatar.classList.remove('hidden');
+            if (userInitial) userInitial.classList.add('hidden');
+        }
+    }
+}
+
+// Show auth gate
+function showAuthGate() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+
+    if (authGate) authGate.classList.remove('hidden');
+    if (gameContainer) gameContainer.classList.add('hidden');
+}
+
+// Show game container
+function showGameContainer() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+
+    if (authGate) authGate.classList.add('hidden');
+    if (gameContainer) gameContainer.classList.remove('hidden');
+}
+
+// Initialize game
+function initializeGame() {
+    const cells = document.querySelectorAll('.game-cell');
+    const newGameBtn = document.getElementById('new-game-btn');
+    const quitGameBtn = document.getElementById('quit-game-btn');
+
+    // Add click handlers to cells
+    cells.forEach(cell => {
+        cell.addEventListener('click', handleCellClick);
+    });
+
+    // Add button handlers
+    if (newGameBtn) {
+        newGameBtn.addEventListener('click', startNewGame);
+    }
+    if (quitGameBtn) {
+        quitGameBtn.addEventListener('click', quitGame);
+    }
+
+    // Setup logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+
+    // Start first game
+    startNewGame();
+}
+
+// Handle logout
+async function handleLogout() {
+    try {
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        deleteCookie('sessionId');
+        window.location.href = '/';
+    } catch (error) {
+        console.error('Logout failed:', error);
+    }
+}
+
+// Start new game with backend
+async function startNewGame() {
+    if (!currentUser) {
+        console.error('No user logged in');
+        return;
+    }
+
+    // Reset local state
+    gameBoard = [null, null, null, null, null, null, null, null, null];
+    currentPlayer = 'X';
+    gameActive = false;
+    gameSessionId = null;
+    isProcessingMove = false;
+
+    // Clear cells visually
+    const cells = document.querySelectorAll('.game-cell');
+    cells.forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('btn-success', 'btn-error');
+        cell.classList.add('btn-neutral');
+    });
+
+    updateGameStatus('Starting new game...');
+
+    try {
+        const response = await fetch('/api/game/tic-tac-toe/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                userId: currentUser.id,
+                difficulty: 'medium',
+                playerStarts: true,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to start game');
+        }
+
+        const data = await response.json();
+        gameSessionId = data.gameSessionId;
+        gameBoard = data.board || [null, null, null, null, null, null, null, null, null];
+        currentPlayer = data.currentPlayer || 'X';
+        gameActive = true;
+
+        updateGameStatus();
+        console.log('Game started:', gameSessionId);
+    } catch (error) {
+        console.error('Error starting game:', error);
+        updateGameStatus('Error starting game. Please try again.');
+    }
+}
+
+// Handle cell click
+async function handleCellClick(event) {
+    const cell = event.target;
+    const cellIndex = parseInt(cell.getAttribute('data-cell'));
+
+    // Validation checks
+    if (!gameActive || isProcessingMove || !gameSessionId) {
+        return;
+    }
+
+    if (currentPlayer !== 'X') {
+        return;
+    }
+
+    if (gameBoard[cellIndex] !== null) {
+        return;
+    }
+
+    // Make player move
+    isProcessingMove = true;
+    updateGameStatus('Making your move...');
+
+    // Optimistically update UI
+    makeLocalMove(cellIndex, 'X');
+
+    try {
+        const response = await fetch('/api/game/tic-tac-toe/move', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                gameSessionId: gameSessionId,
+                move: cellIndex,
+                userId: currentUser.id,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to make move');
+        }
+
+        const data = await response.json();
+
+        // Update game state from server
+        if (data.gameState) {
+            gameBoard = data.gameState.board;
+            currentPlayer = data.gameState.currentPlayer;
+
+            // Update board display
+            updateBoardFromState(data.gameState.board);
+        }
+
+        // Handle AI move
+        if (data.aiMove && data.aiMove.position !== undefined) {
+            setTimeout(() => {
+                makeLocalMove(data.aiMove.position, 'O');
+            }, 300); // Small delay for better UX
+        }
+
+        // Check if game is over
+        if (data.gameOver) {
+            gameActive = false;
+            handleGameEnd(data.winner);
+        } else {
+            updateGameStatus();
+        }
+    } catch (error) {
+        console.error('Error making move:', error);
+        // Revert optimistic update on error
+        gameBoard[cellIndex] = null;
+        cell.textContent = '';
+        cell.classList.remove('btn-success');
+        cell.classList.add('btn-neutral');
+        updateGameStatus('Error making move. Try again.');
+    } finally {
+        isProcessingMove = false;
+    }
+}
+
+// Make a local move (update UI)
+function makeLocalMove(cellIndex, player) {
+    gameBoard[cellIndex] = player;
+    const cell = document.querySelector(`[data-cell="${cellIndex}"]`);
+    if (cell) {
+        cell.textContent = player;
+        cell.classList.remove('btn-neutral');
+        cell.classList.add(player === 'X' ? 'btn-success' : 'btn-error');
+    }
+}
+
+// Update board from server state
+function updateBoardFromState(board) {
+    board.forEach((cell, index) => {
+        if (cell !== null && cell !== gameBoard[index]) {
+            makeLocalMove(index, cell);
+        }
+    });
+}
+
+// Handle game end
+function handleGameEnd(winner) {
+    let message, colorClass, statsType;
+
+    if (winner === 'X') {
+        message = '🎉 You Win!';
+        colorClass = 'text-success';
+        statsType = 'wins';
+    } else if (winner === 'O') {
+        message = '🤖 AI Wins!';
+        colorClass = 'text-error';
+        statsType = 'losses';
+    } else {
+        message = "🤝 It's a Draw!";
+        colorClass = 'text-warning';
+        statsType = 'draws';
+    }
+
+    endGame(message, colorClass);
+    updateStats(statsType);
+}
+
+// Update game status display
+function updateGameStatus(customMessage = null) {
+    const statusElement = document.getElementById('game-status');
+    if (!statusElement) return;
+
+    if (customMessage) {
+        statusElement.textContent = customMessage;
+        statusElement.className = 'text-2xl font-bold text-primary';
+        return;
+    }
+
+    if (!gameActive) {
+        statusElement.textContent = 'Game Over';
+        return;
+    }
+
+    const playerName = currentPlayer === 'X' ? 'Your' : "AI's";
+    statusElement.textContent = `${playerName} Turn (${currentPlayer})`;
+    statusElement.className = 'text-2xl font-bold text-primary';
+}
+
+// End game
+function endGame(message, colorClass) {
+    gameActive = false;
+    const statusElement = document.getElementById('game-status');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.className = `text-2xl font-bold ${colorClass}`;
+    }
+}
+
+// Update game statistics
+function updateStats(type) {
+    const countElement = document.getElementById(`${type}-count`);
+    if (countElement) {
+        const currentCount = parseInt(countElement.textContent);
+        countElement.textContent = currentCount + 1;
+    }
+}
+
+// Quit game and return to games page
+function quitGame() {
+    window.location.href = '/games';
+}
+
+// Open login modal (for auth gate)
+function openLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) {
+        modal.showModal();
+    }
+}
+
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    game = new TicTacToeGame();
+    checkAuthStatus();
 });
-
-// Global functions for buttons
-function restartGame() {
-    if (game) {
-        game.restartGame();
-    }
-}
-
-function toggleFirstPlayer() {
-    if (game) {
-        game.toggleFirstPlayer();
-    }
-}

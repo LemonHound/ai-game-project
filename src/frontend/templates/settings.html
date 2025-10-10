@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="/static/css/output.css" />
+    </head>
+    <body class="min-h-screen bg-base-200">
+        {% include 'partials/navbar.html' %}
+
+        <div class="container mx-auto px-4 py-8 max-w-4xl">
+            <h1 class="text-4xl font-bold mb-8">Settings</h1>
+
+            <div class="space-y-6">
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-2xl mb-4">Profile Settings</h2>
+
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-medium">Display Name</span>
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <input
+                                    type="text"
+                                    id="setting-display-name"
+                                    class="input input-bordered flex-1"
+                                    placeholder="Your display name"
+                                    value="John Doe" />
+                                <div
+                                    id="status-display-name"
+                                    class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                    <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                    <span class="text-sm font-medium status-text"></span>
+                                </div>
+                            </div>
+                            <label class="label">
+                                <span class="label-text-alt">This is how other players will see you</span>
+                            </label>
+                        </div>
+
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-medium">Username</span>
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <input
+                                    type="text"
+                                    id="setting-username"
+                                    class="input input-bordered flex-1"
+                                    placeholder="username"
+                                    value="johndoe" />
+                                <div
+                                    id="status-username"
+                                    class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                    <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                    <span class="text-sm font-medium status-text"></span>
+                                </div>
+                            </div>
+                            <label class="label">
+                                <span class="label-text-alt">Your unique username</span>
+                            </label>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-medium">Bio</span>
+                            </label>
+                            <div class="flex items-start gap-3">
+                                <textarea
+                                    id="setting-bio"
+                                    class="textarea textarea-bordered h-24 flex-1"
+                                    placeholder="Tell us about yourself">
+Passionate gamer and AI enthusiast</textarea
+                                >
+                                <div
+                                    id="status-bio"
+                                    class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                    <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                    <span class="text-sm font-medium status-text"></span>
+                                </div>
+                            </div>
+                            <label class="label">
+                                <span class="label-text-alt">Optional public bio</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-2xl mb-4">Game Preferences</h2>
+
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-medium">Default Difficulty</span>
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <select id="setting-difficulty" class="select select-bordered flex-1">
+                                    <option value="easy">Easy</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="hard">Hard</option>
+                                    <option value="expert">Expert</option>
+                                </select>
+                                <div
+                                    id="status-difficulty"
+                                    class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                    <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                    <span class="text-sm font-medium status-text"></span>
+                                </div>
+                            </div>
+                            <label class="label">
+                                <span class="label-text-alt">Preferred AI difficulty level</span>
+                            </label>
+                        </div>
+
+                        <div class="form-control mb-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Auto-save games</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-autosave"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-autosave"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control mb-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Show move hints</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-hints"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input type="checkbox" id="setting-hints" class="checkbox checkbox-primary" />
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Enable animations</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-animations"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-animations"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-2xl mb-4">Notifications</h2>
+
+                        <div class="form-control mb-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Email notifications</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-email-notif"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-email-notif"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control mb-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Game updates</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-game-updates"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-game-updates"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control mb-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Weekly statistics summary</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-weekly-stats"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-weekly-stats"
+                                        class="checkbox checkbox-primary" />
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">AI training milestones</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-ai-milestones"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-ai-milestones"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-2xl mb-4">Privacy & Data</h2>
+
+                        <div class="form-control mb-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Public profile</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-public-profile"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-public-profile"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                            <label class="label">
+                                <span class="label-text-alt">Allow others to view your profile and statistics</span>
+                            </label>
+                        </div>
+
+                        <div class="form-control mb-4">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Show in leaderboards</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-leaderboards"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-leaderboards"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label cursor-pointer">
+                                <span class="label-text font-medium">Contribute to AI training</span>
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        id="status-ai-training"
+                                        class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                        <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                        <span class="text-sm font-medium status-text"></span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        id="setting-ai-training"
+                                        class="checkbox checkbox-primary"
+                                        checked />
+                                </div>
+                            </label>
+                            <label class="label">
+                                <span class="label-text-alt">Your gameplay helps improve our AI models</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-2xl mb-4">Appearance</h2>
+
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-medium">Theme</span>
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <select id="setting-theme" class="select select-bordered flex-1">
+                                    <option value="light">Light</option>
+                                    <option value="dark" selected>Dark</option>
+                                    <option value="auto">Auto (System)</option>
+                                </select>
+                                <div
+                                    id="status-theme"
+                                    class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                    <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                    <span class="text-sm font-medium status-text"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-medium">Language</span>
+                            </label>
+                            <div class="flex items-center gap-3">
+                                <select id="setting-language" class="select select-bordered flex-1">
+                                    <option value="en" selected>English</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="ja">日本語</option>
+                                </select>
+                                <div
+                                    id="status-language"
+                                    class="flex items-center gap-2 min-w-24 opacity-0 transition-opacity duration-300">
+                                    <span class="loading loading-spinner loading-sm saving-spinner"></span>
+                                    <span class="text-sm font-medium status-text"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
+
+        <script>
+            let currentUser = null;
+            let saveTimeout = null;
+
+            function deleteCookie(name) {
+                document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = name + '=; Path=/; Domain=localhost; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            }
+
+            async function checkAuthStatus() {
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        credentials: 'include',
+                        headers: { Accept: 'application/json' },
+                        cache: 'no-cache',
+                    });
+
+                    if (response.ok) {
+                        currentUser = await response.json();
+                        updateUIForAuthenticatedUser(currentUser);
+                    } else {
+                        window.location.href = '/';
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    window.location.href = '/';
+                }
+            }
+
+            function updateUIForAuthenticatedUser(user) {
+                document.getElementById('auth-logged-out').classList.add('hidden');
+                document.getElementById('auth-logged-in').classList.remove('hidden');
+
+                document.getElementById('user-display-name').textContent = user.displayName || user.username;
+
+                const initial = (user.displayName || user.username || 'U')[0].toUpperCase();
+                document.getElementById('user-initial').textContent = initial;
+
+                if (user.profilePicture) {
+                    document.getElementById('user-avatar').src = user.profilePicture;
+                    document.getElementById('user-avatar').classList.remove('hidden');
+                    document.getElementById('user-initial').classList.add('hidden');
+                }
+            }
+
+            function showSaveStatus(settingName, status) {
+                const statusEl = document.getElementById(`status-${settingName}`);
+                if (!statusEl) return;
+
+                const spinnerEl = statusEl.querySelector('.saving-spinner');
+                const textEl = statusEl.querySelector('.status-text');
+
+                statusEl.style.opacity = '1';
+
+                if (status === 'saving') {
+                    spinnerEl.classList.remove('hidden');
+                    textEl.textContent = 'Saving...';
+                    textEl.classList.remove('text-success');
+                } else if (status === 'saved') {
+                    spinnerEl.classList.add('hidden');
+                    textEl.textContent = 'Saved!';
+                    textEl.classList.add('text-success');
+
+                    setTimeout(() => {
+                        statusEl.style.opacity = '0';
+                    }, 3000);
+                }
+            }
+
+            async function saveSettings(settingName, settingValue) {
+                showSaveStatus(settingName, 'saving');
+
+                setTimeout(() => {
+                    showSaveStatus(settingName, 'saved');
+                }, 1000);
+
+                try {
+                    const response = await fetch('/api/user/settings', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            [settingName]: settingValue,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        console.error('Failed to save setting');
+                    }
+                } catch (error) {
+                    console.error('Error saving setting:', error);
+                }
+            }
+
+            function handleSettingChange(event) {
+                const element = event.target;
+                const settingName = element.id.replace('setting-', '');
+                let settingValue;
+
+                if (element.type === 'checkbox') {
+                    settingValue = element.checked;
+                } else {
+                    settingValue = element.value;
+                }
+
+                if (saveTimeout) {
+                    clearTimeout(saveTimeout);
+                }
+
+                saveTimeout = setTimeout(() => {
+                    saveSettings(settingName, settingValue);
+                }, 500);
+            }
+
+            document.querySelectorAll('input, select, textarea').forEach(element => {
+                if (element.id && element.id.startsWith('setting-')) {
+                    element.addEventListener('change', handleSettingChange);
+                    element.addEventListener('input', handleSettingChange);
+                }
+            });
+
+            function openLoginModal() {
+                document.getElementById('login-modal').showModal();
+            }
+
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+
+                    deleteCookie('sessionId');
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                }
+            });
+
+            checkAuthStatus();
+        </script>
+    </body>
+</html>

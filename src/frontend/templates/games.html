@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ title }}</title>
+        <link rel="stylesheet" href="/static/css/output.css" />
+    </head>
+    <body class="min-h-screen bg-base-200">
+        {% include 'partials/navbar.html' %}
+
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+            <div class="mb-8">
+                <h1 class="text-4xl font-bold mb-4">Games</h1>
+                <p class="text-lg text-base-content/70">
+                    Choose a game and challenge our adaptive AI. Each game you play helps improve the AI for everyone.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div class="card-body">
+                        <div class="text-6xl mb-4 text-center">♟️</div>
+                        <h3 class="card-title justify-center text-2xl">Chess</h3>
+                        <p class="text-center text-base-content/70">
+                            The classic game of strategy. Test your skills against an AI that learns from master
+                            players.
+                        </p>
+                        <div class="card-actions justify-center mt-4 gap-2">
+                            <div class="badge badge-outline">Strategic</div>
+                            <div class="badge badge-outline">Complex</div>
+                        </div>
+                        <div class="divider my-2"></div>
+                        <div class="stats stats-horizontal shadow bg-base-200">
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Difficulty</div>
+                                <div class="stat-value text-lg">Expert</div>
+                            </div>
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Avg Time</div>
+                                <div class="stat-value text-lg">30min</div>
+                            </div>
+                        </div>
+                        <a href="/game/chess" class="btn btn-primary mt-4">Play Chess</a>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div class="card-body">
+                        <div class="text-6xl mb-4 text-center">🔴</div>
+                        <h3 class="card-title justify-center text-2xl">Checkers</h3>
+                        <p class="text-center text-base-content/70">
+                            Jump your way to victory in this classic board game with straightforward rules and deep
+                            tactics.
+                        </p>
+                        <div class="card-actions justify-center mt-4 gap-2">
+                            <div class="badge badge-outline">Strategic</div>
+                            <div class="badge badge-outline">Tactical</div>
+                        </div>
+                        <div class="divider my-2"></div>
+                        <div class="stats stats-horizontal shadow bg-base-200">
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Difficulty</div>
+                                <div class="stat-value text-lg">Medium</div>
+                            </div>
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Avg Time</div>
+                                <div class="stat-value text-lg">15min</div>
+                            </div>
+                        </div>
+                        <a href="/game/checkers" class="btn btn-primary mt-4">Play Checkers</a>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div class="card-body">
+                        <div class="text-6xl mb-4 text-center">🏓</div>
+                        <h3 class="card-title justify-center text-2xl">Pong</h3>
+                        <p class="text-center text-base-content/70">
+                            Fast-paced arcade action. React quickly as the AI adapts to your playing style in real-time.
+                        </p>
+                        <div class="card-actions justify-center mt-4 gap-2">
+                            <div class="badge badge-outline">Fast-Paced</div>
+                            <div class="badge badge-outline">Reflexes</div>
+                        </div>
+                        <div class="divider my-2"></div>
+                        <div class="stats stats-horizontal shadow bg-base-200">
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Difficulty</div>
+                                <div class="stat-value text-lg">Easy</div>
+                            </div>
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Avg Time</div>
+                                <div class="stat-value text-lg">5min</div>
+                            </div>
+                        </div>
+                        <a href="/game/pong" class="btn btn-primary mt-4">Play Pong</a>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div class="card-body">
+                        <div class="text-6xl mb-4 text-center">❌</div>
+                        <h3 class="card-title justify-center text-2xl">Tic-Tac-Toe</h3>
+                        <p class="text-center text-base-content/70">
+                            Simple rules, strategic gameplay. Perfect for quick matches against our learning AI.
+                        </p>
+                        <div class="card-actions justify-center mt-4 gap-2">
+                            <div class="badge badge-outline">Quick</div>
+                            <div class="badge badge-outline">Simple</div>
+                        </div>
+                        <div class="divider my-2"></div>
+                        <div class="stats stats-horizontal shadow bg-base-200">
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Difficulty</div>
+                                <div class="stat-value text-lg">Easy</div>
+                            </div>
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Avg Time</div>
+                                <div class="stat-value text-lg">2min</div>
+                            </div>
+                        </div>
+                        <a href="/game/tic-tac-toe" class="btn btn-primary mt-4">Play Tic-Tac-Toe</a>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div class="card-body">
+                        <div class="text-6xl mb-4 text-center">🔵</div>
+                        <h3 class="card-title justify-center text-2xl">Connect 4</h3>
+                        <p class="text-center text-base-content/70">
+                            Drop your pieces and connect four in a row. Our AI plans several moves ahead to challenge
+                            you.
+                        </p>
+                        <div class="card-actions justify-center mt-4 gap-2">
+                            <div class="badge badge-outline">Strategic</div>
+                            <div class="badge badge-outline">Planning</div>
+                        </div>
+                        <div class="divider my-2"></div>
+                        <div class="stats stats-horizontal shadow bg-base-200">
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Difficulty</div>
+                                <div class="stat-value text-lg">Medium</div>
+                            </div>
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Avg Time</div>
+                                <div class="stat-value text-lg">8min</div>
+                            </div>
+                        </div>
+                        <a href="/game/connect4" class="btn btn-primary mt-4">Play Connect 4</a>
+                    </div>
+                </div>
+
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div class="card-body">
+                        <div class="text-6xl mb-4 text-center">⚫</div>
+                        <h3 class="card-title justify-center text-2xl">Dots and Boxes</h3>
+                        <p class="text-center text-base-content/70">
+                            Connect dots to form boxes and claim territory. Strategic thinking meets spatial reasoning.
+                        </p>
+                        <div class="card-actions justify-center mt-4 gap-2">
+                            <div class="badge badge-outline">Strategic</div>
+                            <div class="badge badge-outline">Spatial</div>
+                        </div>
+                        <div class="divider my-2"></div>
+                        <div class="stats stats-horizontal shadow bg-base-200">
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Difficulty</div>
+                                <div class="stat-value text-lg">Medium</div>
+                            </div>
+                            <div class="stat py-3 px-4">
+                                <div class="stat-title text-xs">Avg Time</div>
+                                <div class="stat-value text-lg">10min</div>
+                            </div>
+                        </div>
+                        <a href="/game/dots-and-boxes" class="btn btn-primary mt-4">Play Dots and Boxes</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-gradient-to-br from-primary to-secondary text-white shadow-xl mt-12">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-2xl justify-center mb-2">Help Train Our AI</h2>
+                    <p class="text-lg">
+                        Every game you play contributes to making our AI smarter and more challenging. Your unique
+                        playing style helps create a better experience for all players.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
+
+        <script>
+            let currentUser = null;
+
+            function deleteCookie(name) {
+                document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                document.cookie = name + '=; Path=/; Domain=localhost; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            }
+
+            async function checkAuthStatus() {
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        credentials: 'include',
+                        headers: { Accept: 'application/json' },
+                        cache: 'no-cache',
+                    });
+
+                    if (response.ok) {
+                        currentUser = await response.json();
+                        updateUIForAuthenticatedUser(currentUser);
+                    } else {
+                        updateUIForUnauthenticatedUser();
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    updateUIForUnauthenticatedUser();
+                }
+            }
+
+            function updateUIForAuthenticatedUser(user) {
+                document.getElementById('auth-logged-out').classList.add('hidden');
+                document.getElementById('auth-logged-in').classList.remove('hidden');
+
+                document.getElementById('user-display-name').textContent = user.displayName || user.username;
+
+                const initial = (user.displayName || user.username || 'U')[0].toUpperCase();
+                document.getElementById('user-initial').textContent = initial;
+
+                if (user.profilePicture) {
+                    document.getElementById('user-avatar').src = user.profilePicture;
+                    document.getElementById('user-avatar').classList.remove('hidden');
+                    document.getElementById('user-initial').classList.add('hidden');
+                }
+            }
+
+            function updateUIForUnauthenticatedUser() {
+                document.getElementById('auth-logged-out').classList.remove('hidden');
+                document.getElementById('auth-logged-in').classList.add('hidden');
+                currentUser = null;
+            }
+
+            function openLoginModal() {
+                document.getElementById('login-modal').showModal();
+            }
+
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+
+                    deleteCookie('sessionId');
+                    updateUIForUnauthenticatedUser();
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                }
+            });
+
+            checkAuthStatus();
+        </script>
+    </body>
+</html>
