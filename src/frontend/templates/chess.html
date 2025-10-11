@@ -51,19 +51,32 @@
                 height: 60px;
                 opacity: 0.8;
             }
+            .eval-bar-container {
+                width: 30px;
+                height: 480px;
+                background: linear-gradient(to bottom, #1f2937 50%, #f3f4f6 50%);
+                position: relative;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            .eval-bar {
+                position: absolute;
+                bottom: 0;
+                width: 100%;
+                background: white;
+                transition: height 0.3s ease;
+            }
         </style>
     </head>
     <body class="min-h-screen bg-base-200">
         {% include 'partials/navbar.html' %}
 
         <main class="container mx-auto px-4 py-8">
-            <!-- Game Header -->
             <div class="text-center mb-8">
                 <h1 class="text-4xl font-bold mb-2">Chess</h1>
                 <p class="text-base-content/70">Play against the AI</p>
             </div>
 
-            <!-- Auth Gate -->
             <div id="auth-gate" class="hidden">
                 <div class="alert alert-info max-w-md mx-auto">
                     <svg
@@ -85,9 +98,7 @@
                 </div>
             </div>
 
-            <!-- Game Container -->
             <div id="game-container" class="hidden">
-                <!-- Color Selection Overlay -->
                 <div
                     id="color-selection-overlay"
                     class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -108,11 +119,8 @@
                     </div>
                 </div>
 
-                <!-- Game Layout -->
                 <div class="flex flex-col lg:flex-row gap-6 justify-center">
-                    <!-- Left Side: Captured Pieces & Info -->
                     <div class="flex flex-col gap-4 lg:w-64">
-                        <!-- AI Captured Pieces -->
                         <div class="card bg-base-100 shadow">
                             <div class="card-body p-4">
                                 <h3 class="font-bold text-sm mb-2">AI Captured</h3>
@@ -120,27 +128,57 @@
                             </div>
                         </div>
 
-                        <!-- Game Status -->
                         <div class="card bg-base-100 shadow">
                             <div class="card-body p-4">
                                 <div id="current-turn" class="text-lg font-bold text-center mb-2">White's Turn</div>
-                                <div id="game-status" class="text-center text-sm"></div>
+                                <div id="game-status" class="text-center text-sm mb-3"></div>
+                                <div class="flex gap-2">
+                                    <button id="undo-move-btn" class="btn btn-sm btn-ghost flex-1" disabled>
+                                        Undo
+                                    </button>
+                                    <button id="submit-move-btn" class="btn btn-sm btn-success flex-1" disabled>
+                                        Submit Move
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-base-100 shadow">
+                            <div class="card-body p-4">
+                                <h3 class="font-bold text-sm mb-3">Position Analysis</h3>
+                                <div id="analysis-panel">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="text-xs">Evaluation:</span>
+                                        <span id="eval-text" class="font-mono font-bold">...</span>
+                                    </div>
+                                    <button id="toggle-analysis-btn" class="btn btn-xs btn-block">
+                                        Disable Analysis
+                                    </button>
+                                    <div class="form-control">
+                                        <label class="label cursor-pointer">
+                                            <span class="label-text text-xs">Real-time Play</span>
+                                            <input
+                                                type="checkbox"
+                                                id="realtime-toggle"
+                                                class="toggle toggle-sm toggle-primary" />
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Center: Chess Board -->
-                    <div class="flex justify-center">
+                    <div class="flex gap-4 items-center justify-center">
+                        <div class="eval-bar-container">
+                            <div id="eval-bar" class="eval-bar" style="height: 50%"></div>
+                        </div>
+
                         <div class="inline-block p-4 bg-base-300 rounded-lg shadow-xl">
-                            <div id="chess-board" class="grid grid-cols-8" style="width: 480px; height: 480px">
-                                <!-- Board will be generated by JavaScript -->
-                            </div>
+                            <div id="chess-board" class="grid grid-cols-8" style="width: 480px; height: 480px"></div>
                         </div>
                     </div>
 
-                    <!-- Right Side: Move History & Controls -->
                     <div class="flex flex-col gap-4 lg:w-64">
-                        <!-- Player Captured Pieces -->
                         <div class="card bg-base-100 shadow">
                             <div class="card-body p-4">
                                 <h3 class="font-bold text-sm mb-2">You Captured</h3>
@@ -148,15 +186,20 @@
                             </div>
                         </div>
 
-                        <!-- Move History -->
-                        <div class="card bg-base-100 shadow flex-1">
-                            <div class="card-body p-4">
-                                <h3 class="font-bold text-sm mb-2">Move History</h3>
-                                <div id="move-history" class="overflow-y-auto max-h-64 text-sm space-y-1"></div>
+                        <div
+                            class="card bg-base-100 shadow"
+                            style="height: 300px; display: flex; flex-direction: column">
+                            <div
+                                class="card-body p-4"
+                                style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+                                <h3 class="font-bold text-sm mb-2" style="flex-shrink: 0">Move History</h3>
+                                <div
+                                    id="move-history"
+                                    class="overflow-y-auto text-sm space-y-1"
+                                    style="flex: 1; min-height: 0"></div>
                             </div>
                         </div>
 
-                        <!-- Controls -->
                         <div class="flex flex-col gap-2">
                             <button id="new-game-btn" class="btn btn-primary">New Game</button>
                             <button id="flip-board-btn" class="btn btn-ghost">Flip Board</button>
@@ -167,10 +210,8 @@
             </div>
         </main>
 
-        <!-- Drag Piece (follows cursor) -->
         <img id="drag-piece" class="hidden" />
 
-        <!-- Promotion Modal -->
         <div id="promotion-overlay" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
@@ -195,6 +236,7 @@
 
         {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
 
+        <script src="/static/js/chess-evaluation.js"></script>
         <script src="/static/js/chess.js"></script>
     </body>
 </html>
