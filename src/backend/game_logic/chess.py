@@ -7,7 +7,6 @@ class ChessGame:
         self.sessions = {}
 
     def start_game(self, user_id: Optional[int], difficulty: str = "medium", playerStarts: bool = True):
-        """Initialize a new chess game session"""
         session_id = f"chess_{user_id or 0}_{datetime.now().timestamp()}"
 
         game_state = {
@@ -27,12 +26,17 @@ class ChessGame:
 
         self.sessions[session_id] = game_state
 
+        ai_move = None
+        if not playerStarts:
+            ai_move = self._generate_ai_move(game_state)
+
         return {
             'gameSessionId': session_id,
             'boardState': game_state['board'],
             'currentPlayer': game_state['currentPlayer'],
             'playerColor': game_state['playerColor'],
-            'gameActive': game_state['gameActive']
+            'gameActive': game_state['gameActive'],
+            'aiMove': ai_move
         }
 
     def make_move(self, session_id: str, move: Dict, user_id: int):

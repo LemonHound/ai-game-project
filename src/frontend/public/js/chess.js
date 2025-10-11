@@ -158,7 +158,6 @@ function updateEvaluationDisplay() {
     if (!evalBar || !evalText) return;
 
     if (!currentEvaluation) {
-        evalBar.style.height = '50%';
         evalText.textContent = '...';
         return;
     }
@@ -174,8 +173,14 @@ function updateEvaluationDisplay() {
         const eval_score = currentEvaluation.value;
         displayValue = (eval_score >= 0 ? '+' : '') + eval_score.toFixed(1);
 
-        const clampedEval = Math.max(-10, Math.min(10, eval_score));
-        percentage = 50 + (clampedEval / 10) * 50;
+        const sign = eval_score >= 0 ? 1 : -1;
+        const absEval = Math.abs(eval_score);
+        const logEval = Math.log10(absEval + 1) * sign;
+        const maxLog = Math.log10(11);
+        const normalizedEval = logEval / maxLog;
+
+        percentage = 50 + normalizedEval * 45;
+        percentage = Math.max(5, Math.min(95, percentage));
     }
 
     evalBar.style.height = percentage + '%';
@@ -254,17 +259,35 @@ async function startGame(isWhite) {
             black: { kingside: true, queenside: true },
         };
 
+        if (data.aiMove) {
+            updateGameStateFromMove(
+                data.aiMove.fromRow,
+                data.aiMove.fromCol,
+                data.aiMove.toRow,
+                data.aiMove.toCol,
+                data.aiMove.piece
+            );
+
+            lastMove = {
+                from: [data.aiMove.fromRow, data.aiMove.fromCol],
+                to: [data.aiMove.toRow, data.aiMove.toCol],
+            };
+
+            addMoveToHistory(
+                data.aiMove.piece,
+                data.aiMove.fromRow,
+                data.aiMove.fromCol,
+                data.aiMove.toRow,
+                data.aiMove.toCol,
+                null
+            );
+        }
+
         createBoard();
         updateGameStatus();
 
         if (analysisEnabled) {
             analyzePosition(board, { gameOver: false });
-        }
-
-        if (!isWhite) {
-            setTimeout(() => {
-                updateGameStatus();
-            }, 500);
         }
     } catch (error) {
         console.error('Error starting game:', error);
@@ -570,18 +593,17 @@ function enableMoveButtons() {
     const submitBtn = document.getElementById('submit-move-btn');
     const undoBtn = document.getElementById('undo-move-btn');
 
+    if (realtimePlay) {
+        submitMove();
+        return;
+    }
+
     if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.classList.add('btn-success');
     }
     if (undoBtn) {
         undoBtn.disabled = false;
-    }
-
-    if (realtimePlay) {
-        setTimeout(() => {
-            submitMove();
-        }, 100);
     }
 }
 
