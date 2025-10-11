@@ -176,7 +176,6 @@ async function startNewGame() {
         gameActive = true;
 
         updateGameStatus();
-        console.log('Game started:', gameSessionId);
     } catch (error) {
         console.error('Error starting game:', error);
         updateGameStatus('Error starting game. Please try again.');

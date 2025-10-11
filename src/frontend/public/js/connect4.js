@@ -1,415 +1,476 @@
-// connect4.js - Fixed Game logic for Connect 4
-class Connect4Game {
-    constructor() {
-        this.rows = 6;
-        this.cols = 7;
-        this.board = Array(this.rows)
-            .fill(null)
-            .map(() => Array(this.cols).fill(null));
-        this.currentPlayer = 'player';
-        this.gameOver = false;
-        this.winner = null;
-        this.winningLine = [];
-        this.moveHistory = [];
-        this.playerStarts = true;
+// Connect 4 Game
+let currentUser = null;
+let gameActive = false;
+let gameStarted = false;
+let board = [];
+let gameSessionId = null;
+let currentPlayer = 'player';
+let aiThinking = false;
+let winningLine = null;
+let lastAnimatedPieces = new Set(); // Track which pieces have been animated
 
-        this.initializeBoard();
-        this.updateGameStatus();
-        this.updateAIThoughts('Ready to play Connect 4! Drop your red piece in any column.');
-    }
+const ROWS = 6;
+const COLS = 7;
 
-    initializeBoard() {
-        // Clear any existing boards first to prevent duplication
-        const desktopBoard = document.getElementById('game-board');
-        const mobileBoard = document.getElementById('mobile-game-board');
-        const desktopButtons = document.getElementById('column-buttons');
-        const mobileButtons = document.getElementById('mobile-column-buttons');
-
-        if (desktopBoard) desktopBoard.innerHTML = '';
-        if (mobileBoard) mobileBoard.innerHTML = '';
-        if (desktopButtons) desktopButtons.innerHTML = '';
-        if (mobileButtons) mobileButtons.innerHTML = '';
-
-        // Create desktop version
-        if (desktopBoard) {
-            this.createColumnButtons(desktopButtons);
-            this.createGameBoard(desktopBoard);
-        }
-
-        // Create mobile version
-        if (mobileBoard) {
-            this.createColumnButtons(mobileButtons);
-            this.createGameBoard(mobileBoard);
+// Initialize empty board
+function initializeEmptyBoard() {
+    board = [];
+    for (let row = 0; row < ROWS; row++) {
+        board[row] = [];
+        for (let col = 0; col < COLS; col++) {
+            board[row][col] = null;
         }
     }
+}
 
-    createColumnButtons(container) {
-        if (!container) return;
+function deleteCookie(name) {
+    document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
 
-        for (let col = 0; col < this.cols; col++) {
-            const button = document.createElement('button');
-            button.className = 'btn btn-primary btn-sm';
-            button.textContent = '⬇️';
-            button.dataset.col = col;
-            button.addEventListener('click', () => this.makeMove(col));
-            container.appendChild(button);
-        }
-    }
-
-    createGameBoard(container) {
-        if (!container) return;
-
-        const boardDiv = document.createElement('div');
-        boardDiv.className = 'bg-primary p-4 rounded-lg grid grid-cols-7 gap-1';
-        boardDiv.style.width = '420px';
-
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                const cell = document.createElement('div');
-                cell.className =
-                    'w-12 h-12 bg-base-100 rounded-full flex items-center justify-center transition-all duration-300';
-                cell.dataset.row = row;
-                cell.dataset.col = col;
-                boardDiv.appendChild(cell);
-            }
-        }
-
-        container.appendChild(boardDiv);
-    }
-
-    makeMove(col) {
-        if (this.gameOver || this.currentPlayer === 'ai') return;
-
-        const row = this.getLowestEmptyRow(col);
-        if (row === -1) {
-            this.updateAIThoughts('That column is full! Try another column.');
-            return;
-        }
-
-        this.board[row][col] = 'player';
-        this.renderBoard();
-        this.addMoveToHistory('Player', col + 1);
-
-        if (this.checkWinner(row, col, 'player')) {
-            this.endGame('player');
-            return;
-        }
-
-        if (this.checkDraw()) {
-            this.endGame('draw');
-            return;
-        }
-
-        this.currentPlayer = 'ai';
-        this.updateGameStatus();
-        this.updateAIThoughts('Your move looks interesting! Let me think...');
-
-        setTimeout(() => this.makeAIMove(), 1000);
-    }
-
-    getLowestEmptyRow(col) {
-        for (let row = this.rows - 1; row >= 0; row--) {
-            if (this.board[row][col] === null) {
-                return row;
-            }
-        }
-        return -1;
-    }
-
-    renderBoard() {
-        const cells = document.querySelectorAll('[data-row][data-col]');
-
-        cells.forEach(cell => {
-            const row = parseInt(cell.dataset.row);
-            const col = parseInt(cell.dataset.col);
-            const piece = this.board[row][col];
-
-            // Clear previous styling
-            cell.className =
-                'w-12 h-12 bg-base-100 rounded-full flex items-center justify-center transition-all duration-300';
-            cell.textContent = '';
-
-            if (piece === 'player') {
-                cell.classList.add('bg-error');
-                cell.textContent = '🔴';
-            } else if (piece === 'ai') {
-                cell.classList.add('bg-blue-400');
-                cell.textContent = '🔵';
-            }
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/auth/me', {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+            cache: 'no-cache',
         });
-    }
 
-    makeAIMove() {
-        if (this.gameOver || this.currentPlayer !== 'ai') return;
-
-        const move = this.getBestAIMove();
-        if (move === -1) return;
-
-        const row = this.getLowestEmptyRow(move);
-        this.board[row][move] = 'ai';
-        this.renderBoard();
-        this.addMoveToHistory('AI', move + 1);
-
-        if (this.checkWinner(row, move, 'ai')) {
-            this.endGame('ai');
-            return;
-        }
-
-        if (this.checkDraw()) {
-            this.endGame('draw');
-            return;
-        }
-
-        this.currentPlayer = 'player';
-        this.updateGameStatus();
-        this.updateAIThoughts('Your turn! Look for opportunities to connect four pieces.');
-    }
-
-    getBestAIMove() {
-        const availableCols = [];
-        for (let col = 0; col < this.cols; col++) {
-            if (this.getLowestEmptyRow(col) !== -1) {
-                availableCols.push(col);
-            }
-        }
-
-        if (availableCols.length === 0) return -1;
-
-        // Check if AI can win
-        for (const col of availableCols) {
-            const row = this.getLowestEmptyRow(col);
-            this.board[row][col] = 'ai';
-            if (this.checkWinner(row, col, 'ai')) {
-                this.board[row][col] = null;
-                return col;
-            }
-            this.board[row][col] = null;
-        }
-
-        // Check if player needs to be blocked
-        for (const col of availableCols) {
-            const row = this.getLowestEmptyRow(col);
-            this.board[row][col] = 'player';
-            if (this.checkWinner(row, col, 'player')) {
-                this.board[row][col] = null;
-                return col;
-            }
-            this.board[row][col] = null;
-        }
-
-        // Prefer center columns
-        const preferredCols = [3, 2, 4, 1, 5, 0, 6].filter(col => availableCols.includes(col));
-        return preferredCols[0];
-    }
-
-    checkWinner(row, col, player) {
-        const directions = [
-            [0, 1], // horizontal
-            [1, 0], // vertical
-            [1, 1], // diagonal \
-            [1, -1], // diagonal /
-        ];
-
-        for (const [deltaRow, deltaCol] of directions) {
-            let count = 1;
-            const line = [{ row, col }];
-
-            // Check positive direction
-            let r = row + deltaRow;
-            let c = col + deltaCol;
-            while (r >= 0 && r < this.rows && c >= 0 && c < this.cols && this.board[r][c] === player) {
-                count++;
-                line.push({ row: r, col: c });
-                r += deltaRow;
-                c += deltaCol;
-            }
-
-            // Check negative direction
-            r = row - deltaRow;
-            c = col - deltaCol;
-            while (r >= 0 && r < this.rows && c >= 0 && c < this.cols && this.board[r][c] === player) {
-                count++;
-                line.unshift({ row: r, col: c });
-                r -= deltaRow;
-                c -= deltaCol;
-            }
-
-            if (count >= 4) {
-                this.winningLine = line.slice(0, 4);
-                this.highlightWinningLine();
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    highlightWinningLine() {
-        this.winningLine.forEach(pos => {
-            const cells = document.querySelectorAll(`[data-row="${pos.row}"][data-col="${pos.col}"]`);
-            cells.forEach(cell => {
-                cell.classList.add('ring-4', 'ring-success', 'animate-pulse');
-            });
-        });
-    }
-
-    checkDraw() {
-        for (let col = 0; col < this.cols; col++) {
-            if (this.getLowestEmptyRow(col) !== -1) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    endGame(result) {
-        this.gameOver = true;
-        let statusMessage = '';
-
-        if (result === 'player') {
-            statusMessage = '🎉 You Win! Four in a row!';
-            this.updateAIThoughts('Excellent strategy! You connected four before me. Well played! 🏆');
-        } else if (result === 'ai') {
-            statusMessage = '🤖 AI Wins! Four in a row!';
-            this.updateAIThoughts('Victory! I managed to connect four pieces. Good game! 🎯');
+        if (response.ok) {
+            currentUser = await response.json();
+            updateUIForAuthenticatedUser(currentUser);
+            showGameContainer();
+            initializeGame();
         } else {
-            statusMessage = "🤝 It's a Draw! Board is full!";
-            this.updateAIThoughts('A tie game! The board filled up without either of us connecting four. ⚖️');
+            console.log('Not authenticated');
+            showAuthGate();
         }
-
-        this.updateGameStatus(statusMessage);
-
-        // Disable all column buttons
-        document.querySelectorAll('[data-col]').forEach(btn => {
-            btn.disabled = true;
-            btn.classList.add('btn-disabled');
-        });
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        showAuthGate();
     }
+}
 
-    updateGameStatus(message = null) {
-        const statusElements = document.querySelectorAll('#game-status, #mobile-game-status');
-        const text =
-            message ||
-            (this.gameOver
-                ? 'Game Over!'
-                : this.currentPlayer === 'player'
-                  ? 'Your turn! Choose a column to drop your red piece.'
-                  : 'AI is thinking...');
+function updateUIForAuthenticatedUser(user) {
+    const loggedOut = document.getElementById('auth-logged-out');
+    const loggedIn = document.getElementById('auth-logged-in');
 
-        statusElements.forEach(el => {
-            if (el) el.textContent = text;
-        });
-    }
+    if (loggedOut) loggedOut.classList.add('hidden');
+    if (loggedIn) loggedIn.classList.remove('hidden');
 
-    updateAIThoughts(thought) {
-        const aiThoughtsElement = document.getElementById('ai-thoughts');
-        if (aiThoughtsElement) {
-            aiThoughtsElement.textContent = thought;
+    const displayName = document.getElementById('user-display-name');
+    if (displayName) displayName.textContent = user.displayName || user.username;
+
+    const initial = (user.displayName || user.username || 'U')[0].toUpperCase();
+    const userInitial = document.getElementById('user-initial');
+    if (userInitial) userInitial.textContent = initial;
+
+    if (user.profilePicture) {
+        const avatar = document.getElementById('user-avatar');
+        if (avatar) {
+            avatar.src = user.profilePicture;
+            avatar.classList.remove('hidden');
+            if (userInitial) userInitial.classList.add('hidden');
         }
     }
+}
 
-    addMoveToHistory(player, col) {
-        this.moveHistory.push({
-            player,
-            move: `Column ${col}`,
-            timestamp: new Date(),
+function showAuthGate() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+    if (authGate) authGate.classList.remove('hidden');
+    if (gameContainer) gameContainer.classList.add('hidden');
+}
+
+function showGameContainer() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+    if (authGate) authGate.classList.add('hidden');
+    if (gameContainer) gameContainer.classList.remove('hidden');
+}
+
+function initializeGame() {
+    const newGameBtn = document.getElementById('new-game-btn');
+    const aiFirstBtn = document.getElementById('ai-first-btn');
+    const quitGameBtn = document.getElementById('quit-game-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (newGameBtn) newGameBtn.addEventListener('click', startNewGame);
+    if (aiFirstBtn) aiFirstBtn.addEventListener('click', handleAIFirstMove);
+    if (quitGameBtn) quitGameBtn.addEventListener('click', quitGame);
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+
+    createBoard();
+    updateGameStatus();
+}
+
+async function handleLogout() {
+    try {
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
         });
+        deleteCookie('sessionId');
+        window.location.href = '/';
+    } catch (error) {
+        console.error('Logout failed:', error);
+    }
+}
+
+async function startNewGame() {
+    try {
+        const response = await fetch('/api/game/connect4/start', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: currentUser.id,
+                difficulty: 'medium',
+                playerStarts: true,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to start game');
+        }
+
+        const data = await response.json();
+        gameSessionId = data.gameSessionId;
+        board = data.boardState;
+        currentPlayer = data.currentPlayer;
+        gameActive = data.gameActive;
+        gameStarted = true;
+        aiThinking = false;
+        winningLine = null;
+
+        // Show AI first move button
+        const aiFirstBtn = document.getElementById('ai-first-btn');
+        if (aiFirstBtn) {
+            aiFirstBtn.classList.remove('hidden');
+        }
+
+        createBoard();
+        updateGameStatus();
+    } catch (error) {
+        console.error('Error starting game:', error);
+        alert('Failed to start game. Please try again.');
+    }
+}
+
+async function handleAIFirstMove() {
+    if (!gameSessionId || !gameActive || aiThinking) return;
+
+    aiThinking = true;
+    updateGameStatus('AI is thinking...');
+
+    try {
+        const response = await fetch('/api/game/connect4/ai-first', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                gameSessionId: gameSessionId,
+                userId: currentUser.id,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to make AI move');
+        }
+
+        const data = await response.json();
+        board = data.boardState;
+        currentPlayer = data.currentPlayer;
+
+        // Hide AI first button after use
+        const aiFirstBtn = document.getElementById('ai-first-btn');
+        if (aiFirstBtn) {
+            aiFirstBtn.classList.add('hidden');
+        }
+
+        createBoard();
+        updateGameStatus();
+    } catch (error) {
+        console.error('Error with AI first move:', error);
+        alert(error.message || 'AI could not make first move. Please try again.');
+    } finally {
+        aiThinking = false;
+        updateGameStatus();
+    }
+}
+
+async function handleColumnClick(col) {
+    if (!gameActive || !gameStarted || currentPlayer !== 'player' || aiThinking) return;
+
+    // Check if board is initialized and column is valid
+    if (!board || !board[0] || board[0][col] === undefined) {
+        console.error('Board not properly initialized');
+        return;
     }
 
-    restart() {
-        this.board = Array(this.rows)
-            .fill(null)
-            .map(() => Array(this.cols).fill(null));
-        this.currentPlayer = this.playerStarts ? 'player' : 'ai';
-        this.gameOver = false;
-        this.winner = null;
-        this.winningLine = [];
-        this.moveHistory = [];
+    // Check if column is full
+    if (board[0][col] !== null) {
+        return;
+    }
 
-        this.initializeBoard();
-        this.renderBoard();
-        this.updateGameStatus();
-        this.updateAIThoughts('Game restarted! Ready for another round of Connect 4!');
+    aiThinking = true;
+    updateGameStatus('Your turn...');
 
-        if (!this.playerStarts) {
-            this.updateAIThoughts("I'll start this round!");
-            setTimeout(() => this.makeAIMove(), 500);
+    // Hide AI first button once player makes first move
+    const aiFirstBtn = document.getElementById('ai-first-btn');
+    if (aiFirstBtn) {
+        aiFirstBtn.classList.add('hidden');
+    }
+
+    // Find where the piece will land (optimistically)
+    let landingRow = ROWS - 1;
+    for (let row = ROWS - 1; row >= 0; row--) {
+        if (board[row][col] === null) {
+            landingRow = row;
+            break;
         }
     }
 
-    getHint() {
-        if (this.gameOver || this.currentPlayer === 'ai') {
-            this.updateAIThoughts('No hints available right now!');
+    // Update board locally to show player's piece
+    const previousBoard = board.map(row => [...row]); // Deep copy
+    board[landingRow][col] = 'player';
+
+    // Render with animation for player's piece
+    createBoard(landingRow, col);
+
+    // Wait for player's piece animation to complete
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    try {
+        // NOW make the API call after animation
+        const response = await fetch('/api/game/connect4/move', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                gameSessionId: gameSessionId,
+                userId: currentUser.id,
+                move: { col: col },
+            }),
+        });
+
+        if (!response.ok) {
+            // Revert the optimistic update
+            board = previousBoard;
+            createBoard();
+            const error = await response.json();
+            throw new Error(error.detail || 'Invalid move');
+        }
+
+        const data = await response.json();
+
+        // Update board with server state
+        board = data.boardState;
+
+        // Check for player win
+        if (data.gameOver && data.winner === 'player') {
+            gameActive = false;
+            aiThinking = false;
+            winningLine = data.winningLine;
+            createBoard(); // Redraw to show winning line
+            updateGameStatus('You win! 🎉');
             return;
         }
 
-        const availableCols = [];
-        for (let col = 0; col < this.cols; col++) {
-            if (this.getLowestEmptyRow(col) !== -1) {
-                availableCols.push(col);
-            }
+        // Check for draw
+        if (data.gameOver && data.winner === 'draw') {
+            gameActive = false;
+            aiThinking = false;
+            createBoard();
+            updateGameStatus("It's a draw!");
+            return;
         }
 
-        // Check if player can win
-        for (const col of availableCols) {
-            const row = this.getLowestEmptyRow(col);
-            this.board[row][col] = 'player';
-            if (this.checkWinner(row, col, 'player')) {
-                this.board[row][col] = null;
-                this.updateAIThoughts(`💡 Hint: You can win by playing column ${col + 1}! 🎯`);
+        // Show AI's move if there is one
+        if (data.aiMove) {
+            updateGameStatus("AI's turn...");
+
+            // Redraw board with AI piece animated
+            createBoard(data.aiMove.row, data.aiMove.col);
+
+            // Wait for AI animation
+            await new Promise(resolve => setTimeout(resolve, 400));
+
+            // Check for AI win
+            if (data.gameOver && data.winner === 'ai') {
+                gameActive = false;
+                aiThinking = false;
+                winningLine = data.winningLine;
+                createBoard(); // Redraw to show winning line
+                updateGameStatus('AI wins!');
                 return;
             }
-            this.board[row][col] = null;
         }
 
-        // Check if player needs to block
-        for (const col of availableCols) {
-            const row = this.getLowestEmptyRow(col);
-            this.board[row][col] = 'ai';
-            if (this.checkWinner(row, col, 'ai')) {
-                this.board[row][col] = null;
-                this.updateAIThoughts(`💡 Hint: Block me by playing column ${col + 1}! 🛡️`);
-                return;
+        // Game continues
+        currentPlayer = data.currentPlayer;
+        gameActive = data.gameActive;
+        winningLine = data.winningLine;
+        aiThinking = false;
+
+        // Redraw board one final time to enable clicks (no animation)
+        createBoard();
+        updateGameStatus();
+    } catch (error) {
+        console.error('Move error:', error);
+        alert(error.message || 'Invalid move. Please try again.');
+        board = previousBoard;
+        aiThinking = false;
+        createBoard();
+    }
+}
+
+// Helper to find which row a piece landed in a column (before AI move)
+function findLastPieceInColumn(boardState, col) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+        if (boardState[row][col] !== null) {
+            return row;
+        }
+    }
+    return ROWS - 1;
+}
+
+// Helper to find player's piece row (different from AI's)
+function findPieceRow(boardState, playerCol, aiCol) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+        if (boardState[row][playerCol] === 'player') {
+            return row;
+        }
+    }
+    return ROWS - 1;
+}
+
+function createBoard(animateRow = null, animateCol = null) {
+    const boardEl = document.getElementById('connect4-board');
+    if (!boardEl) return;
+
+    // Ensure board is initialized
+    if (!board || board.length === 0) {
+        initializeEmptyBoard();
+    }
+
+    boardEl.innerHTML = '';
+
+    // Create column hover indicators (one per column at the top)
+    if (gameActive && currentPlayer === 'player' && !aiThinking) {
+        for (let col = 0; col < COLS; col++) {
+            if (board[0][col] === null) {
+                const colHover = document.createElement('div');
+                colHover.className = 'column-hover-indicator';
+                // Calculate position: padding (20px) + col * (cell width 70px + gap 8px)
+                colHover.style.left = 20 + col * 78 + 'px';
+                colHover.style.top = '-35px';
+                colHover.style.position = 'absolute';
+                colHover.style.width = '70px';
+                colHover.style.height = '50px';
+                colHover.style.display = 'flex';
+                colHover.style.alignItems = 'center';
+                colHover.style.justifyContent = 'center';
+                colHover.style.opacity = '0';
+                colHover.style.transition = 'opacity 0.2s';
+                colHover.style.pointerEvents = 'none';
+                colHover.dataset.col = col;
+
+                const hoverPiece = document.createElement('div');
+                hoverPiece.style.width = '50px';
+                hoverPiece.style.height = '50px';
+                hoverPiece.style.borderRadius = '50%';
+                hoverPiece.style.background = 'radial-gradient(circle at 30% 30%, #fbbf24, #f59e0b)';
+                hoverPiece.style.opacity = '0.7';
+                colHover.appendChild(hoverPiece);
+
+                boardEl.appendChild(colHover);
             }
-            this.board[row][col] = null;
         }
+    }
 
-        // General strategy hint
-        if (availableCols.includes(3)) {
-            this.updateAIThoughts('💡 Hint: Try the center column (4) for better control! 🎯');
-        } else {
-            const preferredCols = [2, 4, 1, 5].filter(col => availableCols.includes(col));
-            if (preferredCols.length > 0) {
-                this.updateAIThoughts(`💡 Hint: Try column ${preferredCols[0] + 1} for good positioning! 📐`);
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+            const cell = document.createElement('div');
+            cell.className = 'connect4-cell';
+            cell.dataset.row = row;
+            cell.dataset.col = col;
+
+            // Add hover effect for entire column
+            if (gameActive && !aiThinking && currentPlayer === 'player' && board[0][col] === null) {
+                cell.addEventListener('mouseenter', () => {
+                    const indicator = boardEl.querySelector(`.column-hover-indicator[data-col="${col}"]`);
+                    if (indicator) indicator.style.opacity = '1';
+                });
+                cell.addEventListener('mouseleave', () => {
+                    const indicator = boardEl.querySelector(`.column-hover-indicator[data-col="${col}"]`);
+                    if (indicator) indicator.style.opacity = '0';
+                });
+                cell.addEventListener('click', () => handleColumnClick(col));
             } else {
-                this.updateAIThoughts('💡 Hint: Look for opportunities to build multiple threats! 🧠');
+                cell.classList.add('disabled');
             }
+
+            // Add piece if present
+            const piece = board[row][col];
+            if (piece) {
+                const pieceEl = document.createElement('div');
+                pieceEl.className = `connect4-piece ${piece}`;
+
+                // Only animate if this is the specified piece to animate
+                const shouldAnimate = animateRow === row && animateCol === col;
+                if (!shouldAnimate) {
+                    // Remove animation for already-placed pieces
+                    pieceEl.style.animation = 'none';
+                }
+
+                // Highlight winning pieces
+                if (winningLine && winningLine.some(p => p.row === row && p.col === col)) {
+                    pieceEl.classList.add('winning');
+                }
+
+                cell.appendChild(pieceEl);
+            }
+
+            boardEl.appendChild(cell);
         }
     }
 }
 
-// Global game instance
-let game = null;
+function updateGameStatus(customMessage = null) {
+    const turnEl = document.getElementById('current-turn');
 
-// Initialize game when page loads
-document.addEventListener('DOMContentLoaded', function () {
-    startGame();
+    if (customMessage) {
+        if (turnEl) turnEl.textContent = customMessage;
+        return;
+    }
+
+    if (!gameStarted) {
+        if (turnEl) turnEl.textContent = 'Click "New Game" to start';
+        return;
+    }
+
+    if (!gameActive) {
+        return;
+    }
+
+    if (currentPlayer === 'player') {
+        if (turnEl) turnEl.textContent = 'Your Turn - Click a column';
+    } else {
+        if (turnEl) turnEl.textContent = 'AI is thinking...';
+    }
+}
+
+function quitGame() {
+    window.location.href = '/games';
+}
+
+function openLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.showModal();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuthStatus();
 });
-
-// Global functions for button handlers
-function startGame() {
-    game = new Connect4Game();
-    window.game = game;
-}
-
-function restartGame() {
-    if (game) {
-        game.restart();
-    }
-}
-
-function getHint() {
-    if (game) {
-        game.getHint();
-    }
-}

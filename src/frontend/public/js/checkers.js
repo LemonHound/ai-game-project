@@ -54,8 +54,6 @@ class CheckersGame {
             this.gameSessionId = data.sessionId;
             this.gameState = data.state;
 
-            // Update UI based on backend state
-            console.log('updating UI - start');
             this.updateUIFromState();
 
             if (!this.gameState.playerStarts) {
@@ -360,7 +358,6 @@ class CheckersGame {
 
         if (data) {
             this.gameState = data.newState;
-            console.log('updating UI for AI move');
             this.updateUIFromState();
 
             if (data.aiMove) {
