@@ -41,7 +41,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv('FRONTEND_URL', 'http://localhost:8000')],
+    allow_origins=[os.getenv('WEBSITE_URL', 'http://localhost:8000')],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "Accept", "X-CSRF-Token"],
