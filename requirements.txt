@@ -6,3 +6,5 @@ pydantic==2.12.0
 python-dotenv==1.1.1
 python_bcrypt==0.3.2
 uvicorn==0.37.0
+fastapi
+uvicorn[standard]

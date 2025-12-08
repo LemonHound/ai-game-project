@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ title }}</title>
-        <link rel="stylesheet" href="/static/css/output.css" />
+        <link rel="stylesheet" href="{{ root_path }}/static/css/output.css" />
     </head>
     <body class="min-h-screen bg-base-200">
         {% include 'partials/navbar.html' %}
@@ -41,7 +41,7 @@
                                 <div class="stat-value text-lg">30min</div>
                             </div>
                         </div>
-                        <a href="/game/chess" class="btn btn-primary mt-4">Play Chess</a>
+                        <a href="{{ root_path }}/game/chess" class="btn btn-primary mt-4">Play Chess</a>
                     </div>
                 </div>
 
@@ -68,7 +68,7 @@
                                 <div class="stat-value text-lg">15min</div>
                             </div>
                         </div>
-                        <a href="/game/checkers" class="btn btn-primary mt-4">Play Checkers</a>
+                        <a href="{{ root_path }}/game/checkers" class="btn btn-primary mt-4">Play Checkers</a>
                     </div>
                 </div>
 
@@ -94,7 +94,7 @@
                                 <div class="stat-value text-lg">5min</div>
                             </div>
                         </div>
-                        <a href="/game/pong" class="btn btn-primary mt-4">Play Pong</a>
+                        <a href="{{ root_path }}/game/pong" class="btn btn-primary mt-4">Play Pong</a>
                     </div>
                 </div>
 
@@ -120,7 +120,7 @@
                                 <div class="stat-value text-lg">2min</div>
                             </div>
                         </div>
-                        <a href="/game/tic-tac-toe" class="btn btn-primary mt-4">Play Tic-Tac-Toe</a>
+                        <a href="{{ root_path }}/game/tic-tac-toe" class="btn btn-primary mt-4">Play Tic-Tac-Toe</a>
                     </div>
                 </div>
 
@@ -147,7 +147,7 @@
                                 <div class="stat-value text-lg">8min</div>
                             </div>
                         </div>
-                        <a href="/game/connect4" class="btn btn-primary mt-4">Play Connect 4</a>
+                        <a href="{{ root_path }}/game/connect4" class="btn btn-primary mt-4">Play Connect 4</a>
                     </div>
                 </div>
 
@@ -173,7 +173,7 @@
                                 <div class="stat-value text-lg">10min</div>
                             </div>
                         </div>
-                        <a href="/game/dots-and-boxes" class="btn btn-primary mt-4">Play Dots and Boxes</a>
+                        <a href="{{ root_path }}/game/dots-and-boxes" class="btn btn-primary mt-4">Play Dots and Boxes</a>
                     </div>
                 </div>
             </div>

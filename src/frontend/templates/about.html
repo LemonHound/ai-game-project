@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ title }}</title>
-        <link rel="stylesheet" href="/static/css/output.css" />
+        <link rel="stylesheet" href="{{ root_path }}/static/css/output.css" />
     </head>
     <body class="min-h-screen bg-base-200">
         {% include 'partials/navbar.html' %}
@@ -86,7 +86,7 @@
                                     <div class="avatar mb-4">
                                         <div class="bg-primary text-primary-content rounded-full w-24">
                                             <img
-                                                src="/static/images/kevin-profile-pic.jpg"
+                                                src="{{ root_path }}/static/images/kevin-profile-pic.jpg"
                                                 alt="Kevin Zookski Profile Picture" />
                                         </div>
                                     </div>
@@ -105,7 +105,7 @@
                                     <div class="avatar mb-4">
                                         <div class="bg-secondary text-secondary-content rounded-full w-24">
                                             <img
-                                                src="/static/images/brian-profile-pic.jpg"
+                                                src="{{ root_path }}/static/images/brian-profile-pic.jpg"
                                                 alt="Brian Waskevich Profile Picture" />
                                         </div>
                                     </div>
@@ -146,7 +146,7 @@
                         generation of intelligent gaming experiences.
                     </p>
                     <div class="card-actions justify-center">
-                        <a href="/games" class="btn btn-accent btn-lg">Start Playing</a>
+                        <a href="{{ root_path }}/games" class="btn btn-accent btn-lg">Start Playing</a>
                     </div>
                 </div>
             </div>

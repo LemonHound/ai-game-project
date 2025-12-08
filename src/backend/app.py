@@ -39,6 +39,11 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+def get_root_path():
+    return os.getenv('ROOT_PATH', '')
+
+templates.env.globals['root_path'] = get_root_path()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv('WEBSITE_URL', 'http://localhost:8000')],

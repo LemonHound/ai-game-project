@@ -37,3 +37,7 @@ logs/
 *.pid
 *.seed
 GameAIWebsite_google_credentials.json
+
+# python development files
+venv/
+**/__pycache__/

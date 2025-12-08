@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ title }}</title>
-        <link rel="stylesheet" href="/static/css/output.css" />
+        <link rel="stylesheet" href="{{ root_path }}/static/css/output.css" />
     </head>
     <body class="min-h-screen bg-base-200">
         {% include 'partials/navbar.html' %}
@@ -74,6 +74,6 @@
 
         {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
 
-        <script src="/static/js/dots-and-boxes.js"></script>
+        <script src="{{ root_path }}/static/js/dots-and-boxes.js"></script>
     </body>
 </html>

@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ title }}</title>
-        <link rel="stylesheet" href="/static/css/output.css" />
+        <link rel="stylesheet" href="{{ root_path }}/static/css/output.css" />
         <style>
             .chess-square {
                 position: relative;
@@ -236,7 +236,7 @@
 
         {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
 
-        <script src="/static/js/chess-evaluation.js"></script>
-        <script src="/static/js/chess.js"></script>
+        <script src="{{ root_path }}/static/js/chess-evaluation.js"></script>
+        <script src="{{ root_path }}/static/js/chess.js"></script>
     </body>
 </html>

@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ title }}</title>
-        <link rel="stylesheet" href="/static/css/output.css" />
+        <link rel="stylesheet" href="{{ root_path }}/static/css/output.css" />
         <script src="https://accounts.google.com/gsi/client" async defer></script>
     </head>
     <body class="min-h-screen bg-base-200">
@@ -19,7 +19,7 @@
                     <p class="text-xl md:text-2xl text-white/90 mb-8">
                         Challenge yourself with AI opponents that learn and adapt to your playing style
                     </p>
-                    <a href="/games" class="btn btn-lg btn-accent">Browse Games</a>
+                    <a href="{{ root_path }}/games" class="btn btn-lg btn-accent">Browse Games</a>
                 </div>
             </div>
         </section>
@@ -39,7 +39,7 @@
                             <div class="badge badge-outline">{{ game.difficulty }}</div>
                             <div class="badge badge-primary">1 Player</div>
                         </div>
-                        <a href="/game/{{ game.id }}" class="btn btn-primary mt-4">Play Now</a>
+                        <a href="{{ root_path }}/game/{{ game.id }}" class="btn btn-primary mt-4">Play Now</a>
                     </div>
                 </div>
                 {% endfor %}

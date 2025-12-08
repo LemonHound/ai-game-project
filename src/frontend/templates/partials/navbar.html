@@ -1,11 +1,11 @@
 <nav class="navbar bg-base-100 shadow-lg">
     <div class="container mx-auto flex w-full">
         <div class="flex flex-1 justify-start">
-            <a href="/" class="btn btn-ghost text-xl">AI Game Hub</a>
+            <a href="{{ root_path }}/" class="btn btn-ghost text-xl">AI Game Hub</a>
         </div>
         <div class="flex flex-1 justify-center">
-            <a href="/games" class="btn btn-ghost">Games</a>
-            <a href="/about" class="btn btn-ghost">About</a>
+            <a href="{{ root_path }}/games" class="btn btn-ghost">Games</a>
+            <a href="{{ root_path }}/about" class="btn btn-ghost">About</a>
         </div>
         <div class="flex flex-1 justify-end">
             <div id="auth-logged-out" class="hidden">
@@ -26,8 +26,8 @@
                         <li class="menu-title">
                             <span id="user-display-name">User</span>
                         </li>
-                        <li><a href="/profile">Profile</a></li>
-                        <li><a href="/settings">Settings</a></li>
+                        <li><a href="{{ root_path }}/profile">Profile</a></li>
+                        <li><a href="{{ root_path }}/settings">Settings</a></li>
                         <li><a id="logout-btn">Logout</a></li>
                     </ul>
                 </div>
