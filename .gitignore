@@ -41,3 +41,6 @@ GameAIWebsite_google_credentials.json
 # python development files
 venv/
 **/__pycache__/
+
+# QoL Scripts
+dev.sh
