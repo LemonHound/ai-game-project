@@ -233,9 +233,12 @@ async def test_database():
             return_db_connection(conn)
 
 if __name__ == "__main__":
+    host = os.getenv('HOST', 'localhost')
+    port = int(os.getenv('PORT', '8000'))
+
     uvicorn.run(
         "app:app",
-        host="0.0.0.0",
-        port=8000,
+        host=host,
+        port=port,
         reload=True
     )
