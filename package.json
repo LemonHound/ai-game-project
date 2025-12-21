@@ -2,10 +2,8 @@
     "name": "aigamewebsite",
     "version": "1.0.0",
     "scripts": {
-        "dev": "C:/Users/seiwe/miniconda3/envs/AIGameWebsite/python.exe src/backend/app.py",
-        "dev-2":"python3 src/backend/app.py",
-        "dev:all": "concurrently \"npm run css:watch\" \"npm run dev-2\"",
-        "start": "",
+        "dev": "python3 src/backend/app.py",
+        "dev:all": "concurrently \"npm run css:watch\" \"npm run dev\"",
         "css": "npx tailwindcss -i ./src/frontend/styles/input.css -o ./src/frontend/public/css/output.css",
         "css:watch": "npx tailwindcss -i ./src/frontend/styles/input.css -o ./src/frontend/public/css/output.css --watch",
         "test": "npm run test:unit && npm run test:e2e",
