@@ -2,10 +2,16 @@ class AuthManager {
     constructor() {
         this.currentUser = null;
         this.authBackendUrl = window.AUTH_BACKEND_URL || 'http://localhost:8000';
+        this.isInitialized = false;
         this.init();
     }
 
     async init() {
+        if (this.isInitialized) {
+            return;
+        }
+        this.isInitialized = true;
+
         this.handleUrlParams();
 
         if (window.GOOGLE_CLIENT_ID && window.GOOGLE_CLIENT_ID !== 'YOUR_GOOGLE_CLIENT_ID') {
@@ -75,28 +81,27 @@ class AuthManager {
     }
 
     setupEventListeners() {
-        // Login form
         const loginForm = document.getElementById('login-form');
-        if (loginForm) {
+        if (loginForm && !loginForm.dataset.listenerAttached) {
             loginForm.addEventListener('submit', e => this.handleLogin(e));
+            loginForm.dataset.listenerAttached = 'true';
         }
 
-        // Registration form
         const registerForm = document.getElementById('register-form');
-        if (registerForm) {
+        if (registerForm && !registerForm.dataset.listenerAttached) {
             registerForm.addEventListener('submit', e => this.handleRegister(e));
+            registerForm.dataset.listenerAttached = 'true';
         }
 
-        // Logout button
         const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
+        if (logoutBtn && !logoutBtn.dataset.listenerAttached) {
             logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.logout();
             });
+            logoutBtn.dataset.listenerAttached = 'true';
         }
 
-        // Render Google buttons after initialization
         this.renderGoogleButtons();
     }
 
@@ -403,9 +408,8 @@ class AuthManager {
     }
 
     showSuccessMessage(message) {
-        // Create a temporary success notification
         const notification = document.createElement('div');
-        notification.className = 'alert alert-success fixed top-4 right-4 w-auto z-50';
+        notification.className = 'alert alert-success fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-auto max-w-md z-[9999] cursor-pointer shadow-lg transition-opacity duration-300';
         notification.innerHTML = `
             <svg class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -414,12 +418,14 @@ class AuthManager {
             <span>${message}</span>
         `;
 
-        document.body.appendChild(notification);
+        const removeNotification = () => {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        };
 
-        // Remove after 3 seconds
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+        notification.addEventListener('click', removeNotification);
+        document.body.appendChild(notification);
+        setTimeout(removeNotification, 900);
     }
 
     setCookie(name, value, days = 7, options = {}) {
@@ -563,14 +569,14 @@ class AuthManager {
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.classList.remove('modal-open');
+            modal.close();
         }
     }
 
     openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.classList.add('modal-open');
+            modal.showModal();
         }
     }
 }
@@ -609,7 +615,3 @@ window.checkAuthForGame = function (actionName = 'play', aiThoughtsElementId = '
     return false;
 };
 
-// Initialize auth manager when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.authManager = new AuthManager();
-});
