@@ -1,3 +1,44 @@
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/auth/me', {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+            cache: 'no-cache',
+        });
+
+        if (response.ok) {
+            showGameContainer();
+            // Initialize game after auth confirmed
+            window.pongGame = new PongGame();
+        } else {
+            console.log('Not authenticated');
+            showAuthGate();
+        }
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        showAuthGate();
+    }
+}
+
+function showAuthGate() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+    if (authGate) authGate.classList.remove('hidden');
+    if (gameContainer) gameContainer.classList.add('hidden');
+}
+
+function showGameContainer() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+    if (authGate) authGate.classList.add('hidden');
+    if (gameContainer) gameContainer.classList.remove('hidden');
+}
+
+function openLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.showModal();
+}
+
 class PongGame {
     constructor() {
         this.canvas = null;
@@ -339,5 +380,5 @@ class PongGame {
 
 // Initialize game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.pongGame = new PongGame();
+    checkAuthStatus();
 });

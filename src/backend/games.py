@@ -7,6 +7,7 @@ from game_logic.tic_tac_toe import tic_tac_toe_game
 from game_logic.dots_and_boxes import dots_and_boxes_game
 from game_logic.chess import chess_game
 from game_logic.connect4 import connect4_game
+from game_logic.checkers import checkers_game
 
 router = APIRouter()
 
@@ -164,6 +165,14 @@ async def start_game(game_id: str, request: StartGameRequest):
             )
             return result
 
+        elif game_id == "checkers":
+            result = checkers_game.start_game(
+                user_id=request.userId,
+                difficulty=request.difficulty,
+                player_starts=request.playerStarts
+            )
+            return result
+
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
     except HTTPException:
         raise
@@ -200,6 +209,14 @@ async def make_move(game_id: str, request: MoveRequest):
 
         elif game_id == "connect4":
             result = connect4_game.make_move(
+                session_id=request.gameSessionId,
+                move=request.move,
+                user_id=request.userId
+            )
+            return result
+
+        elif game_id == "checkers":
+            result = checkers_game.make_move(
                 session_id=request.gameSessionId,
                 move=request.move,
                 user_id=request.userId

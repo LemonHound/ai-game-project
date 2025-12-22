@@ -187,6 +187,28 @@ async def connect4(request: Request):
         }
     )
 
+@app.get("/game/checkers")
+async def checkers(request: Request):
+    """Checkers game page"""
+    return templates.TemplateResponse(
+        "checkers.html",
+        {
+            "request": request,
+            "title": "Checkers - AI Game Hub"
+        }
+    )
+
+@app.get("/game/pong")
+async def pong(request: Request):
+    """Pong game page"""
+    return templates.TemplateResponse(
+        "pong.html",
+        {
+            "request": request,
+            "title": "Pong - AI Game Hub"
+        }
+    )
+
 # ============================================
 # API ROUTES
 # ============================================

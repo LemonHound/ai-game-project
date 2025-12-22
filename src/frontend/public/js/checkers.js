@@ -1,3 +1,44 @@
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/auth/me', {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+            cache: 'no-cache',
+        });
+
+        if (response.ok) {
+            showGameContainer();
+            // Initialize game after auth confirmed
+            game = new CheckersGame();
+        } else {
+            console.log('Not authenticated');
+            showAuthGate();
+        }
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        showAuthGate();
+    }
+}
+
+function showAuthGate() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+    if (authGate) authGate.classList.remove('hidden');
+    if (gameContainer) gameContainer.classList.add('hidden');
+}
+
+function showGameContainer() {
+    const authGate = document.getElementById('auth-gate');
+    const gameContainer = document.getElementById('game-container');
+    if (authGate) authGate.classList.add('hidden');
+    if (gameContainer) gameContainer.classList.remove('hidden');
+}
+
+function openLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.showModal();
+}
+
 class CheckersGame {
     constructor() {
         this.gameSessionId = null;
@@ -6,38 +47,26 @@ class CheckersGame {
         this.isProcessingMove = false;
         this.selectedSquare = null;
         this.validMoves = [];
-
-        this.initializeGame();
+        this.pendingMoveChain = [];
+        this.lastMoveHighlight = [];
 
         // AI Emulator Settings
         this.waitTimeMin = 500;
         this.waitTimeMax = 2400;
+
+        this.initializeGame();
     }
 
     async initializeGame() {
         this.initializeBoard();
         this.updateGameStatus('Starting new checkers game...');
-        this.updateAIThoughts('Checking authentication...');
-
-        const authReady = await window.GameAuthUtils.waitForAuthManager();
-
-        if (!authReady) {
-            this.updateAIThoughts('Authentication system failed to load. Please refresh the page.');
-            return;
-        }
-
-        if (!window.authManager.isAuthenticatedForGames()) {
-            this.updateAIThoughts('I can only play with authenticated users - please log in first!');
-            return;
-        }
-
         this.updateAIThoughts('Setting up the checkers board...');
         await this.startGameOnServer();
     }
 
     async startGameOnServer() {
-        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
-            return fetch(`/api/${this.gameName}/start`, {
+        try {
+            const response = await fetch(`/api/game/checkers/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -48,9 +77,14 @@ class CheckersGame {
                     difficulty: 'medium',
                 }),
             });
-        });
 
-        if (data) {
+            if (!response.ok) {
+                const errorData = await response.json();
+                this.updateAIThoughts(errorData.message || 'Failed to start game. Please try again.');
+                return;
+            }
+
+            const data = await response.json();
             this.gameSessionId = data.sessionId;
             this.gameState = data.state;
 
@@ -58,12 +92,15 @@ class CheckersGame {
 
             if (!this.gameState.playerStarts) {
                 this.updateAIThoughts("I'll start this game!");
-                await this.makeAIMove();
+                // AI would make first move here if needed
             } else {
                 this.updateAIThoughts(
                     'Ready for checkers! Click a red piece to select it, then click where you want to move.'
                 );
             }
+        } catch (error) {
+            console.error('Failed to start game:', error);
+            this.updateAIThoughts('Failed to connect to game server. Please refresh and try again.');
         }
     }
 
@@ -117,13 +154,6 @@ class CheckersGame {
     }
 
     async handleSquareClick(index) {
-        const isAuthenticated = await window.GameAuthUtils.isAuthenticated();
-        if (!isAuthenticated) {
-            this.updateAIThoughts('I can only play with authenticated users - please log in to continue!');
-            window.GameAuthUtils.showLoginRequiredModal();
-            return;
-        }
-
         if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
             return;
         }
@@ -164,9 +194,19 @@ class CheckersGame {
 
         this.highlightValidMoves(index);
 
-        const piece = this.gameState.board[index];
-        const pieceType = piece === 'R' ? 'piece' : 'king';
-        this.updateAIThoughts(`Selected your ${pieceType}. Click on a highlighted square to move.`);
+        // Check if this piece has valid moves
+        if (this.validMoves.length === 0) {
+            const anyCapturesAvailable = this.hasAnyCapturesAvailable();
+            if (anyCapturesAvailable) {
+                this.updateAIThoughts('You must capture when possible! Select a piece that can capture.');
+            } else {
+                this.updateAIThoughts('This piece has no valid moves.');
+            }
+        } else {
+            const piece = this.gameState.board[index];
+            const pieceType = piece === 'R' ? 'piece' : 'king';
+            this.updateAIThoughts(`Selected your ${pieceType}. Click on a highlighted square to move.`);
+        }
     }
 
     clearSelection() {
@@ -176,7 +216,8 @@ class CheckersGame {
 
         // Clear move highlights
         document.querySelectorAll('.move-highlight').forEach(element => {
-            element.classList.remove('bg-green-400', 'move-highlight');
+            element.classList.remove('bg-green-400', 'move-highlight', 'ring-4', 'ring-green-500');
+            element.style.backgroundColor = '';
         });
 
         this.selectedSquare = null;
@@ -186,65 +227,65 @@ class CheckersGame {
     highlightValidMoves(fromIndex) {
         this.validMoves = this.calculateValidMovesForPiece(fromIndex);
 
+        // Clear any existing highlights first
+        document.querySelectorAll('.move-highlight').forEach(element => {
+            element.classList.remove('bg-green-400', 'move-highlight', 'ring-4', 'ring-green-500');
+        });
+
+        // Highlight all valid move destinations
         this.validMoves.forEach(move => {
             const square = document.querySelector(`[data-index="${move.to}"]`);
             if (square) {
-                square.classList.add('bg-green-400', 'move-highlight');
+                square.classList.add('move-highlight', 'ring-4', 'ring-green-500');
+                // Add a subtle background tint
+                square.style.backgroundColor = 'rgba(34, 197, 94, 0.3)';
             }
         });
     }
 
     calculateValidMovesForPiece(fromIndex) {
-        // Simplified move calculation for frontend highlighting
-        const moves = [];
+        if (!this.gameState) return [];
+
         const piece = this.gameState.board[fromIndex];
-        const fromPos = this.indexToRowCol(fromIndex);
+        const fromRow = Math.floor(fromIndex / 8);
+        const fromCol = fromIndex % 8;
 
-        // Basic diagonal moves
-        const directions = [
-            { row: -1, col: -1 },
-            { row: -1, col: 1 },
-            { row: 1, col: -1 },
-            { row: 1, col: 1 },
-        ];
+        if (piece === '_' || (piece !== 'R' && piece !== 'r')) return [];
 
-        const isKing = piece === 'r';
+        // First check if this piece has any captures
+        const captures = this.calculateCapturesForPiece(fromIndex);
 
-        for (const dir of directions) {
-            // Regular pieces can only move forward
-            if (!isKing && piece === 'R' && dir.row > 0) continue;
+        // If ANY captures are available anywhere on the board, only return capture moves
+        if (this.hasAnyCapturesAvailable()) {
+            return captures;
+        }
 
-            // Single move
-            const newRow = fromPos.row + dir.row;
-            const newCol = fromPos.col + dir.col;
+        // No captures available anywhere, so calculate normal moves
+        const moves = [];
+
+        // Determine valid directions based on piece type
+        let directions = [];
+        if (piece === 'R') {
+            directions = [[-1, -1], [-1, 1]];
+        } else if (piece === 'r') {
+            directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+        }
+
+        // Check normal moves
+        for (const [dr, dc] of directions) {
+            const newRow = fromRow + dr;
+            const newCol = fromCol + dc;
 
             if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-                const newIndex = this.rowColToIndex(newRow, newCol);
-                if (newIndex !== -1 && this.gameState.board[newIndex] === '_') {
-                    moves.push({ from: fromIndex, to: newIndex, captures: [] });
-                }
-            }
+                const newIndex = newRow * 8 + newCol;
 
-            // Check for captures (jump moves)
-            const captureRow = fromPos.row + dir.row;
-            const captureCol = fromPos.col + dir.col;
-            const landRow = fromPos.row + dir.row * 2;
-            const landCol = fromPos.col + dir.col * 2;
-
-            if (landRow >= 0 && landRow < 8 && landCol >= 0 && landCol < 8) {
-                const captureIndex = this.rowColToIndex(captureRow, captureCol);
-                const landIndex = this.rowColToIndex(landRow, landCol);
-
-                if (captureIndex !== -1 && landIndex !== -1) {
-                    const capturedPiece = this.gameState.board[captureIndex];
-
-                    if ((capturedPiece === 'B' || capturedPiece === 'b') && this.gameState.board[landIndex] === '_') {
-                        moves.push({
-                            from: fromIndex,
-                            to: landIndex,
-                            captures: [captureIndex],
-                        });
-                    }
+                // Only dark squares are playable
+                if ((newRow + newCol) % 2 === 1 && this.gameState.board[newIndex] === '_') {
+                    moves.push({
+                        from: fromIndex,
+                        to: newIndex,
+                        captures: []
+                    });
                 }
             }
         }
@@ -253,75 +294,164 @@ class CheckersGame {
     }
 
     async attemptMove(fromSquare, toSquare) {
-        this.isProcessingMove = true;
+        if (this.isProcessingMove) return;
 
-        try {
-            await this.sendMoveToServer(fromSquare, toSquare);
-        } catch (error) {
-            console.error('Error making move:', error);
-            this.updateAIThoughts('Something went wrong with your move. Try again!');
-        } finally {
-            this.isProcessingMove = false;
-            this.clearSelection();
-        }
-    }
-
-    async sendMoveToServer(fromSquare, toSquare) {
-        if (!this.gameSessionId) {
-            console.warn('No game session ID - cannot make move');
+        const moveData = this.validMoves.find(m => m.to === toSquare);
+        if (!moveData) {
+            this.updateAIThoughts('Invalid move. Please select a valid square.');
             return;
         }
 
-        // Find the matching valid move to get capture info
-        const move = this.validMoves.find(m => m.from === fromSquare && m.to === toSquare) || {
-            from: fromSquare,
-            to: toSquare,
-            captures: [],
-        };
+        this.isProcessingMove = true;
 
-        if (move) {
-            const tempMove = this.gameState.board[toSquare];
-            this.gameState.board[toSquare] = this.gameState.board[fromSquare];
-            this.gameState.board[fromSquare] = tempMove;
-            this.updateUIFromState();
+        // Add to pending move chain
+        this.pendingMoveChain.push(moveData);
 
-            this.updateAIThoughts('Analyzing the board...');
+        // Execute move locally for immediate feedback with animation
+        const piece = this.gameState.board[fromSquare];
+        this.gameState.board[fromSquare] = '_';
+
+        // Track which squares to animate
+        const animatedSquares = [fromSquare, toSquare];
+
+        // Handle captures with animation
+        const isCapture = moveData.captures && moveData.captures.length > 0;
+        if (isCapture) {
+            moveData.captures.forEach(capturePos => {
+                this.gameState.board[capturePos] = '_';
+                animatedSquares.push(capturePos);
+            });
         }
 
-        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
-            return fetch(`/api/${this.gameName}/move`, {
+        // Check for king promotion
+        const toRow = Math.floor(toSquare / 8);
+        let finalPiece = piece;
+        if (piece === 'R' && toRow === 0) {
+            finalPiece = 'r';
+        }
+
+        this.gameState.board[toSquare] = finalPiece;
+
+        // Update UI with animations only on affected squares
+        this.updateUIFromState(animatedSquares);
+        this.clearSelection();
+
+        // ONLY check for additional captures if the current move was a capture
+        if (isCapture) {
+            const hasMoreCaptures = this.checkForAdditionalCaptures(toSquare);
+
+            if (hasMoreCaptures) {
+                // Highlight the piece that can continue capturing
+                this.updateAIThoughts('You can capture another piece! Click on the highlighted piece to continue.');
+                this.selectSquare(toSquare);
+                this.isProcessingMove = false;
+                return;
+            }
+        }
+
+        // Move is complete, send to server
+        await this.sendMoveToServer();
+    }
+
+    checkForAdditionalCaptures(fromIndex) {
+        const moves = this.calculateValidMovesForPiece(fromIndex);
+        const captureMove = moves.find(m => m.captures && m.captures.length > 0);
+        return !!captureMove;
+    }
+
+
+    async sendMoveToServer() {
+        if (!this.gameSessionId || this.pendingMoveChain.length === 0) {
+            this.isProcessingMove = false;
+            return;
+        }
+
+        this.updateAIThoughts('Analyzing the board...');
+
+        try {
+            const response = await fetch(`/api/game/checkers/move`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                    sessionId: this.gameSessionId,
-                    move: move,
+                    gameSessionId: this.gameSessionId,
+                    move: this.pendingMoveChain.length === 1 ? this.pendingMoveChain[0] : {
+                        chain: this.pendingMoveChain
+                    },
                 }),
             });
-        });
 
-        if (data) {
-            const aiSimWaitTime = Math.random() * (this.waitTimeMax - this.waitTimeMin) + this.waitTimeMin;
-            setTimeout(async () => {
-                this.gameState = data.newState;
-                this.updateUIFromState();
+            if (!response.ok) {
+                const errorData = await response.json();
+                this.showGameOverOverlay('Error', errorData.message || 'Game state desynchronized. Please start a new game.');
+                return;
+            }
 
-                // Handle AI response if game is still ongoing
-                if (data.aiMove) {
-                    const aiMove = data.aiMove;
-                    this.updateAIThoughts(
-                        `I moved from ${this.formatSquare(aiMove.from)} to ${this.formatSquare(aiMove.to)}${
-                            aiMove.captures.length > 0 ? ' and captured your piece!' : '.'
-                        } ${this.getGameEndMessage() || 'Your turn!'}`
-                    );
-                } else if (!this.gameState.gameOver && this.gameState.currentPlayer === 'B') {
-                    await this.makeAIMove();
-                } else if (this.gameState.mustCapture !== null) {
-                    this.updateAIThoughts('You captured a piece! You must continue capturing if possible.');
+            const data = await response.json();
+            this.pendingMoveChain = [];
+
+            if (data && data.state) {
+                // Check if server state matches client state
+                if (!this.validateServerState(data.state)) {
+                    this.showGameOverOverlay('Desync Error', 'Game state desynchronized with server. Please start a new game.');
+                    return;
                 }
-            }, aiSimWaitTime);
+
+                // Calculate AI simulation wait time
+                const aiSimWaitTime = Math.random() * (this.waitTimeMax - this.waitTimeMin) + this.waitTimeMin;
+
+                // Wait before showing AI's response
+                setTimeout(() => {
+                    // Collect squares that will be animated for AI move
+                    const animatedSquares = [];
+
+                    if (data.aiMove) {
+                        if (data.aiMove.chain) {
+                            // Multi-move chain
+                            data.aiMove.chain.forEach(move => {
+                                animatedSquares.push(move.from, move.to);
+                                if (move.captures) {
+                                    animatedSquares.push(...move.captures);
+                                }
+                            });
+                            this.lastMoveHighlight = data.aiMove.chain.map(m => ({ from: m.from, to: m.to }));
+                        } else {
+                            // Single move
+                            animatedSquares.push(data.aiMove.from, data.aiMove.to);
+                            if (data.aiMove.captures) {
+                                animatedSquares.push(...data.aiMove.captures);
+                            }
+                            this.lastMoveHighlight = [{ from: data.aiMove.from, to: data.aiMove.to }];
+                        }
+                    }
+
+                    // Update game state from server with animations
+                    this.gameState = data.state;
+                    this.updateUIFromState(animatedSquares);
+
+                    // Handle AI response
+                    if (data.gameOver) {
+                        const message = data.winner === 'R' ? 'Congratulations! You won!' :
+                            data.winner === 'B' ? 'AI wins! Better luck next time.' :
+                                "It's a tie!";
+                        this.showGameOverOverlay(data.winner === 'R' ? 'Victory!' : 'Game Over', message);
+                    } else if (data.aiMove) {
+                        this.highlightLastMove();
+
+                        const moveDesc = this.formatAIMove(data.aiMove);
+                        this.updateAIThoughts(`${moveDesc} ${this.getGameEndMessage() || 'Your turn!'}`);
+                    } else {
+                        this.updateAIThoughts('Your turn!');
+                    }
+
+                    this.isProcessingMove = false;
+                }, aiSimWaitTime);
+            }
+        } catch (error) {
+            console.error('Failed to make move:', error);
+            this.showGameOverOverlay('Network Error', 'Failed to connect to server. Please check your connection and start a new game.');
         }
     }
 
@@ -330,97 +460,133 @@ class CheckersGame {
         return `${String.fromCharCode(65 + col)}${8 - row}`; // Convert to chess notation (A8, B7, etc.)
     }
 
-    async makeAIMove() {
-        if (this.isProcessingMove || !this.gameState || this.gameState.gameOver) {
-            return;
+    formatAIMove(aiMove) {
+        if (aiMove.chain && aiMove.chain.length > 1) {
+            const captures = aiMove.chain.reduce((sum, m) => sum + (m.captures?.length || 0), 0);
+            return `I captured ${captures} pieces in a combo move!`;
+        } else {
+            const move = aiMove.chain ? aiMove.chain[0] : aiMove;
+            const captured = move.captures && move.captures.length > 0;
+            return `I moved from ${this.formatSquare(move.from)} to ${this.formatSquare(move.to)}${captured ? ' and captured your piece!' : '.'}`;
         }
-
-        if (this.gameState.currentPlayer !== 'B') {
-            return;
-        }
-
-        this.isProcessingMove = true;
-        this.updateAIThoughts('Analyzing the board...');
-
-        const data = await window.GameAuthUtils.handleGameApiCall(async () => {
-            return fetch(`/api/${this.gameName}/move`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    sessionId: this.gameSessionId,
-                    move: { player: 'B', requestAIMove: true },
-                }),
-            });
-        });
-
-        if (data) {
-            this.gameState = data.newState;
-            this.updateUIFromState();
-
-            if (data.aiMove) {
-                const aiMove = data.aiMove;
-                this.updateAIThoughts(
-                    `I moved from ${this.formatSquare(aiMove.from)} to ${this.formatSquare(aiMove.to)}${
-                        aiMove.captures.length > 0 ? ' and captured your piece!' : '.'
-                    } ${this.getGameEndMessage() || 'Your turn!'}`
-                );
-            }
-        }
-
-        this.isProcessingMove = false;
     }
 
-    updateUIFromState() {
+    validateServerState(serverState) {
+        // Basic validation - check if server state is reasonable
+        if (!serverState || !serverState.board) return false;
+        if (serverState.board.length !== 64) return false;
+
+        // Count pieces to ensure state is reasonable
+        const redCount = serverState.board.filter(p => p === 'R' || p === 'r').length;
+        const blackCount = serverState.board.filter(p => p === 'B' || p === 'b').length;
+
+        // Sanity check - each side should have between 0-12 pieces
+        if (redCount < 0 || redCount > 12 || blackCount < 0 || blackCount > 12) return false;
+
+        return true;
+    }
+
+    highlightLastMove() {
+        // Clear previous highlights
+        document.querySelectorAll('.last-move-from, .last-move-to').forEach(el => {
+            el.classList.remove('last-move-from', 'last-move-to');
+        });
+
+        // Add new highlights
+        this.lastMoveHighlight.forEach((move, index) => {
+            const fromSquare = document.querySelector(`[data-index="${move.from}"]`);
+            const toSquare = document.querySelector(`[data-index="${move.to}"]`);
+
+            if (fromSquare) {
+                fromSquare.classList.add('last-move-from');
+            }
+            if (toSquare) {
+                toSquare.classList.add('last-move-to');
+            }
+        });
+    }
+
+    showGameOverOverlay(title, message) {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50';
+        overlay.id = 'game-over-overlay';
+
+        overlay.innerHTML = `
+            <div class="card bg-base-100 shadow-2xl max-w-md">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-3xl justify-center mb-4">${title}</h2>
+                    <p class="text-lg mb-6">${message}</p>
+                    <div class="card-actions justify-center">
+                        <button onclick="restartGame()" class="btn btn-primary btn-lg">Start New Game</button>
+                        <button onclick="window.location.href='/games'" class="btn btn-ghost btn-lg">Back to Games</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        this.gameState.gameOver = true;
+    }
+
+
+    updateUIFromState(animatedSquares = []) {
         if (!this.gameState) return;
 
         for (let i = 0; i < 64; i++) {
             const piece = this.gameState.board[i];
-            this.updateSquare(i, piece);
+            const shouldAnimate = animatedSquares.includes(i);
+            this.updateSquare(i, piece, shouldAnimate);
         }
 
         // Clear non-playable squares
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 if ((row % 2 === 0 && col % 2 === 0) || (row % 2 === 1 && col % 2 === 1)) {
-                    // Light squares
                     const index = row * 8 + col;
-                    this.updateSquare(index, '_');
+                    this.updateSquare(index, '_', false);
                 }
             }
         }
 
-        // Update game status
         this.updateGameStatus();
         this.updateMoveInfo();
 
-        // Show/hide must capture indicator
         const mustCaptureEl = document.getElementById('must-capture');
-        if (this.gameState.mustCapture !== null && this.gameState.currentPlayer === 'R') {
-            mustCaptureEl.classList.remove('hidden');
-        } else {
-            mustCaptureEl.classList.add('hidden');
+        if (mustCaptureEl) {
+            if (this.gameState.mustCapture !== null && this.gameState.currentPlayer === 'R') {
+                mustCaptureEl.classList.remove('hidden');
+            } else {
+                mustCaptureEl.classList.add('hidden');
+            }
         }
 
-        // Update AI thoughts for game end
-        if (this.gameState.gameOver) {
-            this.updateAIThoughts(this.getGameEndMessage());
+        if (this.gameState.gameOver && !document.getElementById('game-over-overlay')) {
+            const message = this.gameState.winner === 'R' ? 'Congratulations! You won!' :
+                this.gameState.winner === 'B' ? 'AI wins! Better luck next time.' :
+                    "It's a tie!";
+            this.showGameOverOverlay(
+                this.gameState.winner === 'R' ? 'Victory!' : 'Game Over',
+                message
+            );
         }
     }
 
-    updateSquare(index, piece) {
+    updateSquare(index, piece, animate = false) {
         const square = document.querySelector(`[data-index="${index}"]`);
         if (!square) return;
 
-        // Clear existing piece
-        square.innerHTML = '';
+        // Get existing piece info before clearing
+        const existingPiece = square.querySelector('.piece-element');
+        const hadPiece = !!existingPiece;
+        const wasKing = existingPiece && existingPiece.textContent === '♔';
+
+        square.classList.remove('last-move-from', 'last-move-to');
 
         if (piece !== '_') {
             const pieceElement = document.createElement('div');
             pieceElement.className =
-                'w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-white';
+                'piece-element w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-white';
 
             switch (piece) {
                 case 'R': // Red piece
@@ -439,8 +605,107 @@ class CheckersGame {
                     break;
             }
 
+            // Only add animations if animate is true
+            if (animate) {
+                // Check if this was just promoted to king
+                const isNewKing = (piece === 'r' || piece === 'b') && hadPiece && !wasKing;
+
+                if (isNewKing) {
+                    pieceElement.classList.add('piece-king-promotion');
+                } else if (hadPiece) {
+                    // Piece was replaced (capture)
+                    existingPiece.classList.add('piece-capture');
+                    setTimeout(() => {
+                        square.innerHTML = '';
+                        pieceElement.classList.add('piece-move');
+                        square.appendChild(pieceElement);
+                    }, 400);
+                    return; // Exit early since we're handling this async
+                } else {
+                    // New piece arriving
+                    pieceElement.classList.add('piece-move');
+                }
+            }
+
+            square.innerHTML = '';
             square.appendChild(pieceElement);
+        } else {
+            // Empty square
+            if (animate && existingPiece) {
+                // Animate piece being captured or moved away
+                existingPiece.classList.add('piece-capture');
+                setTimeout(() => {
+                    square.innerHTML = '';
+                }, 400);
+            } else {
+                square.innerHTML = '';
+            }
         }
+    }
+
+    hasAnyCapturesAvailable() {
+        if (!this.gameState) return false;
+
+        const board = this.gameState.board;
+
+        // Check all player pieces for available captures
+        for (let i = 0; i < 64; i++) {
+            const piece = board[i];
+            if (piece === 'R' || piece === 'r') {
+                // Calculate captures directly without calling calculateValidMovesForPiece
+                const captures = this.calculateCapturesForPiece(i);
+                if (captures.length > 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    calculateCapturesForPiece(fromIndex) {
+        if (!this.gameState) return [];
+
+        const captures = [];
+        const piece = this.gameState.board[fromIndex];
+        const fromRow = Math.floor(fromIndex / 8);
+        const fromCol = fromIndex % 8;
+
+        if (piece === '_' || (piece !== 'R' && piece !== 'r')) return [];
+
+        // Determine valid directions based on piece type
+        let directions = [];
+        if (piece === 'R') {
+            directions = [[-1, -1], [-1, 1]];
+        } else if (piece === 'r') {
+            directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+        }
+
+        // Check for captures
+        for (const [dr, dc] of directions) {
+            const midRow = fromRow + dr;
+            const midCol = fromCol + dc;
+            const jumpRow = fromRow + dr * 2;
+            const jumpCol = fromCol + dc * 2;
+
+            if (jumpRow >= 0 && jumpRow < 8 && jumpCol >= 0 && jumpCol < 8) {
+                const midIndex = midRow * 8 + midCol;
+                const jumpIndex = jumpRow * 8 + jumpCol;
+                const midPiece = this.gameState.board[midIndex];
+                const jumpSquare = this.gameState.board[jumpIndex];
+
+                // Check if it's a valid capture
+                if ((midPiece === 'B' || midPiece === 'b') && jumpSquare === '_') {
+                    captures.push({
+                        from: fromIndex,
+                        to: jumpIndex,
+                        captures: [midIndex]
+                    });
+                }
+            }
+        }
+
+        return captures;
     }
 
     updateGameStatus() {
@@ -504,28 +769,30 @@ class CheckersGame {
     }
 
     async restartGame() {
-        const canRestart = await window.GameAuthUtils.checkAuthBeforeAction('restart a game');
-        if (!canRestart) {
-            return;
+        // Remove overlay if it exists
+        const overlay = document.getElementById('game-over-overlay');
+        if (overlay) {
+            overlay.remove();
         }
 
-        // Reset local state
         this.gameSessionId = null;
         this.gameState = null;
         this.isProcessingMove = false;
         this.selectedSquare = null;
         this.validMoves = [];
+        this.pendingMoveChain = [];
+        this.lastMoveHighlight = [];
         this.clearSelection();
 
-        // Start a new game
         await this.initializeGame();
     }
+
 }
 
 // Initialize game when page loads
 let game;
 document.addEventListener('DOMContentLoaded', () => {
-    game = new CheckersGame();
+    checkAuthStatus();
 });
 
 // Global functions for buttons

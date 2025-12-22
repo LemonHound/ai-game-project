@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ root_path }}/static/css/output.css" />
+    <style>
+        #game-board {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-base-200">
+{% include 'partials/navbar.html' %}
+
+<main class="container mx-auto px-4 py-8">
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold mb-2">Pong</h1>
+        <p class="text-base-content/70">Play against the AI</p>
+    </div>
+
+    <div id="auth-gate" class="hidden">
+        <div class="alert alert-info max-w-md mx-auto">
+            <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    class="stroke-current shrink-0 w-6 h-6">
+                <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="font-bold">Authentication Required</h3>
+                <div class="text-xs">Please log in to start playing</div>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="openLoginModal()">Log In</button>
+        </div>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <div class="flex flex-col items-center gap-6">
+            <div class="card bg-base-100 shadow-xl w-full max-w-4xl">
+                <div class="card-body p-4 text-center">
+                    <div id="game-status" class="text-2xl font-bold text-primary mb-2">
+                        Click to choose your side!
+                    </div>
+                    <div id="score-display" class="text-lg text-base-content/70">Left: 0 | Right: 0</div>
+                </div>
+            </div>
+
+            <div id="pong-container" class="flex justify-center">
+                <canvas id="game-board" width="800" height="400" class="border-4 border-base-300 rounded-lg bg-black shadow-2xl">
+                </canvas>
+            </div>
+
+            <div class="card bg-base-100 shadow-xl w-full max-w-4xl">
+                <div class="card-body p-4">
+                    <div class="flex flex-wrap gap-2 justify-center">
+                        <button id="new-game-btn" onclick="location.reload()" class="btn btn-primary">
+                            New Game
+                        </button>
+                        <button id="quit-game-btn" class="btn btn-ghost" onclick="window.location.href='{{ root_path }}/games'">
+                            Back to Games
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-base-100 shadow-xl w-full max-w-4xl">
+                <div class="card-body p-4">
+                    <h3 class="font-bold mb-2">🕹️ How to Play</h3>
+                    <div class="text-sm text-base-content/70 space-y-2">
+                        <p>• Click left or right side to choose your paddle</p>
+                        <p>• Move your mouse to control the paddle</p>
+                        <p>• Click and hold to aim the ball, release to launch</p>
+                        <p>• First to 7 points wins!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+{% include 'partials/footer.html' %}
+{% include 'partials/auth-modal.html' %}
+
+<script src="{{ root_path }}/static/js/pong.js"></script>
+<script src="{{ root_path }}/static/js/auth-manager.js"></script>
+<script>
+    const authManager = new AuthManager();
+    authManager.init();
+</script>
+</body>
+</html>
