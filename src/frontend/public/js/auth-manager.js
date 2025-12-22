@@ -210,12 +210,10 @@ class AuthManager {
             this.showError('register-error', 'Passwords do not match');
             return;
         }
-
         if (password.length < 6) {
             this.showError('register-error', 'Password must be at least 6 characters long');
             return;
         }
-
         if (username.length < 3) {
             this.showError('register-error', 'Username must be at least 3 characters long');
             return;
