@@ -8,8 +8,9 @@
             <a href="{{ root_path }}/about" class="btn btn-ghost">About</a>
         </div>
         <div class="flex flex-1 justify-end">
-            <div id="auth-logged-out" class="hidden">
-                <button class="btn btn-primary" onclick="openLoginModal()">Log In</button>
+            <div id="auth-not-logged-in" class="hidden">
+                <button class="btn btn-ghost" onclick="document.getElementById('login-modal').showModal()">Log In</button>
+                <button class="btn btn-primary" onclick="document.getElementById('register-modal').showModal()">Sign Up</button>
             </div>
 
             <div id="auth-logged-in" class="hidden">
@@ -21,8 +22,8 @@
                         </div>
                     </label>
                     <ul
-                        tabindex="0"
-                        class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                            tabindex="0"
+                            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                         <li class="menu-title">
                             <span id="user-display-name">User</span>
                         </li>

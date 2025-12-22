@@ -87,6 +87,15 @@ class AuthManager {
             registerForm.addEventListener('submit', e => this.handleRegister(e));
         }
 
+        // Logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.logout();
+            });
+        }
+
         // Render Google buttons after initialization
         this.renderGoogleButtons();
     }
@@ -143,20 +152,19 @@ class AuthManager {
     async handleLogin(event) {
         event.preventDefault();
 
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const rememberMe = document.getElementById('remember-me')?.checked || false;
+        const form = event.target;
+        const email = form.querySelector('input[name="email"]').value;
+        const password = form.querySelector('input[name="password"]').value;
+        const rememberMe = form.querySelector('input[name="rememberMe"]')?.checked || false;
 
         this.hideError('login-error');
 
         try {
-            const csrfToken = await this.getCsrfToken();
             const response = await fetch(`${this.authBackendUrl}/api/auth/login`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken,
                 },
                 body: JSON.stringify({ email, password, rememberMe }),
             });
@@ -164,21 +172,15 @@ class AuthManager {
             const data = await response.json();
 
             if (response.ok) {
-                this.setCookie('loginProvider', 'email', rememberMe ? 30 : 7);
-                this.setCookie('rememberMe', rememberMe.toString(), 365);
-
-                // Store user preferences if available
-                if (data.user.preferences) {
-                    this.setCookie('userPrefs', JSON.stringify(data.user.preferences), 30);
-                }
-
                 this.currentUser = data.user;
                 this.showAuthenticated(this.currentUser);
                 this.closeModal('login-modal');
                 this.showSuccessMessage('Welcome back!');
-                document.getElementById('login-form').reset();
+                form.reset();
             } else {
-                this.showError('login-error', data.error || 'Login failed');
+                // Handle both 'detail' (FastAPI) and 'error' formats
+                const errorMessage = data.detail || data.error || 'Login failed';
+                this.showError('login-error', errorMessage);
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -189,16 +191,17 @@ class AuthManager {
     async handleRegister(event) {
         event.preventDefault();
 
-        const username = document.getElementById('register-username').value;
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        const confirmPassword = document.getElementById('register-confirm-password').value;
-        const displayName = document.getElementById('register-display-name').value;
+        const form = event.target;
+        const username = form.querySelector('input[name="username"]').value;
+        const email = form.querySelector('input[name="email"]').value;
+        const password = form.querySelector('input[name="password"]').value;
+        const confirmPassword = form.querySelector('input[name="confirmPassword"]')?.value;
+        const displayName = form.querySelector('input[name="displayName"]')?.value || '';
 
         this.hideError('register-error');
 
         // Client-side validation
-        if (password !== confirmPassword) {
+        if (confirmPassword && password !== confirmPassword) {
             this.showError('register-error', 'Passwords do not match');
             return;
         }
@@ -208,36 +211,38 @@ class AuthManager {
             return;
         }
 
+        if (username.length < 3) {
+            this.showError('register-error', 'Username must be at least 3 characters long');
+            return;
+        }
+
         try {
-            const csrfToken = await this.getCsrfToken();
             const response = await fetch(`${this.authBackendUrl}/api/auth/register`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken,
                 },
                 body: JSON.stringify({
                     username,
                     email,
                     password,
-                    displayName,
+                    displayName: displayName || username,
                 }),
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                this.setCookie('loginProvider', 'email', 7);
-                this.setCookie('isNewUser', 'true', 1); // Expires in 1 day
-
                 this.currentUser = data.user;
                 this.showAuthenticated(this.currentUser);
                 this.closeModal('register-modal');
                 this.showSuccessMessage('Account created successfully!');
-                document.getElementById('register-form').reset();
+                form.reset();
             } else {
-                this.showError('register-error', data.error || 'Registration failed');
+                // Handle both 'detail' (FastAPI) and 'error' formats
+                const errorMessage = data.detail || data.error || 'Registration failed';
+                this.showError('register-error', errorMessage);
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -314,26 +319,31 @@ class AuthManager {
 
     async logout() {
         try {
-            const csrfToken = await this.getCsrfToken();
-            if (this.sessionId) {
-                await fetch(`${this.authBackendUrl}/api/auth/register`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken, // Add CSRF token for logout too
-                    },
-                });
+            const response = await fetch(`${this.authBackendUrl}/api/auth/logout`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                console.error('Logout request failed:', response.status);
             }
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
-            // Clear local data regardless of API result
+            // Clear all auth-related cookies and local data
+            this.deleteCookie('sessionId');
             this.deleteCookie('loginProvider');
             this.deleteCookie('userPrefs');
             this.deleteCookie('isNewUser');
 
+            // Clear current user
             this.currentUser = null;
+            this.sessionId = null;
+
+            // Update UI
             this.showNotAuthenticated();
             this.showSuccessMessage('Logged out successfully');
         }
@@ -376,10 +386,11 @@ class AuthManager {
 
     showError(elementId, message) {
         const errorElement = document.getElementById(elementId);
-        const messageElement = document.getElementById(elementId + '-message');
-
-        if (errorElement && messageElement) {
-            messageElement.textContent = message;
+        if (errorElement) {
+            const spanElement = errorElement.querySelector('span');
+            if (spanElement) {
+                spanElement.textContent = message;
+            }
             errorElement.classList.remove('hidden');
         }
     }

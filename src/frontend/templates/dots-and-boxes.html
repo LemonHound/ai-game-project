@@ -75,5 +75,10 @@
         {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
 
         <script src="{{ root_path }}/static/js/dots-and-boxes.js"></script>
+        <script src="{{ root_path }}/static/js/auth-manager.js"></script>
+        <script>
+            const authManager = new AuthManager();
+            authManager.init();
+        </script>
     </body>
 </html>

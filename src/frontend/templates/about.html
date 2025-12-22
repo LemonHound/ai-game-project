@@ -154,76 +154,10 @@
 
         {% include 'partials/footer.html' %} {% include 'partials/auth-modal.html' %}
 
+        <script src="{{ root_path }}/static/js/auth-manager.js"></script>
         <script>
-            let currentUser = null;
-
-            function deleteCookie(name) {
-                document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-                document.cookie = name + '=; Path=/; Domain=localhost; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-            }
-
-            async function checkAuthStatus() {
-                try {
-                    const response = await fetch('/api/auth/me', {
-                        credentials: 'include',
-                        headers: { Accept: 'application/json' },
-                        cache: 'no-cache',
-                    });
-
-                    if (response.ok) {
-                        currentUser = await response.json();
-                        updateUIForAuthenticatedUser(currentUser);
-                    } else {
-                        updateUIForUnauthenticatedUser();
-                    }
-                } catch (error) {
-                    console.error('Auth check failed:', error);
-                    updateUIForUnauthenticatedUser();
-                }
-            }
-
-            function updateUIForAuthenticatedUser(user) {
-                document.getElementById('auth-logged-out').classList.add('hidden');
-                document.getElementById('auth-logged-in').classList.remove('hidden');
-
-                document.getElementById('user-display-name').textContent = user.displayName || user.username;
-
-                const initial = (user.displayName || user.username || 'U')[0].toUpperCase();
-                document.getElementById('user-initial').textContent = initial;
-
-                if (user.profilePicture) {
-                    document.getElementById('user-avatar').src = user.profilePicture;
-                    document.getElementById('user-avatar').classList.remove('hidden');
-                    document.getElementById('user-initial').classList.add('hidden');
-                }
-            }
-
-            function updateUIForUnauthenticatedUser() {
-                document.getElementById('auth-logged-out').classList.remove('hidden');
-                document.getElementById('auth-logged-in').classList.add('hidden');
-                currentUser = null;
-            }
-
-            function openLoginModal() {
-                document.getElementById('login-modal').showModal();
-            }
-
-            document.getElementById('logout-btn').addEventListener('click', async () => {
-                try {
-                    await fetch('/api/auth/logout', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                    });
-
-                    deleteCookie('sessionId');
-                    updateUIForUnauthenticatedUser();
-                } catch (error) {
-                    console.error('Logout failed:', error);
-                }
-            });
-
-            checkAuthStatus();
+            const authManager = new AuthManager();
+            authManager.init();
         </script>
     </body>
 </html>

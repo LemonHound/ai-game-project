@@ -68,11 +68,12 @@ class AuthService:
             return new_user
 
     async def hash_password(self, password: str) -> str:
-        salt = bcrypt.gensalt(rounds=12)
-        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+        salt = bcrypt.gensalt(12)
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
+        return password_hash.decode('utf-8')
 
-    async def verify_password(self, password: str, hashed: str) -> bool:
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    async def verify_password(self, password: str, password_hash: str) -> bool:
+        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
 
     async def create_session(self, user_id: int) -> str:
         session_id = str(uuid4())
@@ -97,6 +98,43 @@ class AuthService:
             fallback_sessions[session_id] = {'userId': user_id, 'expiresAt': expires_at}
 
         return session_id
+
+    async def find_user_by_username(self, username: str) -> Optional[Dict]:
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT id, username, email, display_name, profile_picture,
+                           auth_provider, email_verified, password_hash, created_at, last_login
+                    FROM users
+                    WHERE username = %s
+                    """,
+                    (username,)
+                )
+                row = cursor.fetchone()
+                cursor.close()
+
+                if row:
+                    return {
+                        'id': row[0],
+                        'username': row[1],
+                        'email': row[2],
+                        'display_name': row[3],
+                        'profile_picture': row[4],
+                        'auth_provider': row[5],
+                        'email_verified': row[6],
+                        'password_hash': row[7],
+                        'created_at': row[8],
+                        'last_login': row[9],
+                    }
+            except Exception as e:
+                print(f"Error finding user by username: {e}")
+            finally:
+                return_db_connection(conn)
+
+        return None
 
     async def get_user_by_session(self, session_id: str) -> Optional[Dict]:
         conn = get_db_connection()
