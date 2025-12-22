@@ -8,7 +8,6 @@ async function checkAuthStatus() {
 
         if (response.ok) {
             showGameContainer();
-            // Initialize game after auth confirmed
             game = new CheckersGame();
         } else {
             console.log('Not authenticated');
@@ -108,11 +107,6 @@ class CheckersGame {
         const row = Math.floor(index / 8);
         const col = Math.floor(index % 8);
         return { row, col };
-    }
-
-    rowColToIndex(row, col) {
-        if ((row + col) % 2 === 0) return -1; // Not a playable square
-        return row * 8 + col;
     }
 
     initializeBoard() {
@@ -507,28 +501,33 @@ class CheckersGame {
     }
 
     showGameOverOverlay(title, message) {
-        // Create overlay
+        // Remove any existing overlay first
+        const existingOverlay = document.getElementById('game-over-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+
+        // Create new overlay
         const overlay = document.createElement('div');
         overlay.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50';
         overlay.id = 'game-over-overlay';
 
         overlay.innerHTML = `
-            <div class="card bg-base-100 shadow-2xl max-w-md">
-                <div class="card-body text-center">
-                    <h2 class="card-title text-3xl justify-center mb-4">${title}</h2>
-                    <p class="text-lg mb-6">${message}</p>
-                    <div class="card-actions justify-center">
-                        <button onclick="restartGame()" class="btn btn-primary btn-lg">Start New Game</button>
-                        <button onclick="window.location.href='/games'" class="btn btn-ghost btn-lg">Back to Games</button>
-                    </div>
+        <div class="card bg-base-100 shadow-2xl max-w-md">
+            <div class="card-body text-center">
+                <h2 class="card-title text-3xl justify-center mb-4">${title}</h2>
+                <p class="text-lg mb-6">${message}</p>
+                <div class="card-actions justify-center">
+                    <button onclick="restartGame()" class="btn btn-primary btn-lg">Start New Game</button>
+                    <button onclick="window.location.href='/games'" class="btn btn-ghost btn-lg">Back to Games</button>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
         document.body.appendChild(overlay);
         this.gameState.gameOver = true;
     }
-
 
     updateUIFromState(animatedSquares = []) {
         if (!this.gameState) return;
@@ -769,12 +768,7 @@ class CheckersGame {
     }
 
     async restartGame() {
-        // Remove overlay if it exists
-        const overlay = document.getElementById('game-over-overlay');
-        if (overlay) {
-            overlay.remove();
-        }
-
+        // Reset all game state
         this.gameSessionId = null;
         this.gameState = null;
         this.isProcessingMove = false;
@@ -782,8 +776,20 @@ class CheckersGame {
         this.validMoves = [];
         this.pendingMoveChain = [];
         this.lastMoveHighlight = [];
-        this.clearSelection();
 
+        // Clear all visual selections and highlights
+        this.clearSelection();
+        document.querySelectorAll('.last-move-from, .last-move-to').forEach(el => {
+            el.classList.remove('last-move-from', 'last-move-to');
+        });
+
+        // Remove overlay if it exists
+        const overlay = document.getElementById('game-over-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+
+        // Reinitialize the game
         await this.initializeGame();
     }
 
