@@ -27,7 +27,10 @@ DIST_DIR = BASE_DIR / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    setup_telemetry()
+    try:
+        setup_telemetry()
+    except Exception:
+        logger.exception("Telemetry setup failed — observability will be unavailable")
     try:
         init_db_pool()
     except Exception:
