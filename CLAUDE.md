@@ -26,7 +26,7 @@
 - Observability: OpenTelemetry — auto-instrumented FastAPI + psycopg2; GCP Cloud Trace + Cloud Monitoring in prod,
   console exporter locally
 - Testing: Jest (unit), Playwright (E2E / API / smoke)
-- CI/CD: GitHub Actions → GCP Cloud Run (see Branch Hygiene)
+- CI/CD: GitHub Actions (CI tests) + GCP Cloud Build (build & deploy) → GCP Cloud Run (see Branch Hygiene)
 - Secrets: GCP Secret Manager (never use .env in production)
 - Logs: GCP Cloud Logging (stdout from Cloud Run, never use print())
 
@@ -48,11 +48,10 @@
     5. Enable auto-merge: `gh pr merge <number> --auto --squash`
 - For implementation pushes (any change to runtime behavior — features, bug fixes where a test could plausibly fail): 6.
   Watch GitHub Actions inline: `gh run watch`. If CI fails, fix immediately and push again. 7. Once the PR is merged,
-  GitHub Actions will build, push to Artifact Registry, and deploy to Cloud Run automatically. Do **not** block waiting
-  for the deploy (takes ~3–5 min). At the start of the **next** conversation, run
-  `gh run list --workflow=deploy.yml --limit=5` to check the last deploy status before starting new work. Any failed
-  deploy must be fixed as the first priority before new features. To check Cloud Run service health directly:
-  `gcloud run services describe ai-game-app --region=us-central1`
+  GCP Cloud Build will automatically build, push to Artifact Registry, and deploy to Cloud Run. Do **not** block waiting
+  for the deploy (takes ~3–5 min). At the start of the **next** conversation, check the last Cloud Build status:
+  `gcloud builds list --limit=5 --region=global` and verify the deploy: `gcloud run services describe game-ai-website --region=us-central1`.
+  Any failed deploy must be fixed as the first priority before new features.
 
 # General Instructions
 
