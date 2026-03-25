@@ -3,7 +3,7 @@ FROM node:20-slim AS frontend-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY vite.config.ts tsconfig.json tsconfig.node.json tailwind.config.js postcss.config.js ./
+COPY vite.config.ts tsconfig.json tsconfig.node.json postcss.config.js ./
 COPY src/frontend/ ./src/frontend/
 RUN npm run build
 
