@@ -52,7 +52,9 @@
         <button
             type="button"
             class="btn btn-outline w-full gap-2"
-            onclick="window.location.href='/api/auth/google?redirect_to=' + encodeURIComponent(window.location.pathname)">
+            onclick="
+                window.location.href = '/api/auth/google?redirect_to=' + encodeURIComponent(window.location.pathname)
+            ">
             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path
                     fill="currentColor"
@@ -75,7 +77,10 @@
             <button
                 type="button"
                 class="link link-primary"
-                onclick="document.getElementById('login-modal').close(); document.getElementById('register-modal').showModal();">
+                onclick="
+                    document.getElementById('login-modal').close();
+                    document.getElementById('register-modal').showModal();
+                ">
                 Register
             </button>
         </p>
@@ -161,7 +166,9 @@
         <button
             type="button"
             class="btn btn-outline w-full gap-2"
-            onclick="window.location.href='/api/auth/google?redirect_to=' + encodeURIComponent(window.location.pathname)">
+            onclick="
+                window.location.href = '/api/auth/google?redirect_to=' + encodeURIComponent(window.location.pathname)
+            ">
             <svg class="w-5 h-5" viewBox="0 0 24 24">
                 <path
                     fill="currentColor"
@@ -184,7 +191,10 @@
             <button
                 type="button"
                 class="link link-primary"
-                onclick="document.getElementById('register-modal').close(); document.getElementById('login-modal').showModal();">
+                onclick="
+                    document.getElementById('register-modal').close();
+                    document.getElementById('login-modal').showModal();
+                ">
                 Log in
             </button>
         </p>
