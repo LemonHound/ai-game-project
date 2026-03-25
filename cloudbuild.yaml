@@ -27,7 +27,7 @@ steps:
       - '--add-cloudsql-instances=halogen-episode-455311-t4:us-central1:game-database'
       - '--set-env-vars=ENVIRONMENT=production'
       - >-
-        --set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest
+        --set-secrets=DB_SOCKET_PATH=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest
 
 images:
   - 'us-central1-docker.pkg.dev/halogen-episode-455311-t4/ai-game-app/app:$SHORT_SHA'
