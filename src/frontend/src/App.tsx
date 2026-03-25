@@ -17,17 +17,17 @@ export default function App() {
         <BrowserRouter>
             <Routes>
                 <Route element={<Layout />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/games" element={<GamesPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/game/tic-tac-toe" element={<TicTacToePage />} />
-                    <Route path="/game/chess" element={<ChessPage />} />
-                    <Route path="/game/checkers" element={<CheckersPage />} />
-                    <Route path="/game/connect4" element={<Connect4Page />} />
-                    <Route path="/game/dots-and-boxes" element={<DotsAndBoxesPage />} />
-                    <Route path="/game/pong" element={<PongPage />} />
+                    <Route path='/' element={<HomePage />} />
+                    <Route path='/games' element={<GamesPage />} />
+                    <Route path='/about' element={<AboutPage />} />
+                    <Route path='/profile' element={<ProfilePage />} />
+                    <Route path='/settings' element={<SettingsPage />} />
+                    <Route path='/game/tic-tac-toe' element={<TicTacToePage />} />
+                    <Route path='/game/chess' element={<ChessPage />} />
+                    <Route path='/game/checkers' element={<CheckersPage />} />
+                    <Route path='/game/connect4' element={<Connect4Page />} />
+                    <Route path='/game/dots-and-boxes' element={<DotsAndBoxesPage />} />
+                    <Route path='/game/pong' element={<PongPage />} />
                 </Route>
             </Routes>
         </BrowserRouter>

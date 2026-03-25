@@ -29,7 +29,9 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for game in active_games %}
-                <a href="{{ root_path }}/game/{{ game.id }}" class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105 cursor-pointer">
+                <a
+                    href="{{ root_path }}/game/{{ game.id }}"
+                    class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105 cursor-pointer">
                     <div class="card-body">
                         <div class="text-6xl mb-4 text-center">{{ game.icon }}</div>
                         <h3 class="card-title justify-center">{{ game.name }}</h3>

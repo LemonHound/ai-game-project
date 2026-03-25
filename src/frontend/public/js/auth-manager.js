@@ -95,7 +95,7 @@ class AuthManager {
 
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn && !logoutBtn.dataset.listenerAttached) {
-            logoutBtn.addEventListener('click', (e) => {
+            logoutBtn.addEventListener('click', e => {
                 e.preventDefault();
                 this.logout();
             });
@@ -407,7 +407,8 @@ class AuthManager {
 
     showSuccessMessage(message) {
         const notification = document.createElement('div');
-        notification.className = 'alert alert-success fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-auto max-w-md z-[9999] cursor-pointer shadow-lg transition-opacity duration-300';
+        notification.className =
+            'alert alert-success fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-auto max-w-md z-[9999] cursor-pointer shadow-lg transition-opacity duration-300';
         notification.innerHTML = `
             <svg class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -612,4 +613,3 @@ window.checkAuthForGame = function (actionName = 'play', aiThoughtsElementId = '
     }
     return false;
 };
-

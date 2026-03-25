@@ -260,9 +260,17 @@ class CheckersGame {
         // Determine valid directions based on piece type
         let directions = [];
         if (piece === 'R') {
-            directions = [[-1, -1], [-1, 1]];
+            directions = [
+                [-1, -1],
+                [-1, 1],
+            ];
         } else if (piece === 'r') {
-            directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+            directions = [
+                [-1, -1],
+                [-1, 1],
+                [1, -1],
+                [1, 1],
+            ];
         }
 
         // Check normal moves
@@ -278,7 +286,7 @@ class CheckersGame {
                     moves.push({
                         from: fromIndex,
                         to: newIndex,
-                        captures: []
+                        captures: [],
                     });
                 }
             }
@@ -353,7 +361,6 @@ class CheckersGame {
         return !!captureMove;
     }
 
-
     async sendMoveToServer() {
         if (!this.gameSessionId || this.pendingMoveChain.length === 0) {
             this.isProcessingMove = false;
@@ -371,15 +378,21 @@ class CheckersGame {
                 credentials: 'include',
                 body: JSON.stringify({
                     gameSessionId: this.gameSessionId,
-                    move: this.pendingMoveChain.length === 1 ? this.pendingMoveChain[0] : {
-                        chain: this.pendingMoveChain
-                    },
+                    move:
+                        this.pendingMoveChain.length === 1
+                            ? this.pendingMoveChain[0]
+                            : {
+                                  chain: this.pendingMoveChain,
+                              },
                 }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                this.showGameOverOverlay('Error', errorData.message || 'Game state desynchronized. Please start a new game.');
+                this.showGameOverOverlay(
+                    'Error',
+                    errorData.message || 'Game state desynchronized. Please start a new game.'
+                );
                 return;
             }
 
@@ -389,7 +402,10 @@ class CheckersGame {
             if (data && data.state) {
                 // Check if server state matches client state
                 if (!this.validateServerState(data.state)) {
-                    this.showGameOverOverlay('Desync Error', 'Game state desynchronized with server. Please start a new game.');
+                    this.showGameOverOverlay(
+                        'Desync Error',
+                        'Game state desynchronized with server. Please start a new game.'
+                    );
                     return;
                 }
 
@@ -427,9 +443,12 @@ class CheckersGame {
 
                     // Handle AI response
                     if (data.gameOver) {
-                        const message = data.winner === 'R' ? 'Congratulations! You won!' :
-                            data.winner === 'B' ? 'AI wins! Better luck next time.' :
-                                "It's a tie!";
+                        const message =
+                            data.winner === 'R'
+                                ? 'Congratulations! You won!'
+                                : data.winner === 'B'
+                                  ? 'AI wins! Better luck next time.'
+                                  : "It's a tie!";
                         this.showGameOverOverlay(data.winner === 'R' ? 'Victory!' : 'Game Over', message);
                     } else if (data.aiMove) {
                         this.highlightLastMove();
@@ -445,7 +464,10 @@ class CheckersGame {
             }
         } catch (error) {
             console.error('Failed to make move:', error);
-            this.showGameOverOverlay('Network Error', 'Failed to connect to server. Please check your connection and start a new game.');
+            this.showGameOverOverlay(
+                'Network Error',
+                'Failed to connect to server. Please check your connection and start a new game.'
+            );
         }
     }
 
@@ -561,13 +583,13 @@ class CheckersGame {
         }
 
         if (this.gameState.gameOver && !document.getElementById('game-over-overlay')) {
-            const message = this.gameState.winner === 'R' ? 'Congratulations! You won!' :
-                this.gameState.winner === 'B' ? 'AI wins! Better luck next time.' :
-                    "It's a tie!";
-            this.showGameOverOverlay(
-                this.gameState.winner === 'R' ? 'Victory!' : 'Game Over',
-                message
-            );
+            const message =
+                this.gameState.winner === 'R'
+                    ? 'Congratulations! You won!'
+                    : this.gameState.winner === 'B'
+                      ? 'AI wins! Better luck next time.'
+                      : "It's a tie!";
+            this.showGameOverOverlay(this.gameState.winner === 'R' ? 'Victory!' : 'Game Over', message);
         }
     }
 
@@ -675,9 +697,17 @@ class CheckersGame {
         // Determine valid directions based on piece type
         let directions = [];
         if (piece === 'R') {
-            directions = [[-1, -1], [-1, 1]];
+            directions = [
+                [-1, -1],
+                [-1, 1],
+            ];
         } else if (piece === 'r') {
-            directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+            directions = [
+                [-1, -1],
+                [-1, 1],
+                [1, -1],
+                [1, 1],
+            ];
         }
 
         // Check for captures
@@ -698,7 +728,7 @@ class CheckersGame {
                     captures.push({
                         from: fromIndex,
                         to: jumpIndex,
-                        captures: [midIndex]
+                        captures: [midIndex],
                     });
                 }
             }
@@ -792,7 +822,6 @@ class CheckersGame {
         // Reinitialize the game
         await this.initializeGame();
     }
-
 }
 
 // Initialize game when page loads

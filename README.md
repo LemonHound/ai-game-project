@@ -4,13 +4,13 @@ A web-based AI game platform featuring classic games with adaptive AI opponents.
 
 ## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | FastAPI (Python 3.11+), PostgreSQL |
-| Frontend | React 18 + TypeScript, Vite, TanStack Query, Zustand |
-| Styling | Tailwind CSS + DaisyUI |
+| Layer         | Technology                                                 |
+| ------------- | ---------------------------------------------------------- |
+| Backend       | FastAPI (Python 3.11+), PostgreSQL                         |
+| Frontend      | React 18 + TypeScript, Vite, TanStack Query, Zustand       |
+| Styling       | Tailwind CSS + DaisyUI                                     |
 | Observability | OpenTelemetry (GCP Cloud Trace + Cloud Monitoring in prod) |
-| CI/CD | GitHub Actions → GCP Cloud Run |
+| CI/CD         | GitHub Actions → GCP Cloud Run                             |
 
 ---
 
@@ -46,21 +46,23 @@ Frontend will be at `http://localhost:5173`, proxying API requests to the backen
 
 The database is seeded automatically on first `docker compose up`. Use any of these to log in:
 
-| Username | Email | Password |
-|----------|-------|----------|
-| `demo` | `demo@aigamehub.com` | `demo123` |
-| `test` | `test@example.com` | `test123` |
+| Username  | Email                 | Password    |
+| --------- | --------------------- | ----------- |
+| `demo`    | `demo@aigamehub.com`  | `demo123`   |
+| `test`    | `test@example.com`    | `test123`   |
 | `player1` | `player1@example.com` | `player123` |
 
 ### Workflows by Role
 
 **Full-stack development** (frontend + backend):
+
 ```bash
 docker compose up          # starts DB + backend on :8000
 npm run dev:frontend       # starts Vite on :5173 (separate terminal)
 ```
 
 **Backend / game logic only** (Python work, no frontend needed):
+
 ```bash
 docker compose up          # starts DB + backend on :8000
 # Edit files in src/backend/ — uvicorn hot-reloads on save, no rebuild needed
@@ -68,6 +70,7 @@ docker compose up          # starts DB + backend on :8000
 ```
 
 **Rebuild after dependency changes** (requirements.txt or frontend package.json):
+
 ```bash
 docker compose build app
 docker compose up
