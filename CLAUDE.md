@@ -50,8 +50,9 @@
   Watch GitHub Actions inline: `gh run watch`. If CI fails, fix immediately and push again. 7. Once the PR is merged,
   GCP Cloud Build will automatically build, push to Artifact Registry, and deploy to Cloud Run. Do **not** block waiting
   for the deploy (takes ~3–5 min). At the start of the **next** conversation, check the last Cloud Build status:
-  `gcloud builds list --limit=5 --region=global` and verify the deploy: `gcloud run services describe game-ai-website --region=us-central1`.
-  Any failed deploy must be fixed as the first priority before new features.
+  `gcloud builds list --limit=5 --region=global` and verify the deploy:
+  `gcloud run services describe game-ai-website --region=us-central1`. Any failed deploy must be fixed as the first
+  priority before new features.
 
 # General Instructions
 
