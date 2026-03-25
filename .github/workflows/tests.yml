@@ -90,7 +90,7 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:smoke -- --project=chromium
         env:
@@ -146,7 +146,7 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:auth -- --project=chromium
         env:
@@ -202,7 +202,7 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:games -- --project=chromium
         env:
@@ -258,7 +258,7 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:api -- --project=chromium
         env:
@@ -314,7 +314,7 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:navigation -- --project=chromium
         env:
@@ -370,7 +370,7 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql || true
       - run: npx playwright install --with-deps chromium
       - run: npm run test:performance -- --project=chromium
         env:
@@ -431,7 +431,7 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql || true
+          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql || true
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run test:smoke -- --project=${{ matrix.browser }}
         env:

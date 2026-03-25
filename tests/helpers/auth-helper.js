@@ -6,7 +6,7 @@ const path = require('path');
  */
 async function createFreshAuth(request) {
     // Get CSRF token
-    const csrfResponse = await request.get('/api/csrf-token');
+    const csrfResponse = await request.get('/api/auth/csrf-token');
     if (!csrfResponse.ok()) {
         throw new Error(`CSRF token request failed: ${csrfResponse.status()}`);
     }
@@ -17,7 +17,7 @@ async function createFreshAuth(request) {
     const loginResponse = await request.post('/api/auth/login', {
         data: {
             email: 'demo@aigamehub.com',
-            password: 'password123',
+            password: 'demo123',
         },
         headers: {
             'X-CSRF-Token': csrfData.csrfToken,
@@ -53,7 +53,7 @@ async function getCsrfToken(request, sessionCookie = null) {
         headers.Cookie = `${sessionCookie.name}=${sessionCookie.value}`;
     }
 
-    const response = await request.get('/api/csrf-token', { headers });
+    const response = await request.get('/api/auth/csrf-token', { headers });
     if (!response.ok()) {
         throw new Error(`CSRF token request failed: ${response.status()}`);
     }

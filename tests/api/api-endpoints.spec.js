@@ -12,12 +12,11 @@ test.describe('API Endpoints', () => {
             const healthData = await response.json();
             expect(healthData).toHaveProperty('status');
             expect(healthData.status).toBe('OK'); // Your API returns 'OK', not an array
-            expect(healthData).toHaveProperty('message');
-            expect(healthData.message).toContain('Server is running');
+            expect(healthData).toHaveProperty('service');
         });
 
-        test('GET /api/games returns games list', async ({ request }) => {
-            const response = await request.get('/api/games');
+        test('GET /api/games_list returns games list', async ({ request }) => {
+            const response = await request.get('/api/games_list');
             expect(response.ok()).toBeTruthy();
 
             const data = await response.json();

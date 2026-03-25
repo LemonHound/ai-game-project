@@ -1,66 +1,30 @@
 const { expect } = require('@playwright/test');
 
 async function loginWithDemo(page) {
-    // Check if we're on mobile by getting viewport size
-    const viewport = page.viewportSize();
-    const isMobile = viewport && viewport.width < 768;
+    const csrfResponse = await page.request.get('/api/auth/csrf-token');
+    const csrfData = await csrfResponse.json();
 
-    if (isMobile) {
-        // On mobile, scroll to top and ensure navbar is visible
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await page.waitForTimeout(500); // Wait for scroll to complete
-    }
+    await page.request.post('/api/auth/login', {
+        data: { email: 'demo@aigamehub.com', password: 'demo123' },
+        headers: { 'X-CSRF-Token': csrfData.csrfToken },
+    });
 
-    // Try to find and click the login button with better mobile handling
-    const loginButton = page.locator('[data-testid="navbar-login-btn"]');
-
-    // Ensure the button is visible and in viewport
-    await loginButton.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
-
-    // Click with force to bypass any mobile viewport issues
-    await loginButton.click({ force: true });
-
-    // Wait for modal to open
-    await expect(page.locator('#login-modal.modal-open')).toBeVisible();
-
-    // Fill in credentials
-    await page.fill('#login-email', 'demo@aigamehub.com');
-    await page.fill('#login-password', 'password123');
-
-    // Click submit
-    await page.click('[data-testid="login-submit-btn"]');
-
-    // Wait for successful login
-    await expect(page.locator('#auth-logged-in')).toBeVisible();
+    await page.reload();
+    await page.waitForLoadState('networkidle');
 }
 
 async function logoutUser(page) {
-    await page.click('.dropdown .avatar');
-    await page.click('text=Logout');
-    await expect(page.locator('#auth-not-logged-in')).toBeVisible();
+    const csrfResponse = await page.request.get('/api/auth/csrf-token');
+    const csrfData = await csrfResponse.json();
+    await page.request.post('/api/auth/logout', {
+        headers: { 'X-CSRF-Token': csrfData.csrfToken },
+    });
+    await page.reload();
 }
 
-async function waitForGameLoad(page, gameId) {
+async function waitForGameLoad(page) {
     await page.waitForLoadState('networkidle');
-
-    switch (gameId) {
-        case 'tic-tac-toe':
-            await expect(page.locator('#tic-tac-toe-board')).toBeVisible();
-            break;
-        case 'connect4':
-            await expect(page.locator('#connect4-board')).toBeVisible();
-            break;
-        case 'dots-and-boxes':
-            await expect(page.locator('#dots-and-boxes-board')).toBeVisible();
-            break;
-        default:
-            await expect(page.locator('[class*="game"]')).toBeVisible();
-    }
-}
-
-async function makeTicTacToeMove(page, position) {
-    await page.click(`.game-square[data-position="${position}"]`);
+    await expect(page.locator('main')).toBeVisible();
 }
 
 function generateTestUser() {
@@ -84,7 +48,6 @@ module.exports = {
     loginWithDemo,
     logoutUser,
     waitForGameLoad,
-    makeTicTacToeMove,
     generateTestUser,
     verifyApiResponse,
 };

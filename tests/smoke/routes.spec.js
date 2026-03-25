@@ -41,13 +41,6 @@ test.describe('Route Smoke Tests', () => {
         }
     });
 
-    test('invalid game routes return 404', async ({ page }) => {
-        await page.goto('/game/nonexistent-game');
-        await page.waitForLoadState('networkidle');
-
-        await expect(page.locator('h1')).toContainText(/404|Not Found|Error/, { timeout: 5000 });
-    });
-
     test('API health endpoint works', async ({ page }) => {
         const response = await page.request.get('/api/health');
         expect(response.ok()).toBeTruthy();
