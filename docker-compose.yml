@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ai_game_db
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/setup-database.sql:/docker-entrypoint-initdb.d/01-setup.sql
+
+  # Backend: Python files are volume-mounted so changes hot-reload without a rebuild.
+  # Run `docker-compose build app` after changing requirements.txt or frontend files.
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ai_game_db
+      DB_USER: dev_user
+      DB_PASSWORD: dev_password
+      PORT: 8000
+      WEBSITE_URL: http://localhost:8000
+      ENVIRONMENT: development
+    volumes:
+      - ./src/backend:/app/src/backend
+    depends_on:
+      - db
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:

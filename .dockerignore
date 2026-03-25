@@ -1,0 +1,17 @@
+.git
+.github
+.env
+*.env
+node_modules
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+tests/
+playwright-report/
+test-results/
+coverage/
+features/
+scripts/
+environment.yml
+*.md
