@@ -1,94 +1,161 @@
-# Setup Guide
+# AI Game Hub
 
-# Setup Python and Backend Server
-You'll need to be sure that your machine has all the tools needed to install and run code for the project:
-1. Install NPM. `sudo apt install npm`.
-2. Install all the project dependencies. `npm install`.
-3. Install python3 and related essentials. 
-`sudo apt install python3`
-`sudo apt install python3.12-venv`
-`sudo apt install python3-dev build-essential`
-5. Create a virtual python environment. `python3 -m venv venv`
-6. Activate the virtual python environment. `source venv/bin/activate`
-7. Download and install all required packages. `pip3 install -r requirements.txt`
+A web-based AI game platform featuring classic games with adaptive AI opponents.
 
-# Setup your Database
-This guide walks through setting up the PostgreSQL database for the AI Game Hub project.
+## Stack
 
-## Prerequisites
+| Layer | Technology |
+|-------|-----------|
+| Backend | FastAPI (Python 3.11+), PostgreSQL |
+| Frontend | React 18 + TypeScript, Vite, TanStack Query, Zustand |
+| Styling | Tailwind CSS + DaisyUI |
+| Observability | OpenTelemetry (GCP Cloud Trace + Cloud Monitoring in prod) |
+| CI/CD | GitHub Actions → GCP Cloud Run |
 
-Ensure PostgreSQL is installed and running on your system:
-```bash
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
+---
 
-## Database Setup Steps
+## Local Development
 
-### 1. Create the Database and User
+### Prerequisites
 
-Connect to PostgreSQL as the postgres superuser:
-```bash
-sudo -u postgres psql
-```
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — required for the database and backend
+- [Node.js 20+](https://nodejs.org/) — required for the frontend dev server
+- [Git](https://git-scm.com/)
 
-Inside the psql prompt, run the following commands. 
-
-NOTE: replace `user` with whatever username you want, and update `your_password_here`, too. You'll need them later:
-
-```sql
-CREATE DATABASE game_ai_db;
-CREATE USER user WITH PASSWORD 'your_password_here';
-GRANT ALL PRIVILEGES ON DATABASE game_ai_db TO user;
-\q
-```
-
-### 2. Grant Schema Permissions
-
-Connect to the database as the postgres superuser:
-```bash
-sudo -u postgres psql -d game_ai_db
-```
-
-Grant the necessary permissions on the public schema.
-
-NOTE: You'll need to set your own username here in place of `user`!
-
-```sql
-GRANT ALL ON SCHEMA public TO user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO user;
-\q
-```
-
-### 3. Run the Setup Script
-
-From the project root directory, execute the database setup script.
-
-NOTE: Again, update `user` to your selected username:
+### Quick Start
 
 ```bash
-psql -U user -d game_ai_db -f scripts/setup-database.sql
+git clone <repo-url>
+cd ai-game-project
+npm install
+docker compose up
 ```
 
-You'll be prompted for the password you set in step 1.
+The backend API will be available at `http://localhost:8000`.
 
-# Create or Update your ENV
-In order to keep any private information secure, we store all private information to a .env file. This file is ignored by github and will therefore never be shared with anyone.
+To also run the frontend dev server with hot reload:
 
-1. In the root folder, where the .env.example file exists, create a new file named `.env`. Copy the contents from the `.env.example` into it.
-2. Update the data in this file to match your credentials from earlier in this setup. This includes:
-   * Your psql username and password. Yes, your password will be literally written out in a file - this is why we don't share it!
-   * Your proxy domain, if applicable. For local development (when your URL is `localhost:8000`, for instance), leave this blank.
-   * Your own credentials for google auth, if you want to test with it. You'll need to configure this in https://console.cloud.google.com.
+```bash
+# In a separate terminal
+npm run dev:frontend
+```
 
-# Run the Website
+Frontend will be at `http://localhost:5173`, proxying API requests to the backend container.
 
-You can use the scripts in package.json to run the website. In order to run the full website, including the python server (with connection to psql) along with the front-end and tailwindcss for styling, simply run
-`npm run dev:all`
+### Test Credentials
 
-You can run other scripts as need, and may need to adjust them for your local machine, as many use relative paths during execution.
+The database is seeded automatically on first `docker compose up`. Use any of these to log in:
+
+| Username | Email | Password |
+|----------|-------|----------|
+| `demo` | `demo@aigamehub.com` | `demo123` |
+| `test` | `test@example.com` | `test123` |
+| `player1` | `player1@example.com` | `player123` |
+
+### Workflows by Role
+
+**Full-stack development** (frontend + backend):
+```bash
+docker compose up          # starts DB + backend on :8000
+npm run dev:frontend       # starts Vite on :5173 (separate terminal)
+```
+
+**Backend / game logic only** (Python work, no frontend needed):
+```bash
+docker compose up          # starts DB + backend on :8000
+# Edit files in src/backend/ — uvicorn hot-reloads on save, no rebuild needed
+# Test via curl or any HTTP client against localhost:8000
+```
+
+**Rebuild after dependency changes** (requirements.txt or frontend package.json):
+```bash
+docker compose build app
+docker compose up
+```
+
+### API Health Check
+
+```bash
+curl http://localhost:8000/api/health
+```
+
+---
+
+## Project Structure
+
+```
+ai-game-project/
+├── src/
+│   ├── backend/
+│   │   ├── app.py              # FastAPI entry point
+│   │   ├── auth.py             # Auth routes (local + Google OAuth)
+│   │   ├── auth_service.py     # Auth business logic
+│   │   ├── database.py         # PostgreSQL connection pool
+│   │   ├── games.py            # Game API routes
+│   │   ├── models.py           # Pydantic models
+│   │   ├── telemetry.py        # OpenTelemetry setup
+│   │   └── game_logic/         # Game AI engines (Python)
+│   │       ├── tic_tac_toe.py
+│   │       ├── chess.py
+│   │       ├── checkers.py
+│   │       ├── connect4.py
+│   │       └── dots_and_boxes.py
+│   └── frontend/
+│       ├── index.html
+│       └── src/
+│           ├── App.tsx             # React Router root
+│           ├── main.tsx
+│           ├── api/                # TanStack Query hooks
+│           ├── components/         # Shared components (Navbar, AuthModal, etc.)
+│           ├── hooks/              # Custom hooks
+│           ├── pages/              # Route-level components
+│           │   └── games/          # One component per game
+│           ├── store/              # Zustand stores
+│           └── types/              # TypeScript interfaces
+├── tests/                      # Playwright (E2E/API/smoke) + Jest (unit)
+├── scripts/
+│   ├── setup-database.sql      # Schema + seed data (runs automatically in Docker)
+│   └── test-setup.sql          # Test database setup for CI
+├── features/                   # Feature specs (see CLAUDE.md)
+├── .github/workflows/
+│   ├── tests.yml               # CI: lint, unit, E2E, API, smoke
+│   └── deploy.yml              # CD: build → Artifact Registry → Cloud Run
+├── docker-compose.yml          # Local dev environment
+└── Dockerfile                  # Multi-stage build (Node → Python)
+```
+
+---
+
+## Running Tests
+
+Tests require both the backend and database running. Use Docker for the backend:
+
+```bash
+docker compose up -d           # start backend + DB in background
+npm run test:unit              # Jest unit tests
+npm run test:e2e               # Playwright E2E tests
+npm run test:smoke             # Quick smoke tests only
+npm test                       # all tests
+```
+
+See `tests/README.md` for the full test guide.
+
+---
+
+## Deployment
+
+Deployment is fully automated. Merging to `main` triggers the GitHub Actions deploy pipeline:
+
+1. CI tests must pass
+2. Docker image is built and pushed to GCP Artifact Registry
+3. Cloud Run service is updated automatically
+
+The production service runs on GCP Cloud Run backed by Cloud SQL (PostgreSQL).
+
+**GCP setup is required before the first deploy.** See the setup checklist in the team docs.
+
+---
+
+## Adding a New Feature
+
+See `CLAUDE.md` for the full feature development workflow (spec → design → implementation).

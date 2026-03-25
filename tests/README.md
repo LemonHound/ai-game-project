@@ -1,254 +1,157 @@
 # Testing Guide
 
-This project uses **Playwright** for end-to-end testing and **Jest** for unit testing.
+This project uses **Playwright** for end-to-end, API, and smoke testing, and **Jest** for unit testing.
+
+## Prerequisites
+
+The backend and database must be running before executing Playwright tests:
+
+```bash
+docker compose up -d
+```
+
+Test users are seeded automatically. See the main README for credentials.
+
+---
 
 ## Test Structure
 
 ```
 tests/
-├── api/              # API endpoint tests
+├── api/              # API endpoint tests (Playwright request fixtures)
 ├── auth/             # Authentication flow tests
-├── e2e/              # End-to-end navigation tests
+├── e2e/              # Navigation and routing tests
 ├── games/            # Game interaction tests
-├── helpers/          # Test utilities and helpers
-├── performance/      # Performance tests
-├── smoke/            # Quick smoke tests
+├── helpers/          # Shared test utilities
+├── performance/      # Performance benchmarks
+├── smoke/            # Quick health-check tests
 ├── unit/             # Unit tests (Jest)
-├── global-setup.js   # Global test setup
-└── README.md         # This file
+└── global-setup.js   # Global Playwright setup
 ```
 
-## Available Test Commands
+---
+
+## Test Commands
 
 ```bash
-# Run all tests
-npm test
-
-# Run only unit tests
+# Unit tests (Jest, no server required)
 npm run test:unit
 
-# Run only Playwright E2E tests
+# All Playwright tests
 npm run test:e2e
 
-# Run Playwright tests with browser visible
+# Specific categories
+npm run test:smoke        # quick health checks
+npm run test:auth         # login, register, logout, OAuth
+npm run test:games        # game board interactions and AI responses
+npm run test:api          # API endpoint contracts
+
+# Headed mode (opens browser)
 npm run test:e2e:headed
 
-# Run Playwright tests in debug mode
+# Debug mode
 npm run test:e2e:debug
 
-# Run specific test categories
-npm run test:smoke      # Quick smoke tests
-npm run test:games      # Game functionality tests
-npm run test:auth       # Authentication tests
-
-# Run everything including performance
-npm run test:all
+# Run everything
+npm test
 ```
+
+---
 
 ## Test Categories
 
-### 🚀 Smoke Tests (`tests/smoke/`)
-Quick tests to verify basic functionality:
-- All routes load correctly
-- API endpoints respond
-- Database connection works
-- No critical JavaScript errors
+### Smoke (`tests/smoke/`)
+Fast sanity checks — all routes load, API responds, DB connected, no console errors.
 
-### 🎮 Game Tests (`tests/games/`)
-Interactive game functionality:
-- Game boards load and are interactive
-- Player moves work correctly
-- AI responses function
-- Game controls (restart, hints) work
-- Game state updates properly
+### Auth (`tests/auth/`)
+Registration, login, logout, session persistence, Google OAuth redirect.
 
-### 🔐 Auth Tests (`tests/auth/`)
-Authentication flow testing:
-- Login/logout functionality
-- Registration process
-- Session management
-- API authentication
+### Games (`tests/games/`)
+Game boards render and are interactive, player moves are accepted, AI responds, game-over states fire correctly.
 
-### 🌐 Navigation Tests (`tests/e2e/`)
-Site navigation and user flows:
-- Menu navigation works
-- Links function correctly
-- Mobile responsive navigation
-- Breadcrumbs and back buttons
-- 404 error handling
+### API (`tests/api/`)
+HTTP contracts for all backend endpoints: status codes, response shapes, error handling, CORS.
 
-### 📡 API Tests (`tests/api/`)
-Backend API endpoint testing:
-- Health checks
-- Game data endpoints
-- Authentication endpoints
-- Error handling
-- CORS configuration
+### Navigation / E2E (`tests/e2e/`)
+React Router routes resolve, navbar links work, 404 handling, mobile viewports.
 
-### ⚡ Performance Tests (`tests/performance/`)
-Performance and load time testing:
-- Page load times
-- Asset loading efficiency
-- API response times
-- Game interaction responsiveness
+### Performance (`tests/performance/`)
+Page load times, API response times, game interaction latency.
 
-## Running Tests Locally
+### Unit (`tests/unit/`)
+Pure logic — Zustand stores, utility functions, React component rendering (no server required).
 
-### Prerequisites
-1. Make sure your server is running: `npm run dev`
-2. Database should be set up and accessible
+---
 
-### Run Specific Tests
+## Running Individual Tests
+
 ```bash
-# Run only route smoke tests
+# Single spec file
 npx playwright test tests/smoke/routes.spec.js
 
-# Run only tic-tac-toe game tests
-npx playwright test tests/games/game-interactions.spec.js --grep "Tic Tac Toe"
+# Filter by test name
+npx playwright test --grep "Tic Tac Toe"
 
-# Run auth tests in headed mode
-npx playwright test tests/auth/auth-flow.spec.js --headed
-
-# Run with specific browser
+# Specific browser
 npx playwright test --project=chromium
 
-# Run mobile tests
-npx playwright test --project="Mobile Chrome"
-```
-
-### Debug Tests
-```bash
-# Debug mode - opens browser with dev tools
-npx playwright test --debug
-
-# Debug specific test
-npx playwright test tests/games/game-interactions.spec.js --debug
-
-# Generate trace for debugging
+# With trace recording
 npx playwright test --trace on
 ```
 
-## Test Configuration
+---
 
-### Playwright Config (`playwright.config.js`)
-- Tests run against `http://localhost:3000`
-- Automatically starts/stops server
-- Supports multiple browsers (Chrome, Firefox, Safari)
-- Includes mobile viewport testing
-- Generates HTML reports and traces
+## Debugging Failures
 
-### Jest Config (`jest.config.js`)
-- Unit tests only in `tests/unit/` directory
-- 10 second timeout for database tests
-- Coverage reporting enabled
-
-## Test Helpers
-
-The `tests/helpers/test-utils.js` file contains useful helper functions:
-
-```javascript
-const { loginWithDemo, makeTicTacToeMove, waitForGameLoad } = require('./helpers/test-utils');
-
-// Login with demo credentials
-await loginWithDemo(page);
-
-// Wait for a game to load completely
-await waitForGameLoad(page, 'tic-tac-toe');
-
-// Make a move in tic-tac-toe
-await makeTicTacToeMove(page, 0); // Click first square
-```
-
-## CI/CD Integration
-
-Tests are configured to run in GitHub Actions with:
-- Retry on failure
-- Video recording on failure
-- Screenshot capture on failure
-- Test result artifacts
-- Multiple browser testing
-
-## Writing New Tests
-
-### Game Tests Example
-```javascript
-test('new game functionality', async ({ page }) => {
-  await waitForGameLoad(page, 'my-new-game');
-  
-  // Test game-specific functionality
-  const gameBoard = page.locator('#game-board');
-  await expect(gameBoard).toBeVisible();
-  
-  // Make moves, test interactions
-  await page.locator('.game-piece').first().click();
-  await page.waitForTimeout(500);
-  
-  // Verify game state
-  await expect(page.locator('.game-status')).toContainText('Player moved');
-});
-```
-
-### API Tests Example
-```javascript
-test('new API endpoint', async ({ request }) => {
-  const response = await request.get('/api/my-endpoint');
-  
-  expect(response.ok()).toBeTruthy();
-  
-  const data = await response.json();
-  expect(data).toHaveProperty('expectedField');
-});
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Tests fail with "Server not running"**
-    - Make sure `npm run start` works locally
-    - Check that port 3000 is available
-
-2. **Game tests fail intermittently**
-    - Add `await page.waitForTimeout()` after interactions
-    - Use `waitForLoadState('networkidle')` for dynamic content
-
-3. **Authentication tests fail**
-    - Verify demo credentials in `src/backend/routes/auth.js`
-    - Check that mock users exist
-
-4. **Database tests fail**
-    - Ensure database is running and accessible
-    - Check environment variables in `.env`
-
-### Debug Mode
-Run tests in debug mode to step through failures:
 ```bash
+# Open Playwright inspector
 npx playwright test --debug tests/failing-test.spec.js
-```
 
-### Test Reports
-After running tests, view the HTML report:
-```bash
+# View HTML report after a run
 npx playwright show-report
 ```
 
-## Best Practices
+Playwright saves screenshots and videos on failure as CI artifacts.
 
-1. **Use data attributes** for stable selectors:
-   ```html
-   <button data-testid="start-game">Start Game</button>
-   ```
+---
 
-2. **Wait for network idle** after navigation:
-   ```javascript
-   await page.goto('/games');
-   await page.waitForLoadState('networkidle');
-   ```
+## Test Helpers (`tests/helpers/`)
 
-3. **Test error scenarios** not just happy paths
+```javascript
+const { loginAs, waitForGameLoad } = require('./helpers/test-utils');
 
-4. **Keep tests independent** - each test should work in isolation
+await loginAs(page, 'demo');
+await waitForGameLoad(page, 'tic-tac-toe');
+```
 
-5. **Use descriptive test names** that explain what's being tested
+---
 
-6. **Group related tests** using `test.describe()` blocks
+## Writing New Tests
+
+Use `data-testid` attributes for stable selectors:
+
+```tsx
+<button data-testid="start-game">Start Game</button>
+```
+
+```javascript
+test('game starts on button click', async ({ page }) => {
+  await page.goto('/game/tic-tac-toe');
+  await page.waitForLoadState('networkidle');
+  await page.getByTestId('start-game').click();
+  await expect(page.getByTestId('game-board')).toBeVisible();
+});
+```
+
+Keep tests independent — each test should be able to run in isolation without relying on state from another test.
+
+---
+
+## CI Integration
+
+All tests run in GitHub Actions on every push and pull request to `main`. The pipeline runs:
+
+1. Code quality (Prettier, npm audit)
+2. Unit tests with coverage upload
+3. Smoke, auth, games, API, navigation, performance tests (parallel)
+4. Cross-browser tests on Firefox and WebKit (main branch only)
