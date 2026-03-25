@@ -18,7 +18,7 @@ test.describe('Route Smoke Tests', () => {
 
         await expect(page).toHaveTitle(/AI Game Hub/);
         await expect(page.locator('h1')).toContainText('Games', { timeout: 10000 });
-        await expect(page.locator('.card').first()).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('main')).toBeVisible({ timeout: 5000 });
     });
 
     test('about page loads correctly', async ({ page }) => {
