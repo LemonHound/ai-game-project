@@ -35,11 +35,21 @@ future real-time features.
 ### Architecture
 - Should turn-based game moves (TTT, Connect4, Chess, Checkers, Dots & Boxes) migrate from REST to WebSocket,
   or remain as standard HTTP request/response calls? Pros and cons to be evaluated in planning session.
-- Server-authoritative vs. client-authoritative game state?
+- Server is always authoritative for game state — clients accept server state unconditionally on reconnect
+  or desync (consistent with error-handling and game-data-persistence specs).
 - One shared WebSocket connection per client, or one connection per active game session?
 - Message protocol: JSON envelope with type/payload fields, or game-specific schemas?
-- How does a WebSocket connection map to the existing in-memory game sessions on the backend?
+- How does a WebSocket connection map to DB-backed game sessions on the backend? (In-memory sessions are
+  replaced by DB-backed sessions per game-data-persistence spec — this applies to WebSocket connections too)
 - Should the backend emit unprompted messages (e.g., AI move response pushed after server computes it)?
+
+### Error Handling & Recovery
+Real-time games (Pong and future equivalents) do not support session recovery. A disconnect resets to a new
+game — continuous game state is intentionally not persisted between connections. Error handling for
+WebSocket connections must be standardized to the same degree as HTTP error handling (see error-handling
+spec): connection lifecycle events (open, close, error) must be classified, surfaced to the user
+consistently, and instrumented via OTel (see observability spec WebSocket note). The specific retry and
+reconnect strategy for real-time games is an open question for this spec's planning session.
 
 ### Infrastructure
 - FastAPI native WebSocket support vs. third-party library (e.g., Socket.IO, channels)?
