@@ -34,7 +34,7 @@ Automated tests run against staging. The same image is promoted to production on
 ## Open Questions
 
 ### Environment Isolation
-- Separate GCP project for staging vs. same project with separate Cloud Run services?
+- **Decided:** same GCP project, separate Cloud Run service for staging (no separate GCP project)
 - Staging DB strategy: separate Cloud SQL instance, same instance with a separate database, or schema isolation?
 - How are staging secrets managed in GCP Secret Manager (separate secret names/versions vs. environment
   variable override)?
