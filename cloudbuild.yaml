@@ -35,8 +35,8 @@ steps:
       - '--region=${_REGION}'
       - '--set-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
       - '--set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest'
-      - '--command=python'
-      - '--args=-m,alembic,-c,/app/alembic.ini,upgrade,head'
+      - '--command=bash'
+      - '--args=-c,cd /app && python -m alembic upgrade head'
       - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT}'
       - '--max-retries=1'
 
