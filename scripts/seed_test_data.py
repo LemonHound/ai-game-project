@@ -6,6 +6,16 @@ Idempotent: uses ON CONFLICT DO UPDATE.
 import asyncio
 import os
 import sys
+from pathlib import Path
+
+# Load .env if present (CI writes one before running this script)
+_env_path = Path(__file__).resolve().parents[1] / ".env"
+if _env_path.exists():
+    for line in _env_path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, _, v = line.partition("=")
+            os.environ.setdefault(k.strip(), v.strip())
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src/backend"))
 
@@ -35,7 +45,7 @@ _TEST_USERS = [
 
 
 async def seed():
-    await init_db()
+    init_db()
     async with get_session() as session:
         for user in _TEST_USERS:
             await session.execute(
