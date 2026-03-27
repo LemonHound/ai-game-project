@@ -62,11 +62,11 @@ test.describe('Route Smoke Tests', () => {
     });
 
     test('database connection works', async ({ page }) => {
-        const response = await page.request.get('/api/test-db');
+        const response = await page.request.get('/api/auth/health');
         expect(response.ok()).toBeTruthy();
 
         const data = await response.json();
-        expect(data.status).toContain('Database connected');
-        expect(data).toHaveProperty('userCount');
+        expect(data.auth).toBe('OK');
+        expect(data.database).toContain('Connected');
     });
 });
