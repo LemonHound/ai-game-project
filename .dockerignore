@@ -13,5 +13,6 @@ test-results/
 coverage/
 features/
 scripts/
+!scripts/migrations/
 environment.yml
 *.md
