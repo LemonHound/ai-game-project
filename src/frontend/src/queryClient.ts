@@ -16,7 +16,7 @@ export const queryClient = new QueryClient({
                 }
                 return failureCount < 2;
             },
-            onError: (error) => {
+            onError: error => {
                 if (error instanceof GameApiError && error.status === 401) {
                     useNotificationStore.getState().push({
                         level: 'warning',

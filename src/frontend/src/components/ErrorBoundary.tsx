@@ -51,9 +51,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         return (
             <div className='container mx-auto flex flex-col items-center px-4 py-20 text-center'>
                 <h2 className='mb-4 text-2xl font-semibold'>Something went wrong</h2>
-                <p className='mb-2 opacity-60'>
-                    {error?.message ?? 'An unexpected error occurred.'}
-                </p>
+                <p className='mb-2 opacity-60'>{error?.message ?? 'An unexpected error occurred.'}</p>
                 {loopDetected && (
                     <p className='mb-6 text-sm text-warning'>
                         This page is repeatedly crashing. Going home is recommended.
@@ -61,15 +59,11 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                 )}
                 <div className='flex gap-4'>
                     {!loopDetected && (
-                        <button
-                            className='btn btn-primary'
-                            onClick={() => window.location.reload()}>
+                        <button className='btn btn-primary' onClick={() => window.location.reload()}>
                             Reload page
                         </button>
                     )}
-                    <button
-                        className='btn btn-outline'
-                        onClick={() => (window.location.href = '/')}>
+                    <button className='btn btn-outline' onClick={() => (window.location.href = '/')}>
                         Go home
                     </button>
                 </div>

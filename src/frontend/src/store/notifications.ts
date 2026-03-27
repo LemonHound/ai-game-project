@@ -19,23 +19,18 @@ interface NotificationStore {
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
     notifications: [],
-    push: (n) => {
+    push: n => {
         const { notifications } = get();
         const isDuplicate = notifications.some(
-            (existing) =>
-                existing.level === n.level &&
-                existing.title === n.title &&
-                existing.description === n.description
+            existing =>
+                existing.level === n.level && existing.title === n.title && existing.description === n.description
         );
         if (isDuplicate) return;
         set({
-            notifications: [
-                ...notifications,
-                { ...n, id: crypto.randomUUID(), timestamp: Date.now() },
-            ],
+            notifications: [...notifications, { ...n, id: crypto.randomUUID(), timestamp: Date.now() }],
         });
     },
-    dismiss: (id) => {
-        set((state) => ({ notifications: state.notifications.filter((n) => n.id !== id) }));
+    dismiss: id => {
+        set(state => ({ notifications: state.notifications.filter(n => n.id !== id) }));
     },
 }));

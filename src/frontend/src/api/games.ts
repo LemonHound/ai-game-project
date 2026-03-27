@@ -20,11 +20,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     });
     if (!response.ok) {
         const body = await response.json().catch(() => ({ detail: 'Request failed' }));
-        throw new GameApiError(
-            body.detail ?? 'Request failed',
-            response.status,
-            body.board_state ?? null
-        );
+        throw new GameApiError(body.detail ?? 'Request failed', response.status, body.board_state ?? null);
     }
     return response.json() as Promise<T>;
 }

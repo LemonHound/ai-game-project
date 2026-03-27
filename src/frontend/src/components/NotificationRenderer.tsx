@@ -10,7 +10,7 @@ export default function NotificationRenderer() {
     const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
     useEffect(() => {
-        visible.forEach((n) => {
+        visible.forEach(n => {
             if (n.timer !== undefined && !timersRef.current.has(n.id)) {
                 const t = setTimeout(() => dismiss(n.id), n.timer);
                 timersRef.current.set(n.id, t);
@@ -18,7 +18,7 @@ export default function NotificationRenderer() {
         });
 
         timersRef.current.forEach((t, id) => {
-            if (!notifications.find((n) => n.id === id)) {
+            if (!notifications.find(n => n.id === id)) {
                 clearTimeout(t);
                 timersRef.current.delete(id);
             }
@@ -27,7 +27,7 @@ export default function NotificationRenderer() {
 
     useEffect(() => {
         return () => {
-            timersRef.current.forEach((t) => clearTimeout(t));
+            timersRef.current.forEach(t => clearTimeout(t));
         };
     }, []);
 
@@ -35,7 +35,7 @@ export default function NotificationRenderer() {
 
     return (
         <div className='fixed top-4 right-4 z-50 flex w-80 flex-col gap-2'>
-            {visible.map((n) => (
+            {visible.map(n => (
                 <NotificationDisplay
                     key={n.id}
                     level={n.level}

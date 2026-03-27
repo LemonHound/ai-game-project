@@ -20,7 +20,7 @@ import TicTacToePage from './pages/games/TicTacToePage';
 
 function OAuthResultHandler() {
     const location = useLocation();
-    const push = useNotificationStore((s) => s.push);
+    const push = useNotificationStore(s => s.push);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);

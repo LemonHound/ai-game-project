@@ -7,9 +7,7 @@ test.describe('error-handling', () => {
         await expect(page.locator('a[href="/"], button')).toBeTruthy();
     });
 
-    test('error_boundary_renders_fallback: simulated render error shows fallback UI', async ({
-        page,
-    }) => {
+    test('error_boundary_renders_fallback: simulated render error shows fallback UI', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => {
             localStorage.setItem('crash_count_/', '1');
@@ -32,9 +30,7 @@ test.describe('error-handling', () => {
         await expect(page.locator('button', { hasText: 'Go home' })).toBeVisible();
     });
 
-    test('crash_loop_hides_reload_option: 4+ crashes removes Reload page button', async ({
-        page,
-    }) => {
+    test('crash_loop_hides_reload_option: 4+ crashes removes Reload page button', async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => {
             localStorage.setItem('crash_count_/', '4');
