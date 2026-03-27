@@ -12,7 +12,6 @@ playwright-report/
 test-results/
 coverage/
 features/
-scripts/
-!scripts/migrations/
+scripts/seed_test_data.py
 environment.yml
 *.md
