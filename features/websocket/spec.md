@@ -9,19 +9,29 @@ continuous bidirectional communication. Even turn-based games (TTT, Connect4, Ch
 benefit from WebSocket connections to reduce per-move overhead, keep game traffic off the REST API, and enable
 future real-time features.
 
+## Resolved: Turn-Based Games Use SSE, Not WebSocket
+
+The open question about whether turn-based games should use WebSocket is closed. Turn-based games (TTT,
+Connect4, Chess, Checkers, Dots & Boxes) use Server-Sent Events (SSE) for server→client push. The
+client POSTs moves via REST (202 Accepted) and receives state updates over a persistent SSE stream. SSE
+is HTTP-native, sufficient for unidirectional push, and avoids WebSocket infrastructure overhead for games
+that do not require bidirectional real-time communication.
+
+WebSocket is scoped exclusively to Pong, which requires a high-frequency bidirectional game loop.
+
+See `features/game-tic-tac-toe/spec.md` and `adr.md` for the full turn-based game transport design.
+
 ## Proposed Scope
 
 - Establish a WebSocket infrastructure layer (server + client)
 - **Confirmed use case**: Pong requires real-time bidirectional communication and cannot use REST for its game
   loop; WebSocket support is required before Pong can be implemented
-- **Open question**: whether turn-based game moves (TTT, Connect4, Chess, Checkers, Dots & Boxes) should also
-  migrate from REST to WebSocket, or remain as REST calls — see Open Questions below
 - REST API remains for non-game interactions regardless: auth, game metadata, game list, user stats
+- SSE handles all turn-based game state push (not in scope for this spec)
 
 ## Known Requirements
 
 - Must support continuous bidirectional communication for Pong (high-frequency game loop)
-- Whether low-frequency turn-based game moves use WebSocket is an open question (see below)
 - Must integrate with existing session-cookie authentication
 - Same observability/logging requirements as REST (OTel spans, structured logs via GCP Cloud Logging)
 - Must work across mobile and desktop clients (browser WebSocket API)
@@ -35,8 +45,6 @@ future real-time features.
 - Should the WebSocket layer be designed to support future multiplayer (player vs. player), or single-player only?
 
 ### Architecture
-- Should turn-based game moves (TTT, Connect4, Chess, Checkers, Dots & Boxes) migrate from REST to WebSocket,
-  or remain as standard HTTP request/response calls? Pros and cons to be evaluated in planning session.
 - Server is always authoritative for game state — clients accept server state unconditionally on reconnect
   or desync (consistent with error-handling and game-data-persistence specs).
 - One shared WebSocket connection per client, or one connection per active game session?
