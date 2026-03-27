@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from auth import router as auth_router
-from database import init_db_pool, close_db_pool, get_db_connection, return_db_connection
+from db import init_db, close_db
 from games import router as games_router
 from telemetry import setup_telemetry
 
@@ -32,11 +32,11 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.exception("Telemetry setup failed — observability will be unavailable")
     try:
-        init_db_pool()
+        init_db()
     except Exception:
-        logger.exception("Database pool initialization failed — DB-dependent endpoints will be unavailable")
+        logger.exception("Database initialization failed — DB-dependent endpoints will be unavailable")
     yield
-    close_db_pool()
+    await close_db()
 
 
 app = FastAPI(
@@ -78,29 +78,6 @@ async def health_check():
         "service": "ai-game-hub",
     }
 
-
-@app.get("/api/test-db")
-async def test_database():
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return {"status": "Database not configured", "timestamp": datetime.now().isoformat()}
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM users")
-        user_count = cursor.fetchone()[0]
-        cursor.close()
-        return {
-            "status": "Database connected",
-            "userCount": user_count,
-            "timestamp": datetime.now().isoformat(),
-        }
-    except Exception as e:
-        logger.exception("Database test failed")
-        return {"status": "Database error", "error": str(e), "timestamp": datetime.now().isoformat()}
-    finally:
-        if conn:
-            return_db_connection(conn)
 
 
 # Catch-all: serve React app for all non-API routes

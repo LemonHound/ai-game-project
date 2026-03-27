@@ -38,9 +38,19 @@ jobs:
           node-version: 20
           cache: npm
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
       - run: npm ci
 
+      - run: pip install -r requirements.txt
+
       - run: npm run test:unit:coverage
+
+      - run: python -m pytest tests/unit/ -v
+        env:
+          PYTHONPATH: src/backend
 
       - uses: codecov/codecov-action@v5
         with:
@@ -90,8 +100,10 @@ jobs:
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           EOF
-          PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/setup-database.sql
+          python -m alembic upgrade head
           PGPASSWORD=testpassword psql -h localhost -U testuser -d test_ai_game_db -f scripts/test-setup.sql
+        env:
+          PYTHONPATH: src/backend
       - run: npx playwright install --with-deps chromium
       - run: npm run test:smoke -- --project=chromium
         env:

@@ -1,300 +1,339 @@
-from fastapi import APIRouter, HTTPException
+import logging
 from typing import Optional
+from uuid import UUID
 
-from models import StartGameRequest, MoveRequest, CompleteGameRequest
-from database import get_db_connection, return_db_connection
-from game_logic.tic_tac_toe import tic_tac_toe_game
-from game_logic.dots_and_boxes import dots_and_boxes_game
+from fastapi import APIRouter, Cookie, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+import persistence_service
+from auth_service import AuthService
+from db import db_dependency, get_session
+from db_models import GAME_ID_TO_TYPE
+from game_logic.checkers import checkers_game
 from game_logic.chess import chess_game
 from game_logic.connect4 import connect4_game
-from game_logic.checkers import checkers_game
+from game_logic.dots_and_boxes import dots_and_boxes_game
+from game_logic.tic_tac_toe import tic_tac_toe_game
+from models import MoveRequest, StartGameRequest
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+_auth_service = AuthService()
+
+_GAME_ENGINES = {
+    "tic-tac-toe": tic_tac_toe_game,
+    "chess": chess_game,
+    "checkers": checkers_game,
+    "connect4": connect4_game,
+    "dots-and-boxes": dots_and_boxes_game,
+}
+
+
+async def _require_user(sessionId: Optional[str] = Cookie(None)) -> dict:
+    if not sessionId:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    user = await _auth_service.get_user_by_session(sessionId)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return user
+
+
+def _winner_to_outcome(winner: str, game_state: dict) -> str:
+    if winner in ("tie", "draw"):
+        return "draw"
+    player_symbol = game_state.get("player_symbol") or game_state.get("player_color")
+    if winner == player_symbol or winner == "player":
+        return "player_won"
+    return "ai_won"
+
 
 # ============================================
 # GAME METADATA ENDPOINTS
 # ============================================
 
+
 @router.get("/games_list")
 async def get_games(category: Optional[str] = None, status: Optional[str] = None):
-    """Get list of all available games from database"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection not available")
-
-        cursor = conn.cursor()
-        query = "SELECT id, name, description, icon, difficulty, players, status, category, tags FROM games WHERE 1=1"
-        params = []
-
+    async with get_session() as session:
+        query = (
+            "SELECT id, name, description, icon, difficulty, players, status, category, tags"
+            " FROM games WHERE 1=1"
+        )
+        params: dict = {}
         if category:
-            query += " AND category = %s"
-            params.append(category)
-
+            query += " AND category = :category"
+            params["category"] = category
         if status:
-            query += " AND status = %s"
-            params.append(status)
+            query += " AND status = :status"
+            params["status"] = status
+        result = await session.execute(text(query), params)
+        rows = result.fetchall()
 
-        cursor.execute(query, params if params else None)
-        rows = cursor.fetchall()
-        cursor.close()
+    games = [
+        {
+            "id": r[0],
+            "name": r[1],
+            "description": r[2],
+            "icon": r[3],
+            "difficulty": r[4],
+            "players": r[5],
+            "status": r[6],
+            "category": r[7],
+            "tags": r[8],
+        }
+        for r in rows
+    ]
+    return {"games": games}
 
-        games = [{
-            'id': row[0],
-            'name': row[1],
-            'description': row[2],
-            'icon': row[3],
-            'difficulty': row[4],
-            'players': row[5],
-            'status': row[6],
-            'category': row[7],
-            'tags': row[8]
-        } for row in rows]
-
-        return {"games": games}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if conn:
-            return_db_connection(conn)
 
 @router.get("/game/{game_id}/info")
 async def get_game_info(game_id: str):
-    """Get detailed information about a specific game"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection not available")
-
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, name, description, icon, difficulty, players, status, category, tags FROM games WHERE id = %s",
-            (game_id,)
+    async with get_session() as session:
+        result = await session.execute(
+            text(
+                "SELECT id, name, description, icon, difficulty, players, status, category, tags"
+                " FROM games WHERE id = :id"
+            ),
+            {"id": game_id},
         )
-        row = cursor.fetchone()
-        cursor.close()
+        row = result.fetchone()
 
-        if not row:
-            raise HTTPException(status_code=404, detail=f"Game '{game_id}' not found")
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Game '{game_id}' not found")
 
-        game = {
-            'id': row[0],
-            'name': row[1],
-            'description': row[2],
-            'icon': row[3],
-            'difficulty': row[4],
-            'players': row[5],
-            'status': row[6],
-            'category': row[7],
-            'tags': row[8]
+    return {
+        "game": {
+            "id": row[0],
+            "name": row[1],
+            "description": row[2],
+            "icon": row[3],
+            "difficulty": row[4],
+            "players": row[5],
+            "status": row[6],
+            "category": row[7],
+            "tags": row[8],
         }
+    }
 
-        return {"game": game}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if conn:
-            return_db_connection(conn)
 
 @router.get("/game/{game_id}/stats")
-async def get_game_stats(game_id: str, user_id: Optional[int] = None):
-    """Get user statistics for a specific game"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return {
-                "gamesPlayed": 0,
-                "winRate": 0.0,
-                "bestStreak": 0,
-                "aiLevel": 3
-            }
+async def get_game_stats(game_id: str):
+    return {"gamesPlayed": 0, "winRate": 0.0, "bestStreak": 0, "aiLevel": 3}
 
-        # TODO: Implement actual stats calculation from game tables
-        return {
-            "gamesPlayed": 0,
-            "winRate": 0.0,
-            "bestStreak": 0,
-            "aiLevel": 3
-        }
-    finally:
-        if conn:
-            return_db_connection(conn)
 
 # ============================================
 # GAMEPLAY ENDPOINTS
 # ============================================
 
+
 @router.post("/game/{game_id}/start")
-async def start_game(game_id: str, request: StartGameRequest):
-    """Start a new game session"""
-    try:
-        if game_id == "tic-tac-toe":
-            result = tic_tac_toe_game.start_game(
-                user_id=request.userId,
-                difficulty=request.difficulty,
-                player_starts=request.playerStarts
-            )
-            return result
+async def start_game(
+    game_id: str,
+    request: StartGameRequest,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    if game_id not in GAME_ID_TO_TYPE:
+        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
 
-        elif game_id == "dots-and-boxes":
-            result = dots_and_boxes_game.start_game(
-                user_id=request.userId,
-                difficulty=request.difficulty,
-                player_starts=request.playerStarts
-            )
-            return result
+    game_type = GAME_ID_TO_TYPE[game_id]
+    engine = _GAME_ENGINES[game_id]
 
-        elif game_id == "chess":
-            result = chess_game.start_game(
-                user_id=request.userId,
-                difficulty=request.difficulty,
-                playerStarts=request.playerStarts
-            )
-            return result
+    game_session = await persistence_service.get_or_create_game_session(
+        db, user["id"], game_type, request.difficulty
+    )
 
-        elif game_id == "connect4":
-            result = connect4_game.start_game(
-                user_id=request.userId,
-                difficulty=request.difficulty,
-                playerStarts=request.playerStarts
-            )
-            return result
+    latest = await persistence_service.get_latest_board_state(db, game_session.id, game_type)
+    if latest:
+        return {"session_id": str(game_session.id), "game_state": latest, "is_resumed": True}
 
-        elif game_id == "checkers":
-            result = checkers_game.start_game(
-                user_id=request.userId,
-                difficulty=request.difficulty,
-                player_starts=request.playerStarts
-            )
-            return result
+    game_state = engine.get_initial_state(
+        difficulty=request.difficulty, player_starts=request.playerStarts
+    )
+    await persistence_service.record_move(
+        db, game_session.id, game_type, "setup", {}, game_state
+    )
 
-        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"session_id": str(game_session.id), "game_state": game_state, "is_resumed": False}
+
 
 @router.post("/game/{game_id}/move")
-async def make_move(game_id: str, request: MoveRequest):
-    """Make a move in an active game"""
+async def make_move(
+    game_id: str,
+    request: MoveRequest,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    if game_id not in GAME_ID_TO_TYPE:
+        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
+
+    game_type = GAME_ID_TO_TYPE[game_id]
+    engine = _GAME_ENGINES[game_id]
+
     try:
-        if game_id == "tic-tac-toe":
-            result = tic_tac_toe_game.make_move(
-                session_id=request.gameSessionId,
-                position=request.move,
-                user_id=request.userId
-            )
-            return result
+        session_id = UUID(request.gameSessionId)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid session ID format")
 
-        elif game_id == "dots-and-boxes":
-            result = dots_and_boxes_game.make_move(
-                session_id=request.gameSessionId,
-                move=request.move,
-                user_id=request.userId
-            )
-            return result
+    game_session = await persistence_service.get_game_session_state(db, session_id)
+    if not game_session:
+        raise HTTPException(status_code=404, detail="Game session not found")
+    if game_session.user_id != user["id"]:
+        raise HTTPException(status_code=403, detail="Session does not belong to current user")
+    if game_session.game_ended:
+        raise HTTPException(status_code=400, detail="Game session has already ended")
 
-        elif game_id == "chess":
-            result = chess_game.make_move(
-                session_id=request.gameSessionId,
-                move=request.move,
-                user_id=request.userId
-            )
-            return result
+    game_state = await persistence_service.get_latest_board_state(db, session_id, game_type)
+    if not game_state:
+        raise HTTPException(status_code=404, detail="No board state found for session")
 
-        elif game_id == "connect4":
-            result = connect4_game.make_move(
-                session_id=request.gameSessionId,
-                move=request.move,
-                user_id=request.userId
-            )
-            return result
+    try:
+        result = engine.apply_move(game_state, request.move)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-        elif game_id == "checkers":
-            result = checkers_game.make_move(
-                session_id=request.gameSessionId,
-                move=request.move,
-                user_id=request.userId
-            )
-            return result
+    await persistence_service.record_move(
+        db,
+        session_id,
+        game_type,
+        "human",
+        result["player_move"],
+        result["board_after_player"],
+    )
 
-        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if not result["game_over_after_player"] and result["board_after_ai"] is not None:
+        ai_move_data = result.get("ai_move") or result.get("ai_moves")
+        await persistence_service.record_move(
+            db,
+            session_id,
+            game_type,
+            "ai",
+            ai_move_data,
+            result["board_after_ai"],
+        )
 
-@router.post("/game/{game_id}/complete")
-async def complete_game(game_id: str, request: CompleteGameRequest):
-    """Complete a game and save results"""
-    # Game completion is handled automatically in game logic
-    return {
-        "success": True,
-        "message": "Game completed successfully"
-    }
+    if result["game_over"] and result["winner"]:
+        final_state = result["board_after_ai"] or result["board_after_player"]
+        outcome = _winner_to_outcome(result["winner"], final_state)
+        await persistence_service.end_game_session(db, session_id, outcome)
+    elif result["game_over"]:
+        await persistence_service.end_game_session(db, session_id, "draw")
+
+    return {"session_id": str(session_id), **result}
+
 
 @router.post("/game/{game_id}/ai-first")
-async def ai_first_move(game_id: str, request: MoveRequest):
-    """Let AI make the first move"""
-    try:
-        if game_id == "connect4":
-            result = connect4_game.ai_first_move(
-                session_id=request.gameSessionId,
-                user_id=request.userId
-            )
-            return result
+async def ai_first_move(
+    game_id: str,
+    request: StartGameRequest,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    if game_id != "connect4":
+        raise HTTPException(
+            status_code=501, detail=f"AI first move not supported for '{game_id}'"
+        )
 
-        raise HTTPException(status_code=501, detail=f"AI first move not supported for '{game_id}'")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    game_type = GAME_ID_TO_TYPE[game_id]
+
+    game_session = await persistence_service.get_or_create_game_session(
+        db, user["id"], game_type, request.difficulty
+    )
+
+    latest = await persistence_service.get_latest_board_state(db, game_session.id, game_type)
+    if latest:
+        game_state = latest
+    else:
+        game_state = connect4_game.get_initial_state(
+            difficulty=request.difficulty, player_starts=False
+        )
+
+    result = connect4_game.apply_ai_first_move(game_state)
+
+    await persistence_service.record_move(
+        db,
+        game_session.id,
+        game_type,
+        "ai",
+        result["ai_move"],
+        result["board_after_ai"],
+    )
+
+    return {"session_id": str(game_session.id), **result}
+
+
+@router.post("/game/{game_id}/end")
+async def end_game(
+    game_id: str,
+    request: MoveRequest,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    if game_id not in GAME_ID_TO_TYPE:
+        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
+
+    try:
+        session_id = UUID(request.gameSessionId)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid session ID format")
+
+    game_session = await persistence_service.get_game_session_state(db, session_id)
+    if not game_session:
+        raise HTTPException(status_code=404, detail="Game session not found")
+    if game_session.user_id != user["id"]:
+        raise HTTPException(status_code=403, detail="Session does not belong to current user")
+    if not game_session.game_ended:
+        await persistence_service.end_game_session(db, session_id, "abandoned")
+
+    return {"success": True}
+
 
 @router.get("/game/{game_id}/session/{session_id}")
-async def get_game_session(game_id: str, session_id: str):
-    """Get current state of a game session"""
+async def get_game_session(
+    game_id: str,
+    session_id: str,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    if game_id not in GAME_ID_TO_TYPE:
+        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
+
+    game_type = GAME_ID_TO_TYPE[game_id]
+
     try:
-        if game_id == "tic-tac-toe":
-            if session_id not in tic_tac_toe_game.sessions:
-                raise HTTPException(status_code=404, detail="Session not found")
+        sid = UUID(session_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid session ID format")
 
-            game_state = tic_tac_toe_game.sessions[session_id]
-            return tic_tac_toe_game._get_client_state(game_state)
+    game_session = await persistence_service.get_game_session_state(db, sid)
+    if not game_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if game_session.user_id != user["id"]:
+        raise HTTPException(status_code=403, detail="Session does not belong to current user")
 
-        elif game_id == "chess":
-            if session_id not in chess_game.sessions:
-                raise HTTPException(status_code=404, detail="Session not found")
+    board_state = await persistence_service.get_latest_board_state(db, sid, game_type)
+    if not board_state:
+        raise HTTPException(status_code=404, detail="No board state found for session")
 
-            game_state = chess_game.sessions[session_id]
-            return {
-                'boardState': game_state['board'],
-                'currentPlayer': game_state['currentPlayer'],
-                'playerColor': game_state['playerColor'],
-                'gameActive': game_state['gameActive']
+    return {"session_id": session_id, "game_type": game_type, "board_state": board_state}
+
+
+@router.get("/games/sessions/active")
+async def get_active_sessions(
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    sessions = await persistence_service.get_active_game_sessions(db, user["id"])
+    return {
+        "sessions": [
+            {
+                "session_id": str(s.id),
+                "game_type": s.game_type,
+                "difficulty": s.difficulty,
+                "started_at": s.started_at,
+                "last_move_at": s.last_move_at,
             }
-
-        elif game_id == "connect4":
-            if session_id not in connect4_game.sessions:
-                raise HTTPException(status_code=404, detail="Session not found")
-
-            game_state = connect4_game.sessions[session_id]
-            return {
-                'boardState': game_state['board'],
-                'currentPlayer': game_state['currentPlayer'],
-                'gameActive': game_state['gameActive']
-            }
-
-        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented yet")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            for s in sessions
+        ]
+    }
