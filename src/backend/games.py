@@ -4,6 +4,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from opentelemetry import metrics, trace
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -212,7 +213,10 @@ async def make_move(
     except ValueError as exc:
         span.set_attribute("error.type", type(exc).__name__)
         span.set_attribute("error.message", str(exc))
-        raise HTTPException(status_code=400, detail=str(exc))
+        return JSONResponse(
+            status_code=400,
+            content={"detail": str(exc), "board_state": game_state},
+        )
 
     await persistence_service.record_move(
         db,

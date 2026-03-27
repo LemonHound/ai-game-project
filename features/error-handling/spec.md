@@ -53,7 +53,7 @@ first. Until DB-backed sessions and write-on-every-move are in place, recovery i
 
 ## Error Response Shape
 
-All `/api/*` error responses follow:
+Game endpoints (`/api/game/*`) error responses follow:
 
 ```json
 { "detail": "...", "board_state": { ...last board_state_after from move table... } }
@@ -63,6 +63,12 @@ All `/api/*` error responses follow:
 the complete board representation, identical to what is stored at write time. The client is responsible
 for parsing what it needs. `board_state` is `null` if no moves have been made yet (e.g. session creation
 failure).
+
+All other `/api/*` endpoints (auth, health, metadata) return the standard FastAPI error shape:
+
+```json
+{ "detail": "..." }
+```
 
 ## State Recovery Endpoint
 
@@ -157,7 +163,7 @@ connectivity loss. A proactive offline banner adds complexity for a case that is
 
 ## Known Requirements
 
-- Error responses must follow the `{ "detail": "...", "board_state": {...} }` shape consistently
+- Game endpoint error responses must follow the `{ "detail": "...", "board_state": {...} }` shape; non-game endpoints return `{ "detail": "..." }` only
 - Frontend error states must not leave the user with a blank screen or a spinner that never resolves
 - Auth expiry must redirect or prompt the user to log in — not silently fail
 - All React error boundaries must log to OTel (see observability spec)
@@ -174,7 +180,7 @@ connectivity loss. A proactive offline banner adds complexity for a case that is
 | API integration | `api/error-handling.spec.ts::session_recovery_endpoint_returns_board` | `GET /api/games/{game_type}/session/{id}` returns correct board state |
 | API integration | `api/error-handling.spec.ts::session_recovery_404_unknown_session` | Recovery endpoint returns 404 for unknown session_id |
 | API integration | `api/error-handling.spec.ts::unauth_game_start_rejected` | Unauthenticated request to start a game returns 401 |
-| API integration | `api/error-handling.spec.ts::all_endpoints_consistent_error_shape` | Every `/api/*` endpoint returns `{ detail, board_state }` shape on error |
+| API integration | `api/error-handling.spec.ts::game_endpoints_consistent_error_shape` | Every `/api/game/*` endpoint returns `{ detail, board_state }` shape on error; non-game endpoints return `{ detail }` only |
 | E2E | `e2e/error-handling.spec.ts::404_page_renders` | Navigating to unknown route renders 404 page |
 | E2E | `e2e/error-handling.spec.ts::inline_error_on_invalid_move` | Invalid move surfaces inline error, board does not advance |
 | E2E | `e2e/error-handling.spec.ts::error_boundary_renders_fallback` | Simulated render error triggers error boundary fallback UI |

@@ -8,7 +8,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
@@ -68,6 +68,14 @@ if (DIST_DIR / "images").exists():
 
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(games_router, prefix="/api", tags=["Games"])
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    content = {"detail": exc.detail}
+    if request.url.path.startswith("/api/game/"):
+        content["board_state"] = None
+    return JSONResponse(status_code=exc.status_code, content=content)
 
 
 @app.get("/api/health")
