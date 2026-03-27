@@ -6,6 +6,7 @@ substitutions:
   _SERVICE_NAME: game-ai-website
   _CLOUDSQL_INSTANCE: halogen-episode-455311-t4:us-central1:game-database
   _ENVIRONMENT: production
+  _WEBSITE_URL: https://game-ai-website-w4453qrbcq-uc.a.run.app
 
 steps:
   - name: 'gcr.io/cloud-builders/docker'
@@ -65,7 +66,7 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--add-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
-      - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT}'
+      - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT},WEBSITE_URL=${_WEBSITE_URL},GOOGLE_REDIRECT_URI=${_WEBSITE_URL}/api/auth/google/callback'
       - >-
         --set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest
 
