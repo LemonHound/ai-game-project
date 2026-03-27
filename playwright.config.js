@@ -7,7 +7,7 @@ module.exports = defineConfig({
     testDir: './tests',
     /* Only include Playwright test files, exclude Jest tests */
     testMatch: [
-        '**/tests/api/**/*.spec.js',
+        '**/tests/api/**/*.spec.{js,ts}',
         '**/tests/auth/**/*.spec.js',
         '**/tests/database/**/*.spec.js',
         '**/tests/e2e/**/*.spec.js',

@@ -1,8 +1,10 @@
 import logging
+import time
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException
+from opentelemetry import metrics, trace
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +22,9 @@ from models import MoveRequest, StartGameRequest
 logger = logging.getLogger(__name__)
 router = APIRouter()
 _auth_service = AuthService()
+tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+_ai_duration = meter.create_histogram("game.ai.compute_duration", unit="ms", description="AI move computation time")
 
 _GAME_ENGINES = {
     "tic-tac-toe": tic_tac_toe_game,
@@ -144,6 +149,10 @@ async def start_game(
         db, user["id"], game_type, request.difficulty
     )
 
+    span = trace.get_current_span()
+    span.set_attribute("game.id", game_id)
+    span.set_attribute("game.session_id", str(game_session.id))
+
     latest = await persistence_service.get_latest_board_state(db, game_session.id, game_type)
     if latest:
         return {"session_id": str(game_session.id), "game_state": latest, "is_resumed": True}
@@ -184,13 +193,25 @@ async def make_move(
     if game_session.game_ended:
         raise HTTPException(status_code=400, detail="Game session has already ended")
 
+    span = trace.get_current_span()
+    span.set_attribute("game.id", game_id)
+    span.set_attribute("game.session_id", str(session_id))
+
     game_state = await persistence_service.get_latest_board_state(db, session_id, game_type)
     if not game_state:
         raise HTTPException(status_code=404, detail="No board state found for session")
 
     try:
-        result = engine.apply_move(game_state, request.move)
+        with tracer.start_as_current_span("game.ai.move") as ai_span:
+            ai_span.set_attribute("game.id", game_id)
+            t0 = time.monotonic()
+            result = engine.apply_move(game_state, request.move)
+            compute_ms = (time.monotonic() - t0) * 1000
+            ai_span.set_attribute("compute_duration_ms", compute_ms)
+            _ai_duration.record(compute_ms, {"game.id": game_id})
     except ValueError as exc:
+        span.set_attribute("error.type", type(exc).__name__)
+        span.set_attribute("error.message", str(exc))
         raise HTTPException(status_code=400, detail=str(exc))
 
     await persistence_service.record_move(
@@ -216,9 +237,9 @@ async def make_move(
     if result["game_over"] and result["winner"]:
         final_state = result["board_after_ai"] or result["board_after_player"]
         outcome = _winner_to_outcome(result["winner"], final_state)
-        await persistence_service.end_game_session(db, session_id, outcome)
+        await persistence_service.end_game_session(db, session_id, outcome, game_type)
     elif result["game_over"]:
-        await persistence_service.end_game_session(db, session_id, "draw")
+        await persistence_service.end_game_session(db, session_id, "draw", game_type)
 
     return {"session_id": str(session_id), **result}
 
@@ -241,6 +262,10 @@ async def ai_first_move(
         db, user["id"], game_type, request.difficulty
     )
 
+    span = trace.get_current_span()
+    span.set_attribute("game.id", game_id)
+    span.set_attribute("game.session_id", str(game_session.id))
+
     latest = await persistence_service.get_latest_board_state(db, game_session.id, game_type)
     if latest:
         game_state = latest
@@ -249,7 +274,13 @@ async def ai_first_move(
             difficulty=request.difficulty, player_starts=False
         )
 
-    result = connect4_game.apply_ai_first_move(game_state)
+    with tracer.start_as_current_span("game.ai.move") as ai_span:
+        ai_span.set_attribute("game.id", game_id)
+        t0 = time.monotonic()
+        result = connect4_game.apply_ai_first_move(game_state)
+        compute_ms = (time.monotonic() - t0) * 1000
+        ai_span.set_attribute("compute_duration_ms", compute_ms)
+        _ai_duration.record(compute_ms, {"game.id": game_id})
 
     await persistence_service.record_move(
         db,
@@ -273,10 +304,14 @@ async def end_game(
     if game_id not in GAME_ID_TO_TYPE:
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
 
+    game_type = GAME_ID_TO_TYPE[game_id]
+
     try:
         session_id = UUID(request.gameSessionId)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID format")
+
+    trace.get_current_span().set_attribute("game.id", game_id)
 
     game_session = await persistence_service.get_game_session_state(db, session_id)
     if not game_session:
@@ -284,7 +319,7 @@ async def end_game(
     if game_session.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
     if not game_session.game_ended:
-        await persistence_service.end_game_session(db, session_id, "abandoned")
+        await persistence_service.end_game_session(db, session_id, "abandoned", game_type)
 
     return {"success": True}
 

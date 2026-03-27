@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,9 @@ from db_models import GAME_TYPE_TO_MOVE_MODEL, GameSession
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+_sessions_started = meter.create_counter("game.sessions.started", description="Game sessions started")
+_sessions_completed = meter.create_counter("game.sessions.completed", description="Game sessions completed")
 
 _STALE_DAYS = 30
 
@@ -48,6 +51,7 @@ async def get_or_create_game_session(
         session.add(new_session)
         await session.commit()
         await session.refresh(new_session)
+        _sessions_started.add(1, {"game.type": game_type})
         return new_session
 
 
@@ -93,7 +97,7 @@ async def record_move(
 
 
 async def end_game_session(
-    session: AsyncSession, session_id: UUID, outcome: str
+    session: AsyncSession, session_id: UUID, outcome: str, game_type: str = ""
 ) -> None:
     with tracer.start_as_current_span("persistence.end_game_session") as span:
         span.set_attribute("game.session_id", str(session_id))
@@ -113,6 +117,10 @@ async def end_game_session(
             update(GameSession).where(GameSession.id == session_id).values(**values)
         )
         await session.commit()
+        attrs: dict = {"game.outcome": outcome}
+        if game_type:
+            attrs["game.type"] = game_type
+        _sessions_completed.add(1, attrs)
 
 
 async def get_game_session_state(
