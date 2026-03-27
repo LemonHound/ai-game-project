@@ -1,5 +1,7 @@
 # CI/CD Staging Environment Spec
 
+**Status: ready**
+
 ## Background
 
 Current pipeline: GitHub Actions CI (lint, unit, E2E tests against local docker-compose) → on merge to `main`,

@@ -1,5 +1,7 @@
 # Game: Dots and Boxes
 
+**Status: ready**
+
 ## Background
 
 Backend game logic is fully implemented in `src/backend/game_logic/dots_and_boxes.py`. REST API exists at

@@ -1,5 +1,7 @@
 # Site Presence Spec
 
+**Status: ready**
+
 ## Goal
 
 Make the site feel like a real product with a human story behind it. Users should be able to learn who built

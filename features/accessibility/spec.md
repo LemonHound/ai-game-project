@@ -1,5 +1,7 @@
 # Accessibility (a11y) Spec
 
+**Status: ready**
+
 ## Priority: Low
 
 This feature is low priority and may not be addressed for some time. It is documented here to avoid

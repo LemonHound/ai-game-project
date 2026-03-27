@@ -1,5 +1,7 @@
 # Game: Chess
 
+**Status: ready**
+
 ## Background
 
 Backend game logic is fully implemented in `src/backend/game_logic/chess.py`, including piece movement,

@@ -1,5 +1,7 @@
 # Game: Checkers
 
+**Status: ready**
+
 ## Background
 
 Backend game logic is fully implemented in `src/backend/game_logic/checkers.py`, including king promotion and

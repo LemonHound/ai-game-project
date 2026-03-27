@@ -1,5 +1,7 @@
 # Game Data Persistence Spec
 
+**Status: done**
+
 ## Background
 
 Game sessions are currently stored in-memory within each game module (e.g., `tic_tac_toe_game.sessions`).

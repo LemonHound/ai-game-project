@@ -1,5 +1,7 @@
 # OTel User Engagement Analytics Spec
 
+**Status: ready**
+
 ## Background
 
 The existing observability feature (`features/observability/`) established OTel infrastructure: FastAPI

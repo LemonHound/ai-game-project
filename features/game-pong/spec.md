@@ -1,5 +1,7 @@
 # Game: Pong
 
+**Status: blocked — depends on websocket**
+
 ## Background
 
 Unlike the other games, Pong has no backend implementation. The existing `src/frontend/public/js/pong.js` is
