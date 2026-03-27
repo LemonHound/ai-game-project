@@ -1,5 +1,7 @@
 # Game Statistics Spec
 
+**Status: ready** (best done after at least one game is implemented)
+
 ## Background
 
 The backend exposes `/api/game/{game_id}/stats` which currently returns hardcoded zeros for all fields

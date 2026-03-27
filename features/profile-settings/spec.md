@@ -1,5 +1,7 @@
 # Profile & Settings Spec
 
+**Status: ready** (profile stats section depends on game-statistics)
+
 ## Background
 
 Both pages exist as route-level stubs in the React frontend (`src/frontend/src/pages/ProfilePage.tsx` and

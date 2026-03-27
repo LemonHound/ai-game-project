@@ -1,5 +1,7 @@
 # Google OAuth Spec
 
+**Status: ready**
+
 ## Background
 
 **What is Jinja2?** It is a Python server-side HTML templating engine. The original version of this site used

@@ -1,5 +1,7 @@
 # Game: Connect 4
 
+**Status: ready**
+
 ## Background
 
 Backend game logic is fully implemented in `src/backend/game_logic/connect4.py`. REST API exists at

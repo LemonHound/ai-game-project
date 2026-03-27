@@ -1,5 +1,7 @@
 # React Migration Spec
 
+**Status: done**
+
 ## Goal
 Replace Jinja2 server-rendered templates + vanilla JS with a React 18 SPA.
 FastAPI becomes a pure JSON API. The compiled React build is served as static

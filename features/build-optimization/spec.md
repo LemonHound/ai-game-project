@@ -1,5 +1,7 @@
 # Build Optimization Spec
 
+**Status: ready**
+
 ## Background
 
 Every push to main triggers a full GCP Cloud Build run: Docker build (including `npm ci` and

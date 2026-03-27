@@ -1,5 +1,7 @@
 # WebSocket Feature Spec
 
+**Status: ready**
+
 ## Background
 
 Currently all game interactions (start, move, complete) use REST API calls. Real-time games like Pong require

@@ -1,5 +1,7 @@
 # Observability Spec (OpenTelemetry)
 
+**Status: done**
+
 ## Goal
 
 Capture two things:

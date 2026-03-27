@@ -1,5 +1,7 @@
 # Error Handling & Resilience Spec
 
+**Status: done**
+
 ## Background
 
 There is currently no consistent error handling strategy across the frontend or backend. API failures during

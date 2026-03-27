@@ -1,5 +1,7 @@
 # Game: Tic-Tac-Toe
 
+**Status: ready**
+
 ## Background
 
 Backend game logic is fully implemented in `src/backend/game_logic/tic_tac_toe.py`. REST API exists at
