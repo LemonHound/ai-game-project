@@ -8,7 +8,7 @@ from fastapi import APIRouter, Cookie, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from pydantic import BaseModel, EmailStr
 import secrets
 
@@ -16,6 +16,8 @@ from auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+_auth_logins = meter.create_counter("auth.logins", description="Successful authentication logins")
 
 router = APIRouter()
 auth_service = AuthService()
@@ -180,6 +182,7 @@ async def login(request: LoginRequest, response: Response):
         set_session_cookie(response, session_id, max_age=max_age)
         await auth_service.update_last_login(user["id"])
         span.set_attribute("auth.user_id", user["id"])
+        _auth_logins.add(1, {"auth.method": "local"})
 
         return {
             "message": "Login successful",
@@ -251,6 +254,7 @@ async def google_auth(request: GoogleAuthRequest, response: Response):
             set_session_cookie(response, session_id, max_age=30 * 24 * 60 * 60)
             await auth_service.update_last_login(user["id"])
             span.set_attribute("auth.user_id", user["id"])
+            _auth_logins.add(1, {"auth.method": "google"})
 
             return {
                 "message": "Login successful",
