@@ -16,6 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
 COPY --from=frontend-builder /app/dist/ ./dist/
+COPY alembic.ini ./
+COPY scripts/migrations/ ./scripts/migrations/
 
 WORKDIR /app/src/backend
 
