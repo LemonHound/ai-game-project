@@ -1,249 +1,182 @@
-import bcrypt
-from uuid import uuid4
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict
+from uuid import uuid4
 
-from database import get_db_connection, return_db_connection
+import bcrypt
+from sqlalchemy import text
+
+from db import get_session
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
 
-    async def create_google_user(self, email: str, google_id: str, display_name: str, profile_picture: str) -> Dict:
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO users (username, email, google_id, display_name, profile_picture,
-                                   auth_provider, email_verified)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+    async def create_google_user(
+        self, email: str, google_id: str, display_name: str, profile_picture: str
+    ) -> Dict:
+        async with get_session() as session:
+            result = await session.execute(
+                text("""
+                    INSERT INTO users
+                        (username, email, google_id, display_name, profile_picture,
+                         auth_provider, email_verified)
+                    VALUES
+                        (:username, :email, :google_id, :display_name, :profile_picture,
+                         'google', true)
                     RETURNING id, username, email, display_name, auth_provider, created_at
-                """,
-                (email.split('@')[0], email, google_id, display_name, profile_picture, 'google', True)
+                """),
+                {
+                    "username": email.split("@")[0],
+                    "email": email,
+                    "google_id": google_id,
+                    "display_name": display_name,
+                    "profile_picture": profile_picture,
+                },
             )
-            row = cursor.fetchone()
-            conn.commit()
-            cursor.close()
+            row = result.fetchone()
+            await session.commit()
             return {
-                'id': row[0],
-                'username': row[1],
-                'email': row[2],
-                'display_name': row[3],
-                'auth_provider': row[4],
-                'created_at': row[5],
-                'profile_picture': profile_picture,
+                "id": row.id,
+                "username": row.username,
+                "email": row.email,
+                "display_name": row.display_name,
+                "auth_provider": row.auth_provider,
+                "created_at": row.created_at,
+                "profile_picture": profile_picture,
             }
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
 
     async def hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt(12)
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
-        return password_hash.decode('utf-8')
+        return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
     async def verify_password(self, password: str, password_hash: str) -> bool:
-        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+        return bcrypt.checkpw(
+            password.encode("utf-8"), password_hash.encode("utf-8")
+        )
 
     async def create_session(self, user_id: int) -> str:
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
         session_id = str(uuid4())
         expires_at = datetime.now() + timedelta(days=7)
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO user_sessions (session_id, user_id, expires_at) VALUES (%s, %s, %s)",
-                (session_id, user_id, expires_at)
+        async with get_session() as session:
+            await session.execute(
+                text(
+                    "INSERT INTO user_sessions (session_id, user_id, expires_at)"
+                    " VALUES (:session_id, :user_id, :expires_at)"
+                ),
+                {
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "expires_at": expires_at,
+                },
             )
-            conn.commit()
-            cursor.close()
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
+            await session.commit()
         return session_id
 
     async def find_user_by_username(self, username: str) -> Optional[Dict]:
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, username, email, display_name, profile_picture,
-                       auth_provider, email_verified, password_hash, created_at, last_login
-                FROM users
-                WHERE username = %s
-                """,
-                (username,)
+        async with get_session() as session:
+            result = await session.execute(
+                text("""
+                    SELECT id, username, email, display_name, profile_picture,
+                           auth_provider, email_verified, password_hash,
+                           created_at, last_login
+                    FROM users WHERE username = :username
+                """),
+                {"username": username},
             )
-            row = cursor.fetchone()
-            cursor.close()
+            row = result.fetchone()
             if row:
-                return {
-                    'id': row[0],
-                    'username': row[1],
-                    'email': row[2],
-                    'display_name': row[3],
-                    'profile_picture': row[4],
-                    'auth_provider': row[5],
-                    'email_verified': row[6],
-                    'password_hash': row[7],
-                    'created_at': row[8],
-                    'last_login': row[9],
-                }
+                return dict(row._mapping)
             return None
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
 
     async def get_user_by_session(self, session_id: str) -> Optional[Dict]:
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT u.id, u.username, u.email, u.display_name, u.profile_picture,
-                       u.auth_provider, u.email_verified, u.last_login, u.password_hash
-                FROM users u
-                         JOIN user_sessions s ON u.id = s.user_id
-                WHERE s.session_id = %s AND s.expires_at > NOW()
-                """,
-                (session_id,)
+        async with get_session() as session:
+            result = await session.execute(
+                text("""
+                    SELECT u.id, u.username, u.email, u.display_name,
+                           u.profile_picture, u.auth_provider, u.email_verified,
+                           u.last_login, u.password_hash
+                    FROM users u
+                    JOIN user_sessions s ON u.id = s.user_id
+                    WHERE s.session_id = :session_id AND s.expires_at > NOW()
+                """),
+                {"session_id": session_id},
             )
-            row = cursor.fetchone()
-            cursor.close()
+            row = result.fetchone()
             if row:
-                return {
-                    'id': row[0],
-                    'username': row[1],
-                    'email': row[2],
-                    'display_name': row[3],
-                    'profile_picture': row[4],
-                    'auth_provider': row[5],
-                    'email_verified': row[6],
-                    'last_login': row[7],
-                    'password_hash': row[8],
-                }
+                return dict(row._mapping)
             return None
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
 
     async def find_user_by_email(self, email: str) -> Optional[Dict]:
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, username, email, display_name, profile_picture,
-                       auth_provider, email_verified, password_hash, created_at, last_login
-                FROM users WHERE email = %s
-                """,
-                (email,)
+        async with get_session() as session:
+            result = await session.execute(
+                text("""
+                    SELECT id, username, email, display_name, profile_picture,
+                           auth_provider, email_verified, password_hash,
+                           created_at, last_login
+                    FROM users WHERE email = :email
+                """),
+                {"email": email},
             )
-            row = cursor.fetchone()
-            cursor.close()
+            row = result.fetchone()
             if row:
-                return {
-                    'id': row[0],
-                    'username': row[1],
-                    'email': row[2],
-                    'display_name': row[3],
-                    'profile_picture': row[4],
-                    'auth_provider': row[5],
-                    'email_verified': row[6],
-                    'password_hash': row[7],
-                    'created_at': row[8],
-                    'last_login': row[9],
-                }
+                return dict(row._mapping)
             return None
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
 
-    async def create_user(self, username: str, email: str, password: str, display_name: str) -> Dict:
+    async def create_user(
+        self, username: str, email: str, password: str, display_name: str
+    ) -> Dict:
         password_hash = await self.hash_password(password)
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO users (username, email, password_hash, display_name, auth_provider, email_verified)
-                VALUES (%s, %s, %s, %s, %s, %s)
+        async with get_session() as session:
+            result = await session.execute(
+                text("""
+                    INSERT INTO users
+                        (username, email, password_hash, display_name,
+                         auth_provider, email_verified)
+                    VALUES
+                        (:username, :email, :password_hash, :display_name,
+                         'local', false)
                     RETURNING id, username, email, display_name, auth_provider, created_at
-                """,
-                (username, email, password_hash, display_name, 'local', False)
+                """),
+                {
+                    "username": username,
+                    "email": email,
+                    "password_hash": password_hash,
+                    "display_name": display_name,
+                },
             )
-            row = cursor.fetchone()
-            conn.commit()
-            cursor.close()
+            row = result.fetchone()
+            await session.commit()
             return {
-                'id': row[0],
-                'username': row[1],
-                'email': row[2],
-                'display_name': row[3],
-                'auth_provider': row[4],
-                'created_at': row[5],
+                "id": row.id,
+                "username": row.username,
+                "email": row.email,
+                "display_name": row.display_name,
+                "auth_provider": row.auth_provider,
+                "created_at": row.created_at,
             }
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
 
-    async def update_last_login(self, user_id: int):
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
-        try:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE users SET last_login = NOW() WHERE id = %s", (user_id,))
-            conn.commit()
-            cursor.close()
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
+    async def update_last_login(self, user_id: int) -> None:
+        async with get_session() as session:
+            await session.execute(
+                text("UPDATE users SET last_login = NOW() WHERE id = :user_id"),
+                {"user_id": user_id},
+            )
+            await session.commit()
 
-    async def delete_session(self, session_id: str):
-        conn = get_db_connection()
-        if not conn:
-            raise RuntimeError("Database connection unavailable")
-        try:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM user_sessions WHERE session_id = %s", (session_id,))
-            conn.commit()
-            cursor.close()
-        except Exception:
-            raise
-        finally:
-            return_db_connection(conn)
+    async def delete_session(self, session_id: str) -> None:
+        async with get_session() as session:
+            await session.execute(
+                text("DELETE FROM user_sessions WHERE session_id = :session_id"),
+                {"session_id": session_id},
+            )
+            await session.commit()
 
     async def check_database(self) -> str:
-        conn = get_db_connection()
-        if not conn:
-            return "No connection pool"
         try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1")
-            cursor.close()
+            async with get_session() as session:
+                await session.execute(text("SELECT 1"))
             return "Connected and working"
-        except Exception as e:
-            return f"Connected but error: {str(e)}"
-        finally:
-            return_db_connection(conn)
+        except Exception as exc:
+            return f"Error: {exc}"
