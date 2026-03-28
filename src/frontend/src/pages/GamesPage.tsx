@@ -82,11 +82,11 @@ const PLACEHOLDER_GAMES: Game[] = [
 ];
 
 export default function GamesPage() {
-    const { data: games = PLACEHOLDER_GAMES, isLoading } = useQuery({
+    const { data: apiGames, isLoading } = useQuery({
         queryKey: ['games'],
-        queryFn: fetchGames,
-        placeholderData: PLACEHOLDER_GAMES,
+        queryFn: () => fetchGames(),
     });
+    const games = apiGames?.length ? apiGames : PLACEHOLDER_GAMES;
 
     return (
         <div className='container mx-auto px-4 py-10'>
