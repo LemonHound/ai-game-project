@@ -28,7 +28,7 @@ class GameSession(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", nullable=False)
+    user_id: int
     game_type: str = Field(max_length=50)
     difficulty: str = Field(max_length=20, default="medium")
     game_ended: bool = Field(default=False)
