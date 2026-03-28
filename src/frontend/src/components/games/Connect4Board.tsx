@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 interface Connect4BoardProps {
-    board: (('player' | 'ai' | null)[][]);
+    board: ('player' | 'ai' | null)[][];
     playerStarts: boolean;
     currentTurn: 'player' | 'ai' | null;
     locked: boolean;
@@ -20,7 +20,7 @@ export default function Connect4Board({
     const playerColor = playerStarts ? 'red' : 'yellow';
     const aiColor = playerStarts ? 'yellow' : 'red';
 
-    const prevBoardRef = useRef<(('player' | 'ai' | null)[][]) | null>(null);
+    const prevBoardRef = useRef<('player' | 'ai' | null)[][] | null>(null);
     const newCellRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -106,9 +106,7 @@ export default function Connect4Board({
                                     <div
                                         className={[
                                             'w-full aspect-square rounded-full transition-all duration-200',
-                                            cell
-                                                ? discClass
-                                                : 'border-2 border-base-content/20',
+                                            cell ? discClass : 'border-2 border-base-content/20',
                                             winning ? 'animate-pulse' : '',
                                             dimmed ? 'opacity-40' : '',
                                             isNew && !winning ? 'scale-95' : '',

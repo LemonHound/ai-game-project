@@ -14,10 +14,16 @@ export interface ChessGameState {
     en_passant_target: [number, number] | null;
     captured_pieces: { player: string[]; ai: string[] };
     last_move: {
-        fromRow: number; fromCol: number; toRow: number; toCol: number;
-        piece: string; captured: string | null;
-        is_castling: boolean; is_en_passant: boolean;
-        promotion: string | null; notation: string;
+        fromRow: number;
+        fromCol: number;
+        toRow: number;
+        toCol: number;
+        piece: string;
+        captured: string | null;
+        is_castling: boolean;
+        is_en_passant: boolean;
+        promotion: string | null;
+        notation: string;
     } | null;
     in_check: boolean;
 }
@@ -77,7 +83,7 @@ export async function chessMove(
     fromCol: number,
     toRow: number,
     toCol: number,
-    promotionPiece?: string,
+    promotionPiece?: string
 ): Promise<void> {
     const response = await fetch('/api/game/chess/move', {
         method: 'POST',
@@ -98,7 +104,7 @@ export function chessSubscribeSSE(
         onMove: (data: ChessMoveData) => void;
         onError: (code: string, message: string) => void;
         onHeartbeat?: () => void;
-    },
+    }
 ): EventSource {
     const es = new EventSource(`/api/game/chess/events/${sessionId}`, {
         withCredentials: true,
@@ -127,12 +133,9 @@ export function chessSubscribeSSE(
     return es;
 }
 
-export async function chessLegalMoves(
-    fromRow: number,
-    fromCol: number,
-): Promise<{ toRow: number; toCol: number }[]> {
+export async function chessLegalMoves(fromRow: number, fromCol: number): Promise<{ toRow: number; toCol: number }[]> {
     const data = await request<{ moves: { toRow: number; toCol: number }[] }>(
-        `/api/game/chess/legal-moves?from_row=${fromRow}&from_col=${fromCol}`,
+        `/api/game/chess/legal-moves?from_row=${fromRow}&from_col=${fromCol}`
     );
     return data.moves;
 }

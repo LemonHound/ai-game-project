@@ -36,12 +36,7 @@ function clearHint() {
 
 type Phase = 'loading' | 'newgame' | 'resumeprompt' | 'playing' | 'terminal';
 
-function getValidDestinations(
-    board: string[],
-    pos: number,
-    pieceSymbol: string,
-    mustCapture: number | null
-): number[] {
+function getValidDestinations(board: string[], pos: number, pieceSymbol: string, mustCapture: number | null): number[] {
     const piece = board[pos];
     if (!piece || piece === '_') return [];
 
@@ -51,13 +46,23 @@ function getValidDestinations(
     const isKing = piece === 'r' || piece === 'b';
 
     const directions: [number, number][] = isKing
-        ? [[-1, -1], [-1, 1], [1, -1], [1, 1]]
+        ? [
+              [-1, -1],
+              [-1, 1],
+              [1, -1],
+              [1, 1],
+          ]
         : isRed
-          ? [[-1, -1], [-1, 1]]
-          : [[1, -1], [1, 1]];
+          ? [
+                [-1, -1],
+                [-1, 1],
+            ]
+          : [
+                [1, -1],
+                [1, 1],
+            ];
 
-    const isOpponent = (p: string) =>
-        isRed ? p === 'B' || p === 'b' : p === 'R' || p === 'r';
+    const isOpponent = (p: string) => (isRed ? p === 'B' || p === 'b' : p === 'R' || p === 'r');
 
     const destinations: number[] = [];
 
@@ -327,11 +332,7 @@ export default function CheckersPage() {
     const aiLabel = aiSymbol === 'R' ? 'Red' : 'Black';
 
     const playerResult: 'win' | 'loss' | 'draw' | null =
-        phase === 'terminal' && winner !== null
-            ? winner === 'player'
-                ? 'win'
-                : 'loss'
-            : null;
+        phase === 'terminal' && winner !== null ? (winner === 'player' ? 'win' : 'loss') : null;
 
     const aiResult: 'win' | 'loss' | 'draw' | null =
         playerResult === null ? null : playerResult === 'win' ? 'loss' : 'win';
@@ -388,12 +389,7 @@ export default function CheckersPage() {
                     validDestinations={validDestinations}
                     legalPieces={legalPieces}
                     mustCapture={mustCapture}
-                    locked={
-                        boardLocked ||
-                        phase === 'terminal' ||
-                        phase === 'newgame' ||
-                        phase === 'resumeprompt'
-                    }
+                    locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
                     flipped={flipped}
                     onPieceClick={handlePieceClick}
                     onSquareClick={handleSquareClick}

@@ -49,7 +49,9 @@ export default function ChessPage() {
 
     const [phase, setPhase] = useState<Phase>(getHint() ? 'loading' : 'newgame');
     const [board, setBoard] = useState<(string | null)[][]>(
-        Array(8).fill(null).map(() => Array(8).fill(null)),
+        Array(8)
+            .fill(null)
+            .map(() => Array(8).fill(null))
     );
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
     const [currentPlayer, setCurrentPlayer] = useState<'white' | 'black'>('white');
@@ -62,7 +64,9 @@ export default function ChessPage() {
     });
     const [selectedSquare, setSelectedSquare] = useState<[number, number] | null>(null);
     const [legalDestinations, setLegalDestinations] = useState<[number, number][]>([]);
-    const [lastMove, setLastMove] = useState<{ fromRow: number; fromCol: number; toRow: number; toCol: number } | null>(null);
+    const [lastMove, setLastMove] = useState<{ fromRow: number; fromCol: number; toRow: number; toCol: number } | null>(
+        null
+    );
     const [statusText, setStatusText] = useState<string>('');
     const [boardLocked, setBoardLocked] = useState(false);
     const [winner, setWinner] = useState<string | null>(null);
@@ -71,7 +75,10 @@ export default function ChessPage() {
     const [pendingResume, setPendingResume] = useState<{ sessionId: string; state: ChessGameState } | null>(null);
     const [showPromotionModal, setShowPromotionModal] = useState(false);
     const [pendingPromotion, setPendingPromotion] = useState<{
-        fromRow: number; fromCol: number; toRow: number; toCol: number;
+        fromRow: number;
+        fromCol: number;
+        toRow: number;
+        toCol: number;
     } | null>(null);
 
     const esRef = useRef<EventSource | null>(null);
@@ -137,7 +144,7 @@ export default function ChessPage() {
             });
             esRef.current = es;
         },
-        [closeSSE, applyStateFromData],
+        [closeSSE, applyStateFromData]
     );
 
     const loadSession = useCallback(async () => {
@@ -220,7 +227,11 @@ export default function ChessPage() {
         }
         clearHint();
         setPendingResume(null);
-        setBoard(Array(8).fill(null).map(() => Array(8).fill(null)));
+        setBoard(
+            Array(8)
+                .fill(null)
+                .map(() => Array(8).fill(null))
+        );
         setMoveHistory([]);
         setCapturedPieces({ player: [], ai: [] });
         setLastMove(null);
@@ -268,7 +279,7 @@ export default function ChessPage() {
         fromCol: number,
         toRow: number,
         toCol: number,
-        promotionPiece: string | null,
+        promotionPiece: string | null
     ) => {
         setSelectedSquare(null);
         setLegalDestinations([]);
@@ -331,7 +342,7 @@ export default function ChessPage() {
             pendingPromotion.fromCol,
             pendingPromotion.toRow,
             pendingPromotion.toCol,
-            promo,
+            promo
         );
     };
 
@@ -408,9 +419,7 @@ export default function ChessPage() {
             />
 
             {showInfo && capturedPieces.ai.length > 0 && (
-                <div className='text-lg leading-tight px-1 my-1 min-h-6'>
-                    {capturedPieces.ai.join(' ')}
-                </div>
+                <div className='text-lg leading-tight px-1 my-1 min-h-6'>{capturedPieces.ai.join(' ')}</div>
             )}
 
             <div className='relative my-4 flex justify-center'>
@@ -472,8 +481,7 @@ export default function ChessPage() {
                                             key={piece}
                                             className='btn btn-outline btn-square text-3xl w-14 h-14'
                                             title={label}
-                                            onClick={() => handlePromotion(piece)}
-                                        >
+                                            onClick={() => handlePromotion(piece)}>
                                             {playerColor === 'white' ? white : black}
                                         </button>
                                     ))}
@@ -485,9 +493,7 @@ export default function ChessPage() {
             </div>
 
             {showInfo && capturedPieces.player.length > 0 && (
-                <div className='text-lg leading-tight px-1 my-1 min-h-6'>
-                    {capturedPieces.player.join(' ')}
-                </div>
+                <div className='text-lg leading-tight px-1 my-1 min-h-6'>{capturedPieces.player.join(' ')}</div>
             )}
 
             {showInfo && inCheck && currentPlayer === playerColor && phase === 'playing' && (

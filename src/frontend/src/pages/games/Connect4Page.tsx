@@ -29,7 +29,7 @@ function clearHint() {
 
 type Phase = 'loading' | 'newgame' | 'resumeprompt' | 'playing' | 'terminal';
 
-function emptyBoard(): (('player' | 'ai' | null)[][]) {
+function emptyBoard(): ('player' | 'ai' | null)[][] {
     return Array.from({ length: 6 }, () => Array(7).fill(null));
 }
 
@@ -37,7 +37,7 @@ export default function Connect4Page() {
     const { user, isLoading: authLoading } = useAuth();
 
     const [phase, setPhase] = useState<Phase>(getHint() ? 'loading' : 'newgame');
-    const [board, setBoard] = useState<(('player' | 'ai' | null)[][])>(emptyBoard());
+    const [board, setBoard] = useState<('player' | 'ai' | null)[][]>(emptyBoard());
     const [winningCells, setWinningCells] = useState<[number, number][] | null>(null);
     const [winner, setWinner] = useState<'player' | 'ai' | 'draw' | null>(null);
     const [currentTurn, setCurrentTurn] = useState<'player' | 'ai'>('player');

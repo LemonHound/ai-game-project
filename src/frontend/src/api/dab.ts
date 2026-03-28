@@ -65,11 +65,7 @@ export async function dabNewGame(playerStarts: boolean): Promise<DaBNewGameRespo
     });
 }
 
-export async function dabMove(
-    type: 'horizontal' | 'vertical',
-    row: number,
-    col: number
-): Promise<void> {
+export async function dabMove(type: 'horizontal' | 'vertical', row: number, col: number): Promise<void> {
     const response = await fetch('/api/game/dots-and-boxes/move', {
         method: 'POST',
         credentials: 'include',

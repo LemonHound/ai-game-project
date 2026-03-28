@@ -3,13 +3,7 @@ import AuthModal from '../../components/AuthModal';
 import PlayerCard from '../../components/PlayerCard';
 import DotsAndBoxesBoard from '../../components/games/DotsAndBoxesBoard';
 import { useAuth } from '../../hooks/useAuth';
-import {
-    dabMove,
-    dabNewGame,
-    dabResume,
-    dabSubscribeSSE,
-    type DaBGameState,
-} from '../../api/dab';
+import { dabMove, dabNewGame, dabResume, dabSubscribeSSE, type DaBGameState } from '../../api/dab';
 
 const HINT_KEY = 'dab_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -70,10 +64,8 @@ export default function DotsAndBoxesPage() {
             const es = dabSubscribeSSE(sid, {
                 onStatus: msg => setStatusText(msg),
                 onMove: data => {
-                    if (data.horizontal_lines !== undefined)
-                        setHorizontalLines(data.horizontal_lines ?? {});
-                    if (data.vertical_lines !== undefined)
-                        setVerticalLines(data.vertical_lines ?? {});
+                    if (data.horizontal_lines !== undefined) setHorizontalLines(data.horizontal_lines ?? {});
+                    if (data.vertical_lines !== undefined) setVerticalLines(data.vertical_lines ?? {});
                     if (data.boxes !== undefined) setBoxes(data.boxes ?? {});
                     if (data.player_score !== undefined) setPlayerScore(data.player_score ?? 0);
                     if (data.ai_score !== undefined) setAiScore(data.ai_score ?? 0);
@@ -203,11 +195,7 @@ export default function DotsAndBoxesPage() {
         }
     };
 
-    const handleLineClick = async (
-        type: 'horizontal' | 'vertical',
-        row: number,
-        col: number
-    ) => {
+    const handleLineClick = async (type: 'horizontal' | 'vertical', row: number, col: number) => {
         if (boardLocked || currentTurn !== 'player') return;
         const key = `${row},${col}`;
         if (type === 'horizontal' && horizontalLines[key]) return;
@@ -247,13 +235,7 @@ export default function DotsAndBoxesPage() {
             : null;
 
     const aiResult: 'win' | 'loss' | 'draw' | null =
-        playerResult === null
-            ? null
-            : playerResult === 'draw'
-              ? 'draw'
-              : playerResult === 'win'
-                ? 'loss'
-                : 'win';
+        playerResult === null ? null : playerResult === 'draw' ? 'draw' : playerResult === 'win' ? 'loss' : 'win';
 
     if (authLoading) {
         return (
@@ -271,20 +253,14 @@ export default function DotsAndBoxesPage() {
                     <div className='card bg-base-200 w-full max-w-sm'>
                         <div className='card-body text-center'>
                             <p className='mb-4'>Sign in to play.</p>
-                            <button
-                                className='btn btn-primary'
-                                onClick={() => setShowAuthModal(true)}>
+                            <button className='btn btn-primary' onClick={() => setShowAuthModal(true)}>
                                 Sign In
                             </button>
                         </div>
                     </div>
                 </div>
                 {showAuthModal && (
-                    <AuthModal
-                        open={showAuthModal}
-                        initialTab='login'
-                        onClose={() => setShowAuthModal(false)}
-                    />
+                    <AuthModal open={showAuthModal} initialTab='login' onClose={() => setShowAuthModal(false)} />
                 )}
             </div>
         );
@@ -309,12 +285,7 @@ export default function DotsAndBoxesPage() {
                     verticalLines={verticalLines}
                     boxes={boxes}
                     currentTurn={currentTurn}
-                    locked={
-                        boardLocked ||
-                        phase === 'terminal' ||
-                        phase === 'newgame' ||
-                        phase === 'resumeprompt'
-                    }
+                    locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
                     onLineClick={handleLineClick}
                 />
 
@@ -342,14 +313,10 @@ export default function DotsAndBoxesPage() {
                     <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
                         <p className='text-sm text-base-content/70'>Choose your turn:</p>
                         <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button
-                                className='btn btn-primary btn-wide'
-                                onClick={() => handleStartGame(true)}>
+                            <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
                                 Go First
                             </button>
-                            <button
-                                className='btn btn-secondary btn-wide'
-                                onClick={() => handleStartGame(false)}>
+                            <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
                                 Go Second
                             </button>
                         </div>

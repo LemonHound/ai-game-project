@@ -56,15 +56,7 @@ export default function DotsAndBoxesBoard({
     const dots: React.ReactNode[] = [];
     for (let r = 0; r <= gridSize; r++) {
         for (let c = 0; c <= gridSize; c++) {
-            dots.push(
-                <circle
-                    key={`dot-${r}-${c}`}
-                    cx={cx(c)}
-                    cy={cy(r)}
-                    r={DOT_RADIUS}
-                    fill='#9CA3AF'
-                />
-            );
+            dots.push(<circle key={`dot-${r}-${c}`} cx={cx(c)} cy={cy(r)} r={DOT_RADIUS} fill='#9CA3AF' />);
         }
     }
 

@@ -1,7 +1,7 @@
 import { GameApiError } from './games';
 
 export interface C4GameState {
-    board: (('player' | 'ai' | null)[][]);
+    board: ('player' | 'ai' | null)[][];
     current_turn: 'player' | 'ai' | null;
     game_active: boolean;
     player_starts: boolean;

@@ -16,16 +16,11 @@ function PieceDisplay({ code }: { code: string }) {
     const isRed = code === 'R' || code === 'r';
     const isKing = code === 'r' || code === 'b';
 
-    const baseClass = isRed
-        ? 'bg-red-500 border-red-700'
-        : 'bg-neutral-800 border-neutral-600';
+    const baseClass = isRed ? 'bg-red-500 border-red-700' : 'bg-neutral-800 border-neutral-600';
 
     return (
-        <div
-            className={`w-3/4 h-3/4 rounded-full border-2 flex items-center justify-center ${baseClass}`}>
-            {isKing && (
-                <div className='w-1/2 h-1/2 rounded-full bg-white/40 border border-white/60' />
-            )}
+        <div className={`w-3/4 h-3/4 rounded-full border-2 flex items-center justify-center ${baseClass}`}>
+            {isKing && <div className='w-1/2 h-1/2 rounded-full bg-white/40 border border-white/60' />}
         </div>
     );
 }
@@ -43,9 +38,7 @@ export default function CheckersBoard({
     onPieceClick,
     onSquareClick,
 }: CheckersBoardProps) {
-    const rows = flipped
-        ? [7, 6, 5, 4, 3, 2, 1, 0]
-        : [0, 1, 2, 3, 4, 5, 6, 7];
+    const rows = flipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
 
     return (
         <div
@@ -68,11 +61,7 @@ export default function CheckersBoard({
                         hasPiece &&
                         (mustCapture !== null ? pos === mustCapture : isLegalPiece);
 
-                    const isDestinationInteractive =
-                        !locked &&
-                        currentTurn === 'player' &&
-                        !hasPiece &&
-                        isDestination;
+                    const isDestinationInteractive = !locked && currentTurn === 'player' && !hasPiece && isDestination;
 
                     let squareBg = isLight ? 'bg-amber-100' : 'bg-amber-800';
                     if (!isLight && isSelected) squareBg = 'bg-yellow-500';

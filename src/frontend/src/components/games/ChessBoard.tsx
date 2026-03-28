@@ -12,8 +12,18 @@ interface ChessBoardProps {
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
-    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟',
+    K: '♔',
+    Q: '♕',
+    R: '♖',
+    B: '♗',
+    N: '♘',
+    P: '♙',
+    k: '♚',
+    q: '♛',
+    r: '♜',
+    b: '♝',
+    n: '♞',
+    p: '♟',
 };
 
 export default function ChessBoard({
@@ -34,13 +44,11 @@ export default function ChessBoard({
     const isSelected = (r: number, c: number) =>
         selectedSquare !== null && selectedSquare[0] === r && selectedSquare[1] === c;
 
-    const isLegalDest = (r: number, c: number) =>
-        legalDestinations.some(([lr, lc]) => lr === r && lc === c);
+    const isLegalDest = (r: number, c: number) => legalDestinations.some(([lr, lc]) => lr === r && lc === c);
 
     const isLastMove = (r: number, c: number) =>
         lastMove !== null &&
-        ((lastMove.fromRow === r && lastMove.fromCol === c) ||
-            (lastMove.toRow === r && lastMove.toCol === c));
+        ((lastMove.fromRow === r && lastMove.fromCol === c) || (lastMove.toRow === r && lastMove.toCol === c));
 
     const isKingInCheck = (r: number, c: number) => {
         if (!inCheck || !kingInCheckColor || !kingPositions) return false;
@@ -69,8 +77,7 @@ export default function ChessBoard({
                             <div
                                 key={c}
                                 className={`relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 cursor-pointer select-none ${getSquareBg(r, c)} ${!locked ? 'hover:opacity-90' : ''}`}
-                                onClick={() => !locked && onSquareClick(r, c)}
-                            >
+                                onClick={() => !locked && onSquareClick(r, c)}>
                                 {isLegalDest(r, c) && (
                                     <div
                                         className={`absolute rounded-full z-10 ${piece ? 'inset-0 border-4 border-black/30' : 'w-3 h-3 bg-black/30'}`}
@@ -78,8 +85,7 @@ export default function ChessBoard({
                                 )}
                                 {symbol && (
                                     <span
-                                        className={`text-3xl sm:text-4xl leading-none z-20 drop-shadow ${isWhitePiece ? 'text-white [text-shadow:0_0_2px_#000,0_0_2px_#000]' : 'text-gray-900 [text-shadow:0_0_1px_#fff]'}`}
-                                    >
+                                        className={`text-3xl sm:text-4xl leading-none z-20 drop-shadow ${isWhitePiece ? 'text-white [text-shadow:0_0_2px_#000,0_0_2px_#000]' : 'text-gray-900 [text-shadow:0_0_1px_#fff]'}`}>
                                         {symbol}
                                     </span>
                                 )}
