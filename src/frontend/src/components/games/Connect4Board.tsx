@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Connect4BoardProps {
     board: ('player' | 'ai' | null)[][];
@@ -22,6 +22,7 @@ export default function Connect4Board({
 
     const prevBoardRef = useRef<('player' | 'ai' | null)[][] | null>(null);
     const newCellRef = useRef<string | null>(null);
+    const [hoveredCol, setHoveredCol] = useState<number | null>(null);
 
     useEffect(() => {
         if (!prevBoardRef.current) {
@@ -44,9 +45,20 @@ export default function Connect4Board({
         return board[0][col] !== null;
     }
 
+    function getLandingRow(col: number): number {
+        for (let r = 5; r >= 0; r--) {
+            if (board[r][col] === null) return r;
+        }
+        return -1;
+    }
+
     function getPlayerDiscClass(owner: 'player' | 'ai'): string {
         const color = owner === 'player' ? playerColor : aiColor;
         return color === 'red' ? 'bg-red-500' : 'bg-yellow-400';
+    }
+
+    function getPreviewClass(): string {
+        return playerColor === 'red' ? 'bg-red-400/50' : 'bg-yellow-300/50';
     }
 
     function isWinningCell(row: number, col: number): boolean {
@@ -58,8 +70,15 @@ export default function Connect4Board({
         return winningCells !== null && winningCells.length > 0;
     }
 
+    const landingRow = hoveredCol !== null && isInteractive && !isColumnFull(hoveredCol)
+        ? getLandingRow(hoveredCol)
+        : -1;
+
     return (
-        <div className='w-full max-w-sm mx-auto select-none' aria-label='Connect 4 board'>
+        <div
+            className='w-full max-w-sm mx-auto select-none'
+            aria-label='Connect 4 board'
+            onMouseLeave={() => setHoveredCol(null)}>
             <div className='grid grid-cols-7 mb-1'>
                 {Array.from({ length: 7 }, (_, col) => {
                     const full = isColumnFull(col);
@@ -70,6 +89,7 @@ export default function Connect4Board({
                             aria-label={`Column ${col + 1}${full ? ', full' : ''}`}
                             disabled={!clickable}
                             onClick={() => clickable && onColumnClick(col)}
+                            onMouseEnter={() => setHoveredCol(col)}
                             className={[
                                 'h-6 flex items-center justify-center text-xs',
                                 clickable
@@ -93,6 +113,9 @@ export default function Connect4Board({
                             const winning = isWinningCell(rowIdx, colIdx);
                             const dimmed = hasAnyWinner() && !winning && cell !== null;
                             const isNew = newCellRef.current === `${rowIdx}-${colIdx}`;
+                            const isPreview = cell === null && rowIdx === landingRow && colIdx === hoveredCol;
+                            const full = isColumnFull(colIdx);
+                            const cellClickable = isInteractive && !full;
 
                             let discClass = '';
                             if (cell) {
@@ -102,11 +125,14 @@ export default function Connect4Board({
                             return (
                                 <div
                                     key={`${rowIdx}-${colIdx}`}
-                                    className='aspect-square rounded-full bg-blue-900 flex items-center justify-center p-0.5'>
+                                    className='aspect-square rounded-full bg-blue-900 flex items-center justify-center p-0.5'
+                                    style={{ cursor: cellClickable ? 'pointer' : 'default' }}
+                                    onMouseEnter={() => setHoveredCol(colIdx)}
+                                    onClick={() => cellClickable && onColumnClick(colIdx)}>
                                     <div
                                         className={[
                                             'w-full aspect-square rounded-full transition-all duration-200',
-                                            cell ? discClass : 'border-2 border-base-content/20',
+                                            cell ? discClass : isPreview ? getPreviewClass() : 'border-2 border-base-content/20',
                                             winning ? 'animate-pulse' : '',
                                             dimmed ? 'opacity-40' : '',
                                             isNew && !winning ? 'scale-95' : '',

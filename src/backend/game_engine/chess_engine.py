@@ -136,6 +136,8 @@ class ChessEngine(GameEngine):
 
         in_check = chess_game._is_in_check(gs, gs["current_player"])
 
+        notation = self._make_san(move, piece, state, gs, captured_piece, is_ep)
+
         last_move = {
             "fromRow": from_row,
             "fromCol": from_col,
@@ -146,19 +148,122 @@ class ChessEngine(GameEngine):
             "is_castling": piece.lower() == "k" and abs(to_col - from_col) == 2 if piece else False,
             "is_en_passant": is_ep,
             "promotion": promotion,
-            "notation": self._make_notation(move, piece),
+            "notation": notation,
         }
 
         gs["last_move"] = last_move
         gs["in_check"] = in_check
+        gs["fen"] = self._to_fen(gs)
         return gs
 
-    def _make_notation(self, move: dict, piece: Optional[str]) -> str:
-        fc = _COLS[move["fromCol"]]
-        fr = 8 - move["fromRow"]
-        tc = _COLS[move["toCol"]]
-        tr = 8 - move["toRow"]
-        return f"{fc}{fr}-{tc}{tr}"
+    def _make_san(
+        self,
+        move: dict,
+        piece: Optional[str],
+        pre_state: dict,
+        post_state: dict,
+        captured_piece: Optional[str],
+        is_ep: bool,
+    ) -> str:
+        if not piece:
+            return "?"
+        from_col = move["fromCol"]
+        to_row = move["toRow"]
+        to_col = move["toCol"]
+        promotion = move.get("promotionPiece")
+        tc = _COLS[to_col]
+        tr = 8 - to_row
+
+        # Castling
+        if piece.lower() == "k" and abs(to_col - from_col) == 2:
+            notation = "O-O" if to_col > from_col else "O-O-O"
+        elif piece.lower() == "p":
+            is_capture = captured_piece is not None or is_ep
+            if is_capture:
+                notation = f"{_COLS[from_col]}x{tc}{tr}"
+            else:
+                notation = f"{tc}{tr}"
+            if promotion:
+                notation += f"={promotion.upper()}"
+        else:
+            piece_char = piece.upper()
+            disambig = self._get_disambiguation(pre_state, piece, move["fromRow"], from_col, to_row, to_col)
+            is_capture = captured_piece is not None
+            if is_capture:
+                notation = f"{piece_char}{disambig}x{tc}{tr}"
+            else:
+                notation = f"{piece_char}{disambig}{tc}{tr}"
+
+        # Check / checkmate suffix
+        next_color = post_state.get("current_player")
+        if next_color and chess_game._is_in_check(post_state, next_color):
+            terminal, _ = self.is_terminal(post_state)
+            notation += "#" if terminal else "+"
+
+        return notation
+
+    def _get_disambiguation(
+        self, pre_state: dict, piece: str, from_row: int, from_col: int, to_row: int, to_col: int
+    ) -> str:
+        board = pre_state["board"]
+        ambiguous: list[tuple[int, int]] = []
+        for r in range(8):
+            for c in range(8):
+                if r == from_row and c == from_col:
+                    continue
+                if board[r][c] != piece:
+                    continue
+                valid = chess_game._get_valid_moves(pre_state, r, c)
+                if [to_row, to_col] in valid:
+                    ambiguous.append((r, c))
+        if not ambiguous:
+            return ""
+        files_distinct = all(c != from_col for _, c in ambiguous)
+        if files_distinct:
+            return _COLS[from_col]
+        ranks_distinct = all(r != from_row for r, _ in ambiguous)
+        if ranks_distinct:
+            return str(8 - from_row)
+        return f"{_COLS[from_col]}{8 - from_row}"
+
+    def _to_fen(self, state: dict) -> str:
+        board = state["board"]
+        rows = []
+        for row in board:
+            empty = 0
+            row_str = ""
+            for cell in row:
+                if cell is None:
+                    empty += 1
+                else:
+                    if empty:
+                        row_str += str(empty)
+                        empty = 0
+                    row_str += cell
+            if empty:
+                row_str += str(empty)
+            rows.append(row_str)
+        pieces = "/".join(rows)
+
+        turn = "w" if state.get("current_player") == "white" else "b"
+
+        cr = state.get("castling_rights", {})
+        castling = ""
+        if cr.get("white", {}).get("kingside"):
+            castling += "K"
+        if cr.get("white", {}).get("queenside"):
+            castling += "Q"
+        if cr.get("black", {}).get("kingside"):
+            castling += "k"
+        if cr.get("black", {}).get("queenside"):
+            castling += "q"
+        if not castling:
+            castling = "-"
+
+        ep = state.get("en_passant_target")
+        ep_str = f"{_COLS[ep[1]]}{8 - ep[0]}" if ep else "-"
+
+        return f"{pieces} {turn} {castling} {ep_str} 0 1"
 
     def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
         state_copy = copy.deepcopy(state)

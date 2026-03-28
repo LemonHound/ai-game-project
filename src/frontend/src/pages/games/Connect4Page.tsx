@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
+import GameStartOverlay from '../../components/games/GameStartOverlay';
 import PlayerCard from '../../components/PlayerCard';
 import Connect4Board from '../../components/games/Connect4Board';
 import { useAuth } from '../../hooks/useAuth';
@@ -187,6 +188,19 @@ export default function Connect4Page() {
     const handleColumnClick = async (col: number) => {
         if (boardLocked || currentTurn !== 'player' || board[0][col] !== null) return;
 
+        let landingRow = -1;
+        for (let r = 5; r >= 0; r--) {
+            if (board[r][col] === null) {
+                landingRow = r;
+                break;
+            }
+        }
+        if (landingRow === -1) return;
+
+        const newBoard = board.map(r => [...r]);
+        newBoard[landingRow][col] = 'player';
+        setBoard(newBoard);
+        setCurrentTurn('ai');
         setBoardLocked(true);
         setStatusText('');
 
@@ -197,6 +211,8 @@ export default function Connect4Page() {
             if (status === 401) {
                 setShowAuthModal(true);
             } else {
+                setBoard(board);
+                setCurrentTurn('player');
                 setBoardLocked(false);
             }
         }
@@ -286,30 +302,34 @@ export default function Connect4Page() {
                     </div>
                 )}
 
-                {phase === 'resumeprompt' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70 font-medium'>Game in progress</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={handleResume}>
-                                Continue Game
-                            </button>
-                            <button className='btn btn-neutral btn-wide' onClick={handleNewGame}>
-                                New Game
-                            </button>
-                        </div>
-                    </div>
+                {(phase === 'newgame' || phase === 'resumeprompt') && (
+                    <GameStartOverlay
+                        canResume={phase === 'resumeprompt'}
+                        onResume={handleResume}
+                        optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                        optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
+                    />
                 )}
 
-                {phase === 'newgame' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70'>Choose your side:</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
-                                Play as Red — Go First
-                            </button>
-                            <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
-                                Play as Yellow — Go Second
-                            </button>
+                {phase === 'terminal' && (
+                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-base-100/85 backdrop-blur-sm'>
+                        <p className='text-2xl font-bold'>
+                            {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
+                        </p>
+                        <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
+                            <div className='flex items-center gap-2 w-full'>
+                                <div className='flex-1 h-px bg-base-content/20' />
+                                <span className='text-xs text-base-content/50 uppercase tracking-wider'>Play Again</span>
+                                <div className='flex-1 h-px bg-base-content/20' />
+                            </div>
+                            <div className='flex gap-2 w-full'>
+                                <button className='btn btn-primary flex-1' onClick={() => handleStartGame(true)}>
+                                    Play as Red
+                                </button>
+                                <button className='btn btn-secondary flex-1' onClick={() => handleStartGame(false)}>
+                                    Play as Yellow
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -322,7 +342,7 @@ export default function Connect4Page() {
                 result={playerResult}
             />
 
-            {(phase === 'playing' || phase === 'terminal') && (
+            {phase === 'playing' && (
                 <div className='flex justify-center mt-4'>
                     <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
                         New Game
