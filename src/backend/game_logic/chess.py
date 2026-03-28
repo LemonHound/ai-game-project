@@ -339,6 +339,24 @@ class ChessGame:
         board = game_state["board"]
         piece = board[from_row][from_col]
         original = board[to_row][to_col]
+
+        ep_captured_row = None
+        ep_captured_piece = None
+        ep = game_state.get("en_passant_target")
+        if (
+            piece
+            and piece.lower() == "p"
+            and from_col != to_col
+            and ep
+            and to_row == ep[0]
+            and to_col == ep[1]
+            and not board[to_row][to_col]
+        ):
+            is_white_ep = self._is_white_piece(piece)
+            ep_captured_row = to_row + 1 if is_white_ep else to_row - 1
+            ep_captured_piece = board[ep_captured_row][to_col]
+            board[ep_captured_row][to_col] = None
+
         board[to_row][to_col] = piece
         board[from_row][from_col] = None
         is_white = self._is_white_piece(piece)
@@ -350,6 +368,8 @@ class ChessGame:
         in_check = self._is_in_check(game_state, color)
         board[from_row][from_col] = piece
         board[to_row][to_col] = original
+        if ep_captured_row is not None:
+            board[ep_captured_row][to_col] = ep_captured_piece
         if original_king_pos:
             game_state["king_positions"][color] = original_king_pos
         return in_check
