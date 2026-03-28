@@ -112,9 +112,7 @@ export default function GamesPage() {
                                     <div className='card-actions mt-2'>
                                         <div className='badge badge-outline'>{game.difficulty}</div>
                                         <div className='badge badge-outline'>{game.players}</div>
-                                        {isComingSoon && (
-                                            <div className='badge badge-neutral'>Coming Soon</div>
-                                        )}
+                                        {isComingSoon && <div className='badge badge-neutral'>Coming Soon</div>}
                                     </div>
                                 </div>
                             </Link>
