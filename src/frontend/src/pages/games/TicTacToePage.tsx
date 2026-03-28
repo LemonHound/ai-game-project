@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
+import PlayerCard from '../../components/PlayerCard';
 import TicTacToeBoard from '../../components/games/TicTacToeBoard';
 import { useAuth } from '../../hooks/useAuth';
 import { tttMove, tttNewGame, tttResume, tttSubscribeSSE, type TttGameState } from '../../api/ttt';
@@ -26,10 +27,10 @@ function clearHint() {
     localStorage.removeItem(HINT_KEY);
 }
 
-type Phase = 'loading' | 'newgame' | 'playing' | 'terminal';
+type Phase = 'loading' | 'newgame' | 'resumeprompt' | 'playing' | 'terminal';
 
 export default function TicTacToePage() {
-    const { user, loading: authLoading } = useAuth();
+    const { user, isLoading: authLoading } = useAuth();
 
     const [phase, setPhase] = useState<Phase>(getHint() ? 'loading' : 'newgame');
     const [board, setBoard] = useState<(string | null)[]>(Array(9).fill(null));
@@ -41,6 +42,7 @@ export default function TicTacToePage() {
     const [playerSymbol, setPlayerSymbol] = useState<string>('X');
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [pendingResume, setPendingResume] = useState<{ sessionId: string; state: TttGameState } | null>(null);
 
     const esRef = useRef<EventSource | null>(null);
 
@@ -91,7 +93,6 @@ export default function TicTacToePage() {
         try {
             const { session_id, state } = await tttResume();
             if (session_id && state) {
-                setSessionId(session_id);
                 setBoard(state.board);
                 setCurrentTurn(state.current_turn);
                 setWinningPositions(state.winning_positions);
@@ -99,12 +100,13 @@ export default function TicTacToePage() {
                 setPlayerSymbol(state.player_symbol);
                 setHint();
                 if (state.status === 'complete') {
-                    setPhase('terminal');
+                    setSessionId(session_id);
                     setBoardLocked(true);
+                    setPhase('terminal');
                 } else {
-                    setPhase('playing');
-                    setBoardLocked(state.current_turn === 'ai');
-                    subscribeSSE(session_id);
+                    setPendingResume({ sessionId: session_id, state });
+                    setBoardLocked(true);
+                    setPhase('resumeprompt');
                 }
             } else {
                 clearHint();
@@ -119,7 +121,7 @@ export default function TicTacToePage() {
                 setPhase('newgame');
             }
         }
-    }, [user, subscribeSSE]);
+    }, [user]);
 
     useEffect(() => {
         if (authLoading) return;
@@ -140,28 +142,41 @@ export default function TicTacToePage() {
         return () => closeSSE();
     }, [closeSSE]);
 
+    const handleResume = () => {
+        if (!pendingResume) return;
+        setSessionId(pendingResume.sessionId);
+        setBoardLocked(pendingResume.state.current_turn === 'ai');
+        setPhase('playing');
+        subscribeSSE(pendingResume.sessionId);
+        setPendingResume(null);
+    };
+
     const handleStartGame = async (goFirst: boolean) => {
         if (!user) {
             setShowAuthModal(true);
             return;
         }
         clearHint();
+        setPendingResume(null);
+        setBoard(Array(9).fill(null));
+        setWinningPositions(null);
+        setWinner(null);
+        setStatusText('');
+        setBoardLocked(true);
+        setPhase('playing');
         try {
             const { session_id, state } = await tttNewGame(goFirst);
             setSessionId(session_id);
             setBoard(state.board);
             setCurrentTurn(state.current_turn);
-            setWinningPositions(null);
-            setWinner(null);
             setPlayerSymbol(state.player_symbol);
             setBoardLocked(state.current_turn === 'ai');
-            setStatusText('');
-            setPhase('playing');
             setHint();
             subscribeSSE(session_id);
         } catch (err: unknown) {
             const status = (err as { status?: number }).status;
             if (status === 401) setShowAuthModal(true);
+            setPhase('newgame');
         }
     };
 
@@ -191,14 +206,27 @@ export default function TicTacToePage() {
         closeSSE();
         clearHint();
         setSessionId(null);
-        setBoard(Array(9).fill(null));
-        setWinningPositions(null);
+        setPendingResume(null);
         setWinner(null);
-        setCurrentTurn('player');
         setStatusText('');
-        setBoardLocked(false);
+        setBoardLocked(true);
         setPhase('newgame');
     };
+
+    const aiSymbol = playerSymbol === 'X' ? 'O' : 'X';
+    const showSymbols = phase === 'resumeprompt' || phase === 'playing' || phase === 'terminal';
+
+    const playerResult: 'win' | 'loss' | 'draw' | null =
+        phase === 'terminal' && winner !== null
+            ? winner === 'draw'
+                ? 'draw'
+                : winner === playerSymbol
+                  ? 'win'
+                  : 'loss'
+            : null;
+
+    const aiResult: 'win' | 'loss' | 'draw' | null =
+        playerResult === null ? null : playerResult === 'draw' ? 'draw' : playerResult === 'win' ? 'loss' : 'win';
 
     if (authLoading) {
         return (
@@ -211,16 +239,20 @@ export default function TicTacToePage() {
     if (!user) {
         return (
             <div className='container mx-auto px-4 py-10'>
-                <h1 className='mb-6 text-4xl font-bold'>Tic-Tac-Toe</h1>
-                <div className='card bg-base-200 max-w-sm'>
-                    <div className='card-body text-center'>
-                        <p className='mb-4'>Sign in to play.</p>
-                        <button className='btn btn-primary' onClick={() => setShowAuthModal(true)}>
-                            Sign In
-                        </button>
+                <h1 className='mb-6 text-4xl font-bold text-center'>Tic-Tac-Toe</h1>
+                <div className='flex justify-center'>
+                    <div className='card bg-base-200 w-full max-w-sm'>
+                        <div className='card-body text-center'>
+                            <p className='mb-4'>Sign in to play.</p>
+                            <button className='btn btn-primary' onClick={() => setShowAuthModal(true)}>
+                                Sign In
+                            </button>
+                        </div>
                     </div>
                 </div>
-                {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+                {showAuthModal && (
+                    <AuthModal open={showAuthModal} initialTab='login' onClose={() => setShowAuthModal(false)} />
+                )}
             </div>
         );
     }
@@ -229,54 +261,66 @@ export default function TicTacToePage() {
         <div className='container mx-auto px-4 py-6 max-w-lg'>
             <h1 className='mb-4 text-4xl font-bold text-center'>Tic-Tac-Toe</h1>
 
-            {phase === 'loading' && (
-                <div className='flex justify-center py-20'>
-                    <span className='loading loading-spinner loading-lg' />
-                </div>
-            )}
+            <PlayerCard
+                name='AI Opponent'
+                isAi
+                symbol={showSymbols ? aiSymbol : undefined}
+                statusText={phase === 'playing' ? statusText : undefined}
+                result={aiResult}
+            />
 
-            {phase === 'newgame' && (
-                <div className='flex flex-col items-center gap-4 py-10'>
-                    <p className='text-base-content/70'>Choose your side:</p>
-                    <div className='flex flex-col gap-3 w-full max-w-xs'>
-                        <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
-                            Play as X — Go First
-                        </button>
-                        <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
-                            Play as O — Go Second
-                        </button>
+            <div className='relative my-4'>
+                <TicTacToeBoard
+                    board={board}
+                    winningPositions={winningPositions}
+                    locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
+                    onCellClick={handleCellClick}
+                />
+
+                {phase === 'loading' && (
+                    <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
+                        <span className='loading loading-spinner loading-lg' />
                     </div>
-                </div>
-            )}
+                )}
+
+                {phase === 'resumeprompt' && (
+                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
+                        <p className='text-sm text-base-content/70 font-medium'>Game in progress</p>
+                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
+                            <button className='btn btn-primary btn-wide' onClick={handleResume}>
+                                Continue Game
+                            </button>
+                            <button className='btn btn-neutral btn-wide' onClick={handleNewGame}>
+                                New Game
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {phase === 'newgame' && (
+                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
+                        <p className='text-sm text-base-content/70'>Choose your side:</p>
+                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
+                            <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
+                                Play as X — Go First
+                            </button>
+                            <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
+                                Play as O — Go Second
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <PlayerCard
+                name={user.displayName || user.username}
+                avatarUrl={user.profilePicture}
+                symbol={showSymbols ? playerSymbol : undefined}
+                result={playerResult}
+            />
 
             {(phase === 'playing' || phase === 'terminal') && (
-                <div className='flex flex-col items-center gap-4'>
-                    <TicTacToeBoard
-                        board={board}
-                        winningPositions={winningPositions}
-                        locked={boardLocked || phase === 'terminal'}
-                        onCellClick={handleCellClick}
-                    />
-
-                    <div className='min-h-8 text-center'>
-                        {phase === 'terminal' ? (
-                            <div className='alert max-w-xs'>
-                                <span>
-                                    {winner === 'draw'
-                                        ? "It's a draw!"
-                                        : winner === playerSymbol
-                                          ? 'You win!'
-                                          : 'AI wins!'}
-                                </span>
-                            </div>
-                        ) : statusText ? (
-                            <div className='flex items-center gap-2 text-base-content/70'>
-                                <span className='loading loading-dots loading-sm' />
-                                <span>{statusText}</span>
-                            </div>
-                        ) : null}
-                    </div>
-
+                <div className='flex justify-center mt-4'>
                     <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
                         New Game
                     </button>
@@ -285,6 +329,8 @@ export default function TicTacToePage() {
 
             {showAuthModal && (
                 <AuthModal
+                    open={showAuthModal}
+                    initialTab='login'
                     onClose={() => {
                         setShowAuthModal(false);
                         clearHint();
