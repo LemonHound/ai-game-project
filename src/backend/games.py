@@ -100,6 +100,21 @@ def _winner_to_outcome(winner: str, game_state: dict) -> str:
     return "ai_won"
 
 
+_GAME_TYPE_TO_ID: dict[str, str] = {v: k for k, v in GAME_ID_TO_TYPE.items()}
+
+
+async def _get_game_difficulty(db: AsyncSession, game_type: str) -> str:
+    game_id = _GAME_TYPE_TO_ID.get(game_type)
+    if not game_id:
+        return "medium"
+    result = await db.execute(
+        text("SELECT difficulty FROM games WHERE id = :id"),
+        {"id": game_id},
+    )
+    row = result.fetchone()
+    return row[0] if row else "medium"
+
+
 # ============================================
 # TIC-TAC-TOE (SSE ARCHITECTURE)
 # ============================================
@@ -154,7 +169,8 @@ async def ttt_newgame(
             q.put_nowait({"__close__": True})
         await persistence_service.close_session(db, existing.id)
 
-    session = await persistence_service.create_game_session(db, user["id"], "tic_tac_toe")
+    difficulty = await _get_game_difficulty(db, "tic_tac_toe")
+    session = await persistence_service.create_game_session(db, user["id"], "tic_tac_toe", difficulty)
     span.set_attribute("game.session_id", str(session.id))
 
     state = _ttt_engine.initial_state(request.player_starts)
@@ -394,7 +410,8 @@ async def c4_newgame(
             q.put_nowait({"__close__": True})
         await persistence_service.close_session(db, existing.id)
 
-    session = await persistence_service.create_game_session(db, user["id"], "connect4")
+    difficulty = await _get_game_difficulty(db, "connect4")
+    session = await persistence_service.create_game_session(db, user["id"], "connect4", difficulty)
     span.set_attribute("game.session_id", str(session.id))
 
     state = _c4_engine.initial_state(request.player_starts)
@@ -642,26 +659,12 @@ async def checkers_newgame(
             q.put_nowait({"__close__": True})
         await persistence_service.close_session(db, existing.id)
 
-    session = await persistence_service.create_game_session(db, user["id"], "checkers")
+    difficulty = await _get_game_difficulty(db, "checkers")
+    session = await persistence_service.create_game_session(db, user["id"], "checkers", difficulty)
     span.set_attribute("game.session_id", str(session.id))
 
     state = _checkers_engine.initial_state(request.player_starts)
-
-    if not request.player_starts:
-        while state.get("current_turn") == "ai" and state.get("game_active", True):
-            ai_move, _ = _checkers_strategy.generate_move(state)
-            ai_state_tmp = {**state, "current_turn": "ai"}
-            if not _checkers_engine.validate_move(ai_state_tmp, ai_move):
-                legal = _checkers_engine.get_legal_moves(ai_state_tmp)
-                if not legal:
-                    break
-                ai_move = legal[0]
-            state = _checkers_engine.apply_move(ai_state_tmp, ai_move)
-            await persistence_service.record_move(db, session.id, "checkers", "ai", state.get("last_move"), state)
-            if state.get("must_capture") is None:
-                break
-    else:
-        await persistence_service.record_move(db, session.id, "checkers", "setup", None, state)
+    await persistence_service.record_move(db, session.id, "checkers", "setup", None, state)
 
     return {"session_id": str(session.id), "state": state}
 
@@ -723,9 +726,59 @@ async def checkers_events(
     move_q: asyncio.Queue = asyncio.Queue()
     _checkers_move_queues[sid] = move_q
 
+    async def _checkers_run_ai_turn(state: dict) -> tuple[dict, bool]:
+        """Process AI's turn with timing delay. Returns (new_state, terminal)."""
+        output_q.put_nowait('data: {"type": "status", "message": "Thinking..."}\n\n')
+        await asyncio.sleep(2.5)
+
+        with tracer.start_as_current_span("game.ai.move") as ai_span:
+            ai_span.set_attribute("game.id", "checkers")
+            ai_span.set_attribute("game.session_id", session_id)
+            t0 = time.monotonic()
+
+            while state.get("current_turn") == "ai" and state.get("game_active", True):
+                ai_move, _ = _checkers_strategy.generate_move(state)
+                ai_state_tmp = {**state, "current_turn": "ai"}
+                if not _checkers_engine.validate_move(ai_state_tmp, ai_move):
+                    legal = _checkers_engine.get_legal_moves(ai_state_tmp)
+                    if not legal:
+                        break
+                    ai_move = legal[0]
+
+                state = _checkers_engine.apply_move(ai_state_tmp, ai_move)
+                await persistence_service.record_move(db, sid, "checkers", "ai", state.get("last_move"), state)
+
+                is_terminal, outcome = _checkers_engine.is_terminal(state)
+                output_q.put_nowait(
+                    f'data: {json.dumps({"type": "move", "data": _checkers_state_payload(state, state.get("last_move"), "ai")})}\n\n'
+                )
+
+                if is_terminal:
+                    await persistence_service.end_game_session(db, sid, outcome or "draw", "checkers")
+                    output_q.put_nowait(None)
+                    return state, True
+
+                if state.get("must_capture") is None:
+                    break
+
+                await asyncio.sleep(0.5)
+
+            compute_ms = (time.monotonic() - t0) * 1000
+            ai_span.set_attribute("compute_duration_ms", compute_ms)
+            _ai_duration.record(compute_ms, {"game.id": "checkers"})
+
+        return state, False
+
     async def process_moves():
         try:
             state = await persistence_service.get_latest_board_state(db, sid, "checkers")
+
+            # Handle case where AI goes first (player chose to go second)
+            if state.get("current_turn") == "ai" and state.get("game_active", True):
+                state, done = await _checkers_run_ai_turn(state)
+                if done:
+                    return
+
             while True:
                 try:
                     msg = await asyncio.wait_for(move_q.get(), timeout=31)
@@ -754,42 +807,9 @@ async def checkers_events(
                 if state.get("must_capture") is not None:
                     continue
 
-                output_q.put_nowait('data: {"type": "status", "message": "Thinking..."}\n\n')
-
-                with tracer.start_as_current_span("game.ai.move") as ai_span:
-                    ai_span.set_attribute("game.id", "checkers")
-                    ai_span.set_attribute("game.session_id", session_id)
-                    t0 = time.monotonic()
-
-                    while state.get("current_turn") == "ai" and state.get("game_active", True):
-                        ai_move, _ = _checkers_strategy.generate_move(state)
-                        ai_state_tmp = {**state, "current_turn": "ai"}
-                        if not _checkers_engine.validate_move(ai_state_tmp, ai_move):
-                            legal = _checkers_engine.get_legal_moves(ai_state_tmp)
-                            if not legal:
-                                break
-                            ai_move = legal[0]
-
-                        state = _checkers_engine.apply_move(ai_state_tmp, ai_move)
-                        await persistence_service.record_move(db, sid, "checkers", "ai", state.get("last_move"), state)
-
-                        is_terminal, outcome = _checkers_engine.is_terminal(state)
-                        output_q.put_nowait(
-                            f'data: {json.dumps({"type": "move", "data": _checkers_state_payload(state, state.get("last_move"), "ai")})}\n\n'
-                        )
-                        await asyncio.sleep(0.4)
-
-                        if is_terminal:
-                            await persistence_service.end_game_session(db, sid, outcome or "draw", "checkers")
-                            output_q.put_nowait(None)
-                            return
-
-                        if state.get("must_capture") is None:
-                            break
-
-                    compute_ms = (time.monotonic() - t0) * 1000
-                    ai_span.set_attribute("compute_duration_ms", compute_ms)
-                    _ai_duration.record(compute_ms, {"game.id": "checkers"})
+                state, done = await _checkers_run_ai_turn(state)
+                if done:
+                    return
 
         except Exception as exc:
             logger.exception("checkers_sse_error", extra={"session_id": session_id})
@@ -880,7 +900,8 @@ async def dab_newgame(
             q.put_nowait({"__close__": True})
         await persistence_service.close_session(db, existing.id)
 
-    session = await persistence_service.create_game_session(db, user["id"], "dots_and_boxes")
+    difficulty = await _get_game_difficulty(db, "dots_and_boxes")
+    session = await persistence_service.create_game_session(db, user["id"], "dots_and_boxes", difficulty)
     span.set_attribute("game.session_id", str(session.id))
 
     state = _dab_engine.initial_state(request.player_starts)
@@ -1116,7 +1137,8 @@ async def chess_newgame(
             q.put_nowait({"__close__": True})
         await persistence_service.close_session(db, existing.id)
 
-    session = await persistence_service.create_game_session(db, user["id"], "chess")
+    difficulty = await _get_game_difficulty(db, "chess")
+    session = await persistence_service.create_game_session(db, user["id"], "chess", difficulty)
     span.set_attribute("game.session_id", str(session.id))
 
     state = _chess_engine.initial_state(request.player_starts)

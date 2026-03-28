@@ -183,9 +183,9 @@ async def close_session(session: AsyncSession, session_id: UUID) -> None:
 
 
 async def create_game_session(
-    session: AsyncSession, user_id: int, game_type: str
+    session: AsyncSession, user_id: int, game_type: str, difficulty: str = "medium"
 ) -> GameSession:
-    new_session = GameSession(user_id=user_id, game_type=game_type)
+    new_session = GameSession(user_id=user_id, game_type=game_type, difficulty=difficulty)
     session.add(new_session)
     await session.commit()
     await session.refresh(new_session)

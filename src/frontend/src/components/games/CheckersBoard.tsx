@@ -27,7 +27,6 @@ function PieceDisplay({ code }: { code: string }) {
 
 export default function CheckersBoard({
     board,
-    playerSymbol,
     currentTurn,
     selectedPiece,
     validDestinations,
@@ -55,11 +54,14 @@ export default function CheckersBoard({
                     const isDestination = validDestinations.includes(pos);
                     const isLegalPiece = legalPieces.includes(pos);
 
-                    const isPieceInteractive =
+                    const isInteractivePiece =
                         !locked &&
                         currentTurn === 'player' &&
                         hasPiece &&
                         (mustCapture !== null ? pos === mustCapture : isLegalPiece);
+
+                    const isNonInteractivePiece =
+                        !locked && currentTurn === 'player' && hasPiece && !isInteractivePiece;
 
                     const isDestinationInteractive = !locked && currentTurn === 'player' && !hasPiece && isDestination;
 
@@ -82,15 +84,15 @@ export default function CheckersBoard({
                             )}
                             {hasPiece && (
                                 <div
-                                    className={`absolute inset-0 flex items-center justify-center ${isPieceInteractive ? 'cursor-pointer' : 'cursor-default'}`}
+                                    className={`absolute inset-0 flex items-center justify-center ${isInteractivePiece ? 'cursor-pointer' : 'cursor-default'}`}
                                     onClick={e => {
-                                        if (isPieceInteractive) {
+                                        if (isInteractivePiece) {
                                             e.stopPropagation();
                                             onPieceClick(pos);
                                         }
                                     }}>
                                     <div
-                                        className={`w-3/4 h-3/4 flex items-center justify-center transition-transform ${isPieceInteractive ? 'hover:scale-110' : ''} ${isSelected ? 'ring-4 ring-yellow-300 rounded-full' : ''}`}>
+                                        className={`w-3/4 h-3/4 flex items-center justify-center transition-all ${isInteractivePiece ? 'hover:scale-110' : ''} ${isSelected ? 'ring-4 ring-yellow-300 rounded-full' : ''} ${isNonInteractivePiece ? 'opacity-35' : ''}`}>
                                         <PieceDisplay code={piece} />
                                     </div>
                                 </div>

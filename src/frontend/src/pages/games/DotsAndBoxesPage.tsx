@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
+import GameStartOverlay from '../../components/games/GameStartOverlay';
 import PlayerCard from '../../components/PlayerCard';
 import DotsAndBoxesBoard from '../../components/games/DotsAndBoxesBoard';
 import { useAuth } from '../../hooks/useAuth';
@@ -295,30 +296,36 @@ export default function DotsAndBoxesPage() {
                     </div>
                 )}
 
-                {phase === 'resumeprompt' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70 font-medium'>Game in progress</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={handleResume}>
-                                Continue Game
-                            </button>
-                            <button className='btn btn-neutral btn-wide' onClick={handleNewGame}>
-                                New Game
-                            </button>
-                        </div>
-                    </div>
+                {(phase === 'newgame' || phase === 'resumeprompt') && (
+                    <GameStartOverlay
+                        canResume={phase === 'resumeprompt'}
+                        onResume={handleResume}
+                        optionA={{ label: 'Go First', onClick: () => handleStartGame(true) }}
+                        optionB={{ label: 'Go Second', onClick: () => handleStartGame(false) }}
+                    />
                 )}
 
-                {phase === 'newgame' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70'>Choose your turn:</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
-                                Go First
-                            </button>
-                            <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
-                                Go Second
-                            </button>
+                {phase === 'terminal' && (
+                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-base-100/85 backdrop-blur-sm'>
+                        <p className='text-2xl font-bold'>
+                            {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
+                        </p>
+                        <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
+                            <div className='flex items-center gap-2 w-full'>
+                                <div className='flex-1 h-px bg-base-content/20' />
+                                <span className='text-xs text-base-content/50 uppercase tracking-wider'>
+                                    Play Again
+                                </span>
+                                <div className='flex-1 h-px bg-base-content/20' />
+                            </div>
+                            <div className='flex gap-2 w-full'>
+                                <button className='btn btn-primary flex-1' onClick={() => handleStartGame(true)}>
+                                    Go First
+                                </button>
+                                <button className='btn btn-secondary flex-1' onClick={() => handleStartGame(false)}>
+                                    Go Second
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -331,7 +338,7 @@ export default function DotsAndBoxesPage() {
                 result={playerResult}
             />
 
-            {(phase === 'playing' || phase === 'terminal') && (
+            {phase === 'playing' && (
                 <div className='flex justify-center mt-4'>
                     <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
                         New Game

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
+import GameStartOverlay from '../../components/games/GameStartOverlay';
 import PlayerCard from '../../components/PlayerCard';
 import ChessBoard from '../../components/games/ChessBoard';
 import { useAuth } from '../../hooks/useAuth';
@@ -38,11 +39,26 @@ function clearHint() {
 type Phase = 'loading' | 'newgame' | 'resumeprompt' | 'playing' | 'terminal';
 
 const PROMOTION_PIECES = [
-    { piece: 'Q', white: '♕', black: '♛', label: 'Queen' },
-    { piece: 'R', white: '♖', black: '♜', label: 'Rook' },
-    { piece: 'B', white: '♗', black: '♝', label: 'Bishop' },
-    { piece: 'N', white: '♘', black: '♞', label: 'Knight' },
+    { piece: 'Q', label: 'Queen' },
+    { piece: 'R', label: 'Rook' },
+    { piece: 'B', label: 'Bishop' },
+    { piece: 'N', label: 'Knight' },
 ];
+
+const PIECE_IMG: Record<string, string> = {
+    K: '/images/k_white.png',
+    Q: '/images/q_white.png',
+    R: '/images/r_white.png',
+    B: '/images/b_white.png',
+    N: '/images/n_white.png',
+    P: '/images/p_white.png',
+    k: '/images/k_black.png',
+    q: '/images/q_black.png',
+    r: '/images/r_black.png',
+    b: '/images/b_black.png',
+    n: '/images/n_black.png',
+    p: '/images/p_black.png',
+};
 
 export default function ChessPage() {
     const { user, isLoading: authLoading } = useAuth();
@@ -281,10 +297,23 @@ export default function ChessPage() {
         toCol: number,
         promotionPiece: string | null
     ) => {
+        const movingPiece = board[fromRow][fromCol];
         setSelectedSquare(null);
         setLegalDestinations([]);
         setBoardLocked(true);
         setStatusText('');
+
+        // Optimistic update: show the move immediately
+        const newBoard = board.map(r => [...r]);
+        newBoard[fromRow][fromCol] = null;
+        newBoard[toRow][toCol] = promotionPiece
+            ? playerColor === 'white'
+                ? promotionPiece.toUpperCase()
+                : promotionPiece.toLowerCase()
+            : movingPiece;
+        setBoard(newBoard);
+        setLastMove({ fromRow, fromCol, toRow, toCol });
+
         try {
             await chessMove(fromRow, fromCol, toRow, toCol, promotionPiece ?? undefined);
         } catch (err) {
@@ -377,6 +406,9 @@ export default function ChessPage() {
 
     const kingInCheckColor: 'white' | 'black' | null = inCheck ? currentPlayer : null;
 
+    const playerCaptureIcons = showInfo ? capturedPieces.player.map(p => PIECE_IMG[p]).filter(Boolean) : undefined;
+    const aiCaptureIcons = showInfo ? capturedPieces.ai.map(p => PIECE_IMG[p]).filter(Boolean) : undefined;
+
     if (authLoading) {
         return (
             <div className='container mx-auto px-4 py-10 flex justify-center'>
@@ -406,9 +438,11 @@ export default function ChessPage() {
         );
     }
 
+    void sessionId;
+
     return (
-        <div className='container mx-auto px-4 py-6 max-w-2xl'>
-            <h1 className='mb-4 text-4xl font-bold text-center'>Chess</h1>
+        <div className='container mx-auto px-4 py-4 max-w-2xl flex flex-col'>
+            <h1 className='mb-3 text-3xl font-bold text-center'>Chess</h1>
 
             <PlayerCard
                 name='AI Opponent'
@@ -416,13 +450,10 @@ export default function ChessPage() {
                 symbol={showInfo ? aiColor : undefined}
                 statusText={phase === 'playing' ? statusText : undefined}
                 result={aiResult}
+                captureIcons={aiCaptureIcons}
             />
 
-            {showInfo && capturedPieces.ai.length > 0 && (
-                <div className='text-lg leading-tight px-1 my-1 min-h-6'>{capturedPieces.ai.join(' ')}</div>
-            )}
-
-            <div className='relative my-4 flex justify-center'>
+            <div className='relative my-3 flex justify-center'>
                 <div className='relative'>
                     <ChessBoard
                         board={board}
@@ -443,30 +474,37 @@ export default function ChessPage() {
                         </div>
                     )}
 
-                    {phase === 'resumeprompt' && (
-                        <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                            <p className='text-sm text-base-content/70 font-medium'>Game in progress</p>
-                            <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                                <button className='btn btn-primary btn-wide' onClick={handleResume}>
-                                    Continue Game
-                                </button>
-                                <button className='btn btn-neutral btn-wide' onClick={handleNewGame}>
-                                    New Game
-                                </button>
-                            </div>
-                        </div>
+                    {(phase === 'newgame' || phase === 'resumeprompt') && (
+                        <GameStartOverlay
+                            canResume={phase === 'resumeprompt'}
+                            onResume={handleResume}
+                            optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
+                            optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                        />
                     )}
 
-                    {phase === 'newgame' && (
+                    {phase === 'terminal' && (
                         <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                            <p className='text-sm text-base-content/70'>Choose your side:</p>
-                            <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                                <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
-                                    Play as White — Go First
-                                </button>
-                                <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
-                                    Play as Black — Go Second
-                                </button>
+                            <div
+                                className={`text-2xl font-bold ${playerResult === 'win' ? 'text-success' : playerResult === 'loss' ? 'text-error' : 'text-warning'}`}>
+                                {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw'}
+                            </div>
+                            <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
+                                <div className='flex items-center gap-2 w-full'>
+                                    <div className='flex-1 h-px bg-base-content/20' />
+                                    <span className='text-xs text-base-content/50 uppercase tracking-wider'>
+                                        Play Again
+                                    </span>
+                                    <div className='flex-1 h-px bg-base-content/20' />
+                                </div>
+                                <div className='flex gap-2 w-full'>
+                                    <button className='btn btn-primary flex-1' onClick={() => handleStartGame(true)}>
+                                        Play as White
+                                    </button>
+                                    <button className='btn btn-secondary flex-1' onClick={() => handleStartGame(false)}>
+                                        Play as Black
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -476,15 +514,23 @@ export default function ChessPage() {
                             <div className='bg-base-200 rounded-xl p-4 shadow-lg'>
                                 <p className='text-sm font-medium text-center mb-3'>Promote pawn to:</p>
                                 <div className='flex gap-2'>
-                                    {PROMOTION_PIECES.map(({ piece, white, black, label }) => (
-                                        <button
-                                            key={piece}
-                                            className='btn btn-outline btn-square text-3xl w-14 h-14'
-                                            title={label}
-                                            onClick={() => handlePromotion(piece)}>
-                                            {playerColor === 'white' ? white : black}
-                                        </button>
-                                    ))}
+                                    {PROMOTION_PIECES.map(({ piece, label }) => {
+                                        const imgKey =
+                                            playerColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
+                                        return (
+                                            <button
+                                                key={piece}
+                                                className='btn btn-outline btn-square w-14 h-14'
+                                                title={label}
+                                                onClick={() => handlePromotion(piece)}>
+                                                <img
+                                                    src={PIECE_IMG[imgKey]}
+                                                    alt={label}
+                                                    className='w-10 h-10 object-contain'
+                                                />
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -492,12 +538,8 @@ export default function ChessPage() {
                 </div>
             </div>
 
-            {showInfo && capturedPieces.player.length > 0 && (
-                <div className='text-lg leading-tight px-1 my-1 min-h-6'>{capturedPieces.player.join(' ')}</div>
-            )}
-
             {showInfo && inCheck && currentPlayer === playerColor && phase === 'playing' && (
-                <div className='text-center my-1'>
+                <div className='text-center mb-1'>
                     <span className='badge badge-error badge-lg'>Check!</span>
                 </div>
             )}
@@ -507,23 +549,16 @@ export default function ChessPage() {
                 avatarUrl={user.profilePicture}
                 symbol={showInfo ? playerColorLabel : undefined}
                 result={playerResult}
+                captureIcons={playerCaptureIcons}
             />
 
             {showInfo && moveHistory.length > 0 && (
-                <div className='mt-3 bg-base-200 rounded-lg p-2'>
-                    <div className='overflow-y-auto max-h-32 flex flex-wrap gap-x-2 gap-y-0.5 text-sm text-base-content/70'>
+                <div className='mt-2 bg-base-200 rounded-lg p-2'>
+                    <div className='overflow-y-auto max-h-20 flex flex-wrap gap-x-2 gap-y-0.5 text-sm text-base-content/70'>
                         {moveHistory.map((move, i) => (
                             <span key={i}>{move}</span>
                         ))}
                     </div>
-                </div>
-            )}
-
-            {(phase === 'playing' || phase === 'terminal') && (
-                <div className='flex justify-center mt-4'>
-                    <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
-                        New Game
-                    </button>
                 </div>
             )}
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
+import GameStartOverlay from '../../components/games/GameStartOverlay';
 import PlayerCard from '../../components/PlayerCard';
 import CheckersBoard from '../../components/games/CheckersBoard';
 import { useAuth } from '../../hooks/useAuth';
@@ -101,6 +102,14 @@ function getValidDestinations(board: string[], pos: number, pieceSymbol: string,
     }
 
     return destinations;
+}
+
+function TurnArrow() {
+    return (
+        <svg viewBox='0 0 24 24' fill='currentColor' className='w-5 h-5'>
+            <path d='M8 5l8 7-8 7V5z' />
+        </svg>
+    );
 }
 
 export default function CheckersPage() {
@@ -337,6 +346,8 @@ export default function CheckersPage() {
     const aiResult: 'win' | 'loss' | 'draw' | null =
         playerResult === null ? null : playerResult === 'win' ? 'loss' : 'win';
 
+    const showTurnIndicator = phase === 'playing' && currentTurn !== null;
+
     if (authLoading) {
         return (
             <div className='container mx-auto px-4 py-10 flex justify-center'>
@@ -380,54 +391,46 @@ export default function CheckersPage() {
                 result={aiResult}
             />
 
-            <div className='relative my-4 flex justify-center'>
-                <CheckersBoard
-                    board={board}
-                    playerSymbol={playerSymbol}
-                    currentTurn={currentTurn}
-                    selectedPiece={selectedPiece}
-                    validDestinations={validDestinations}
-                    legalPieces={legalPieces}
-                    mustCapture={mustCapture}
-                    locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
-                    flipped={flipped}
-                    onPieceClick={handlePieceClick}
-                    onSquareClick={handleSquareClick}
-                />
-
-                {phase === 'loading' && (
-                    <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
-                        <span className='loading loading-spinner loading-lg' />
-                    </div>
-                )}
-
-                {phase === 'resumeprompt' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70 font-medium'>Game in progress</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={handleResume}>
-                                Continue Game
-                            </button>
-                            <button className='btn btn-neutral btn-wide' onClick={handleNewGame}>
-                                New Game
-                            </button>
+            <div className='relative my-4 flex justify-center items-stretch gap-2'>
+                {showTurnIndicator && (
+                    <div className='relative w-6 flex-shrink-0'>
+                        <div
+                            className={`absolute left-0 transition-all duration-500 text-primary ${currentTurn === 'ai' ? 'top-2' : 'bottom-2'}`}>
+                            <TurnArrow />
                         </div>
                     </div>
                 )}
 
-                {phase === 'newgame' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70'>Choose your side:</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
-                                Play as Red — Go First
-                            </button>
-                            <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
-                                Play as Black — Go Second
-                            </button>
+                <div className='relative flex-1 min-w-0'>
+                    <CheckersBoard
+                        board={board}
+                        playerSymbol={playerSymbol}
+                        currentTurn={currentTurn}
+                        selectedPiece={selectedPiece}
+                        validDestinations={validDestinations}
+                        legalPieces={legalPieces}
+                        mustCapture={mustCapture}
+                        locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
+                        flipped={flipped}
+                        onPieceClick={handlePieceClick}
+                        onSquareClick={handleSquareClick}
+                    />
+
+                    {phase === 'loading' && (
+                        <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
+                            <span className='loading loading-spinner loading-lg' />
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    {(phase === 'newgame' || phase === 'resumeprompt') && (
+                        <GameStartOverlay
+                            canResume={phase === 'resumeprompt'}
+                            onResume={handleResume}
+                            optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                            optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                        />
+                    )}
+                </div>
             </div>
 
             <PlayerCard

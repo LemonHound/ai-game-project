@@ -11,19 +11,19 @@ interface ChessBoardProps {
     kingPositions?: { white: [number, number]; black: [number, number] } | null;
 }
 
-const PIECE_SYMBOLS: Record<string, string> = {
-    K: '♔',
-    Q: '♕',
-    R: '♖',
-    B: '♗',
-    N: '♘',
-    P: '♙',
-    k: '♚',
-    q: '♛',
-    r: '♜',
-    b: '♝',
-    n: '♞',
-    p: '♟',
+const PIECE_IMAGES: Record<string, string> = {
+    K: '/images/k_white.png',
+    Q: '/images/q_white.png',
+    R: '/images/r_white.png',
+    B: '/images/b_white.png',
+    N: '/images/n_white.png',
+    P: '/images/p_white.png',
+    k: '/images/k_black.png',
+    q: '/images/q_black.png',
+    r: '/images/r_black.png',
+    b: '/images/b_black.png',
+    n: '/images/n_black.png',
+    p: '/images/p_black.png',
 };
 
 export default function ChessBoard({
@@ -38,7 +38,7 @@ export default function ChessBoard({
     kingInCheckColor,
     kingPositions,
 }: ChessBoardProps) {
-    const rows = playerColor === 'black' ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
+    const rows = playerColor === 'black' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
     const cols = playerColor === 'black' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
 
     const isSelected = (r: number, c: number) =>
@@ -70,8 +70,7 @@ export default function ChessBoard({
                 <div key={r} className='flex'>
                     {cols.map(c => {
                         const piece = board[r][c];
-                        const symbol = piece ? PIECE_SYMBOLS[piece] : null;
-                        const isWhitePiece = piece ? piece === piece.toUpperCase() : false;
+                        const imgSrc = piece ? PIECE_IMAGES[piece] : null;
 
                         return (
                             <div
@@ -83,11 +82,12 @@ export default function ChessBoard({
                                         className={`absolute rounded-full z-10 ${piece ? 'inset-0 border-4 border-black/30' : 'w-3 h-3 bg-black/30'}`}
                                     />
                                 )}
-                                {symbol && (
-                                    <span
-                                        className={`text-3xl sm:text-4xl leading-none z-20 drop-shadow ${isWhitePiece ? 'text-white [text-shadow:0_0_2px_#000,0_0_2px_#000]' : 'text-gray-900 [text-shadow:0_0_1px_#fff]'}`}>
-                                        {symbol}
-                                    </span>
+                                {imgSrc && (
+                                    <img
+                                        src={imgSrc}
+                                        alt={piece ?? ''}
+                                        className='w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 z-20 object-contain drop-shadow-md pointer-events-none'
+                                    />
                                 )}
                             </div>
                         );

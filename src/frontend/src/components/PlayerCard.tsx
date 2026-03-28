@@ -5,6 +5,7 @@ interface PlayerCardProps {
     symbol?: string;
     statusText?: string;
     result?: 'win' | 'loss' | 'draw' | null;
+    captureIcons?: string[];
 }
 
 function BotIcon() {
@@ -40,7 +41,15 @@ function resultBadgeClass(result: 'win' | 'loss' | 'draw'): string {
     return 'badge-warning';
 }
 
-export default function PlayerCard({ name, avatarUrl, isAi, symbol, statusText, result }: PlayerCardProps) {
+export default function PlayerCard({
+    name,
+    avatarUrl,
+    isAi,
+    symbol,
+    statusText,
+    result,
+    captureIcons,
+}: PlayerCardProps) {
     return (
         <div className='flex items-center gap-3 p-3 bg-base-200 rounded-lg w-full'>
             <div className='shrink-0'>
@@ -75,6 +84,14 @@ export default function PlayerCard({ name, avatarUrl, isAi, symbol, statusText, 
                         {resultLabel(result, !!isAi)}
                     </div>
                 ) : null}
+
+                {captureIcons && captureIcons.length > 0 && (
+                    <div className='flex flex-wrap gap-0.5 mt-1'>
+                        {captureIcons.map((src, i) => (
+                            <img key={i} src={src} alt='' className='w-5 h-5 object-contain' />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

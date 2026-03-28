@@ -20,8 +20,8 @@ const PLAYER_COLOR = '#3B82F6';
 const AI_COLOR = '#EF4444';
 const UNDRAWN_COLOR = '#6B7280';
 const HOVER_COLOR = '#A3BFFA';
-const PLAYER_FILL = 'rgba(59, 130, 246, 0.25)';
-const AI_FILL = 'rgba(239, 68, 68, 0.25)';
+const PLAYER_FILL = 'rgba(59, 130, 246, 0.35)';
+const AI_FILL = 'rgba(239, 68, 68, 0.35)';
 
 export default function DotsAndBoxesBoard({
     gridSize,
@@ -65,15 +65,37 @@ export default function DotsAndBoxesBoard({
         for (let c = 0; c < gridSize; c++) {
             const owner = boxes[`${r},${c}`];
             if (!owner) continue;
+            const bx = cx(c) + DOT_RADIUS;
+            const by = cy(r) + DOT_RADIUS;
+            const bw = CELL - DOT_RADIUS * 2;
+            const bh = CELL - DOT_RADIUS * 2;
+            const iconCx = cx(c) + CELL / 2;
+            const iconCy = cy(r) + CELL / 2;
             boxFills.push(
-                <rect
-                    key={`box-${r}-${c}`}
-                    x={cx(c) + DOT_RADIUS}
-                    y={cy(r) + DOT_RADIUS}
-                    width={CELL - DOT_RADIUS * 2}
-                    height={CELL - DOT_RADIUS * 2}
-                    fill={owner === 'player' ? PLAYER_FILL : AI_FILL}
-                />
+                <g key={`box-${r}-${c}`}>
+                    <rect x={bx} y={by} width={bw} height={bh} fill={owner === 'player' ? PLAYER_FILL : AI_FILL} />
+                    {owner === 'player' ? (
+                        <text
+                            x={iconCx}
+                            y={iconCy + 6}
+                            textAnchor='middle'
+                            fontSize={22}
+                            fontWeight='bold'
+                            fill={PLAYER_COLOR}
+                            opacity={0.7}>
+                            P
+                        </text>
+                    ) : (
+                        <g transform={`translate(${iconCx - 10}, ${iconCy - 10})`} opacity={0.7}>
+                            <rect x={2} y={4} width={16} height={12} rx={3} fill={AI_COLOR} />
+                            <rect x={6} y={0} width={8} height={5} rx={1} fill={AI_COLOR} />
+                            <circle cx={6} cy={10} r={2} fill='white' />
+                            <circle cx={14} cy={10} r={2} fill='white' />
+                            <rect x={0} y={9} width={2} height={5} rx={1} fill={AI_COLOR} />
+                            <rect x={18} y={9} width={2} height={5} rx={1} fill={AI_COLOR} />
+                        </g>
+                    )}
+                </g>
             );
         }
     }
