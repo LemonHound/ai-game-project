@@ -55,4 +55,15 @@ Pong's architecture is meaningfully different from the turn-based games.
 
 ## Test Cases
 
-_To be defined during planning session._
+_To be defined once WebSocket spec and open questions above are resolved._
+
+| # | Scenario | Tier | Test Name |
+|---|----------|------|-----------|
+| 1 | Canvas renders and scales to viewport width | unit | `pong_canvas_scales_to_viewport` |
+| 2 | WebSocket connection established on game start | API integration | `pong_ws_connects_on_start` |
+| 3 | AI paddle moves in response to ball position | API integration | `pong_ai_paddle_responds_to_ball` |
+| 4 | Invalid AI paddle position corrected by backend | API integration | `pong_invalid_paddle_clamped` |
+| 5 | Game ends and score reported on win condition | API integration | `pong_game_over_reports_score` |
+| 6 | Touch/swipe controls move paddle on mobile | E2E | `pong_mobile_touch_controls` |
+| 7 | Keyboard controls move paddle on desktop | E2E | `pong_keyboard_controls` |
+| 8 | Disconnect during game resets to new game | manual | Disconnect mid-game, verify new game starts cleanly |
