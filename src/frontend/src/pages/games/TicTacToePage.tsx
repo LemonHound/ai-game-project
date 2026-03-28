@@ -38,7 +38,6 @@ export default function TicTacToePage() {
     const [currentTurn, setCurrentTurn] = useState<'player' | 'ai'>('player');
     const [statusText, setStatusText] = useState<string>('');
     const [boardLocked, setBoardLocked] = useState(false);
-    const [playerStarts, setPlayerStarts] = useState(true);
     const [playerSymbol, setPlayerSymbol] = useState<string>('X');
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -141,14 +140,14 @@ export default function TicTacToePage() {
         return () => closeSSE();
     }, [closeSSE]);
 
-    const handleStartGame = async () => {
+    const handleStartGame = async (goFirst: boolean) => {
         if (!user) {
             setShowAuthModal(true);
             return;
         }
         clearHint();
         try {
-            const { session_id, state } = await tttNewGame(playerStarts);
+            const { session_id, state } = await tttNewGame(goFirst);
             setSessionId(session_id);
             setBoard(state.board);
             setCurrentTurn(state.current_turn);
@@ -237,23 +236,16 @@ export default function TicTacToePage() {
             )}
 
             {phase === 'newgame' && (
-                <div className='flex flex-col items-center gap-6 py-10'>
-                    <p className='text-base-content/70'>Choose who goes first:</p>
-                    <div className='join'>
-                        <button
-                            className={`btn join-item ${playerStarts ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => setPlayerStarts(true)}>
-                            Go first (X)
+                <div className='flex flex-col items-center gap-4 py-10'>
+                    <p className='text-base-content/70'>Choose your side:</p>
+                    <div className='flex flex-col gap-3 w-full max-w-xs'>
+                        <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
+                            Play as X — Go First
                         </button>
-                        <button
-                            className={`btn join-item ${!playerStarts ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => setPlayerStarts(false)}>
-                            Go second (O)
+                        <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
+                            Play as O — Go Second
                         </button>
                     </div>
-                    <button className='btn btn-primary btn-wide' onClick={handleStartGame}>
-                        New Game
-                    </button>
                 </div>
             )}
 
@@ -285,7 +277,7 @@ export default function TicTacToePage() {
                         ) : null}
                     </div>
 
-                    <button className='btn btn-outline btn-sm' onClick={handleNewGame}>
+                    <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
                         New Game
                     </button>
                 </div>
