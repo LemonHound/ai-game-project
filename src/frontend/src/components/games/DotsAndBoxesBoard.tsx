@@ -7,7 +7,9 @@ interface DotsAndBoxesBoardProps {
     boxes: Record<string, 'player' | 'ai'>;
     currentTurn: 'player' | 'ai' | null;
     locked: boolean;
+    lastLine: { type: 'h' | 'v'; row: number; col: number } | null;
     onLineClick: (type: 'horizontal' | 'vertical', row: number, col: number) => void;
+    hidePieces?: boolean;
 }
 
 const CELL = 80;
@@ -23,13 +25,17 @@ const HOVER_COLOR = '#A3BFFA';
 const PLAYER_FILL = 'rgba(59, 130, 246, 0.35)';
 const AI_FILL = 'rgba(239, 68, 68, 0.35)';
 
+const LAST_LINE_COLOR = '#FBBF24';
+
 export default function DotsAndBoxesBoard({
     gridSize,
     horizontalLines,
     verticalLines,
     boxes,
     locked,
+    lastLine,
     onLineClick,
+    hidePieces = false,
 }: DotsAndBoxesBoardProps) {
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
 
@@ -105,13 +111,17 @@ export default function DotsAndBoxesBoard({
         for (let c = 0; c < gridSize; c++) {
             const key = `${r},${c}`;
             const owner = horizontalLines[key];
-            const isDrawn = !!owner;
+            const isDrawn = !hidePieces && !!owner;
             const hoverKey = `h-${key}`;
             const isHovered = hoveredLine === hoverKey;
             const isClickable = !locked && !isDrawn;
 
+            const isLastLine = !hidePieces && lastLine?.type === 'h' && lastLine.row === r && lastLine.col === c;
+
             let stroke = UNDRAWN_COLOR;
-            if (isDrawn) {
+            if (isLastLine) {
+                stroke = LAST_LINE_COLOR;
+            } else if (isDrawn) {
                 stroke = owner === 'player' ? PLAYER_COLOR : AI_COLOR;
             } else if (isHovered) {
                 stroke = HOVER_COLOR;
@@ -156,13 +166,17 @@ export default function DotsAndBoxesBoard({
         for (let c = 0; c <= gridSize; c++) {
             const key = `${r},${c}`;
             const owner = verticalLines[key];
-            const isDrawn = !!owner;
+            const isDrawn = !hidePieces && !!owner;
             const hoverKey = `v-${key}`;
             const isHovered = hoveredLine === hoverKey;
             const isClickable = !locked && !isDrawn;
 
+            const isLastLine = !hidePieces && lastLine?.type === 'v' && lastLine.row === r && lastLine.col === c;
+
             let stroke = UNDRAWN_COLOR;
-            if (isDrawn) {
+            if (isLastLine) {
+                stroke = LAST_LINE_COLOR;
+            } else if (isDrawn) {
                 stroke = owner === 'player' ? PLAYER_COLOR : AI_COLOR;
             } else if (isHovered) {
                 stroke = HOVER_COLOR;
@@ -208,7 +222,7 @@ export default function DotsAndBoxesBoard({
             width='100%'
             style={{ display: 'block', maxWidth: svgSize }}
             aria-label='Dots and Boxes board'>
-            {boxFills}
+            {!hidePieces && boxFills}
             {horizontalLineElements}
             {verticalLineElements}
             {dots}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import ChessBoard from '../../components/games/ChessBoard';
 import { useAuth } from '../../hooks/useAuth';
@@ -13,6 +14,7 @@ import {
     type ChessGameState,
     type ChessMoveData,
 } from '../../api/chess';
+import { forfeitGame } from '../../api/games';
 
 const HINT_KEY = 'chess_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -60,15 +62,17 @@ const PIECE_IMG: Record<string, string> = {
     p: '/images/p_black.png',
 };
 
+function emptyBoard(): (string | null)[][] {
+    return Array(8)
+        .fill(null)
+        .map(() => Array(8).fill(null));
+}
+
 export default function ChessPage() {
     const { user, isLoading: authLoading } = useAuth();
 
     const [phase, setPhase] = useState<Phase>(getHint() ? 'loading' : 'newgame');
-    const [board, setBoard] = useState<(string | null)[][]>(
-        Array(8)
-            .fill(null)
-            .map(() => Array(8).fill(null))
-    );
+    const [board, setBoard] = useState<(string | null)[][]>(emptyBoard());
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
     const [currentPlayer, setCurrentPlayer] = useState<'white' | 'black'>('white');
     const [inCheck, setInCheck] = useState(false);
@@ -98,6 +102,7 @@ export default function ChessPage() {
     } | null>(null);
 
     const esRef = useRef<EventSource | null>(null);
+    const moveListRef = useRef<HTMLDivElement>(null);
 
     const closeSSE = useCallback(() => {
         if (esRef.current) {
@@ -168,26 +173,27 @@ export default function ChessPage() {
         try {
             const { session_id, state } = await chessResume();
             if (session_id && state) {
-                setBoard(state.board);
-                setCurrentPlayer(state.current_player);
-                setPlayerColor(state.player_color);
-                setInCheck(state.in_check ?? false);
-                setCapturedPieces(state.captured_pieces);
-                if (state.king_positions) setKingPositions(state.king_positions);
-                if (state.last_move) {
-                    setLastMove({
-                        fromRow: state.last_move.fromRow,
-                        fromCol: state.last_move.fromCol,
-                        toRow: state.last_move.toRow,
-                        toCol: state.last_move.toCol,
-                    });
-                }
                 setHint();
                 if (!state.game_active) {
+                    setBoard(state.board);
+                    setCurrentPlayer(state.current_player);
+                    setPlayerColor(state.player_color);
+                    setInCheck(state.in_check ?? false);
+                    setCapturedPieces(state.captured_pieces);
+                    if (state.king_positions) setKingPositions(state.king_positions);
+                    if (state.last_move) {
+                        setLastMove({
+                            fromRow: state.last_move.fromRow,
+                            fromCol: state.last_move.fromCol,
+                            toRow: state.last_move.toRow,
+                            toCol: state.last_move.toCol,
+                        });
+                    }
                     setSessionId(session_id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
+                    setPlayerColor(state.player_color);
                     setPendingResume({ sessionId: session_id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
@@ -226,13 +232,34 @@ export default function ChessPage() {
         return () => closeSSE();
     }, [closeSSE]);
 
+    useEffect(() => {
+        if (moveListRef.current) {
+            moveListRef.current.scrollTop = moveListRef.current.scrollHeight;
+        }
+    }, [moveHistory]);
+
     const handleResume = () => {
         if (!pendingResume) return;
-        setSessionId(pendingResume.sessionId);
-        const isPlayerTurn = pendingResume.state.current_player === pendingResume.state.player_color;
+        const { sessionId: sid, state } = pendingResume;
+        setSessionId(sid);
+        setBoard(state.board);
+        setCurrentPlayer(state.current_player);
+        setPlayerColor(state.player_color);
+        setInCheck(state.in_check ?? false);
+        setCapturedPieces(state.captured_pieces);
+        if (state.king_positions) setKingPositions(state.king_positions);
+        if (state.last_move) {
+            setLastMove({
+                fromRow: state.last_move.fromRow,
+                fromCol: state.last_move.fromCol,
+                toRow: state.last_move.toRow,
+                toCol: state.last_move.toCol,
+            });
+        }
+        const isPlayerTurn = state.current_player === state.player_color;
         setBoardLocked(!isPlayerTurn);
         setPhase('playing');
-        subscribeSSE(pendingResume.sessionId);
+        subscribeSSE(sid);
         setPendingResume(null);
     };
 
@@ -243,11 +270,7 @@ export default function ChessPage() {
         }
         clearHint();
         setPendingResume(null);
-        setBoard(
-            Array(8)
-                .fill(null)
-                .map(() => Array(8).fill(null))
-        );
+        setBoard(emptyBoard());
         setMoveHistory([]);
         setCapturedPieces({ player: [], ai: [] });
         setLastMove(null);
@@ -303,7 +326,6 @@ export default function ChessPage() {
         setBoardLocked(true);
         setStatusText('');
 
-        // Optimistic update: show the move immediately
         const newBoard = board.map(r => [...r]);
         newBoard[fromRow][fromCol] = null;
         newBoard[toRow][toCol] = promotionPiece
@@ -361,6 +383,26 @@ export default function ChessPage() {
         }
     };
 
+    const handleSquareDrop = async (row: number, col: number) => {
+        if (boardLocked || currentPlayer !== playerColor) return;
+        if (!selectedSquare) return;
+        const [sr, sc] = selectedSquare;
+        if (!legalDestinations.some(([r, c]) => r === row && c === col)) return;
+        const movingPiece = board[sr][sc];
+        const isPromotion =
+            movingPiece &&
+            movingPiece.toLowerCase() === 'p' &&
+            ((playerColor === 'white' && row === 0) || (playerColor === 'black' && row === 7));
+
+        if (isPromotion) {
+            setPendingPromotion({ fromRow: sr, fromCol: sc, toRow: row, toCol: col });
+            setShowPromotionModal(true);
+            return;
+        }
+
+        await submitMove(sr, sc, row, col, null);
+    };
+
     const handlePromotion = async (choice: string) => {
         if (!pendingPromotion) return;
         const promo = playerColor === 'white' ? choice.toUpperCase() : choice.toLowerCase();
@@ -388,6 +430,15 @@ export default function ChessPage() {
         setPhase('newgame');
     };
 
+    const handleResign = () => {
+        closeSSE();
+        clearHint();
+        if (sessionId) forfeitGame('chess', sessionId).catch(() => {});
+        setWinner('ai');
+        setBoardLocked(true);
+        setPhase('terminal');
+    };
+
     const showInfo = phase === 'resumeprompt' || phase === 'playing' || phase === 'terminal';
     const aiColor = playerColor === 'white' ? 'Black' : 'White';
     const playerColorLabel = playerColor === 'white' ? 'White' : 'Black';
@@ -406,8 +457,13 @@ export default function ChessPage() {
 
     const kingInCheckColor: 'white' | 'black' | null = inCheck ? currentPlayer : null;
 
-    const playerCaptureIcons = showInfo ? capturedPieces.player.map(p => PIECE_IMG[p]).filter(Boolean) : undefined;
-    const aiCaptureIcons = showInfo ? capturedPieces.ai.map(p => PIECE_IMG[p]).filter(Boolean) : undefined;
+    const movePairs = moveHistory.reduce<Array<{ white?: string; black?: string }>>((acc, notation, i) => {
+        const pairIdx = Math.floor(i / 2);
+        if (!acc[pairIdx]) acc[pairIdx] = {};
+        if (i % 2 === 0) acc[pairIdx].white = notation;
+        else acc[pairIdx].black = notation;
+        return acc;
+    }, []);
 
     if (authLoading) {
         return (
@@ -441,126 +497,168 @@ export default function ChessPage() {
     void sessionId;
 
     return (
-        <div className='container mx-auto px-4 py-4 max-w-2xl flex flex-col'>
+        <div className='container mx-auto px-4 py-4 max-w-4xl'>
             <h1 className='mb-3 text-3xl font-bold text-center'>Chess</h1>
 
-            <PlayerCard
-                name='AI Opponent'
-                isAi
-                symbol={showInfo ? aiColor : undefined}
-                statusText={phase === 'playing' ? statusText : undefined}
-                result={aiResult}
-                captureIcons={aiCaptureIcons}
-            />
-
-            <div className='relative my-3 flex justify-center'>
-                <div className='relative'>
-                    <ChessBoard
-                        board={board}
-                        playerColor={playerColor}
-                        selectedSquare={selectedSquare}
-                        legalDestinations={legalDestinations}
-                        lastMove={lastMove}
-                        inCheck={inCheck}
-                        locked={boardLocked || phase !== 'playing'}
-                        onSquareClick={handleSquareClick}
-                        kingInCheckColor={kingInCheckColor}
-                        kingPositions={kingPositions}
+            <div className='flex gap-4 items-stretch'>
+                <div className='flex flex-col'>
+                    <PlayerCard
+                        name='AI Opponent'
+                        isAi
+                        symbol={showInfo ? aiColor : undefined}
+                        statusText={phase === 'playing' ? statusText : undefined}
+                        result={aiResult}
                     />
 
-                    {phase === 'loading' && (
-                        <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
-                            <span className='loading loading-spinner loading-lg' />
-                        </div>
-                    )}
+                    <div className='relative my-2 flex justify-center'>
+                        <div className='relative'>
+                            <ChessBoard
+                                board={board}
+                                playerColor={playerColor}
+                                selectedSquare={selectedSquare}
+                                legalDestinations={legalDestinations}
+                                lastMove={lastMove}
+                                inCheck={inCheck}
+                                locked={boardLocked || phase !== 'playing'}
+                                onSquareClick={handleSquareClick}
+                                onSquareDrop={handleSquareDrop}
+                                kingInCheckColor={kingInCheckColor}
+                                kingPositions={kingPositions}
+                                hidePieces={phase !== 'playing'}
+                            />
 
-                    {(phase === 'newgame' || phase === 'resumeprompt') && (
-                        <GameStartOverlay
-                            canResume={phase === 'resumeprompt'}
-                            onResume={handleResume}
-                            optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
-                            optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
-                        />
-                    )}
-
-                    {phase === 'terminal' && (
-                        <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                            <div
-                                className={`text-2xl font-bold ${playerResult === 'win' ? 'text-success' : playerResult === 'loss' ? 'text-error' : 'text-warning'}`}>
-                                {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw'}
-                            </div>
-                            <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
-                                <div className='flex items-center gap-2 w-full'>
-                                    <div className='flex-1 h-px bg-base-content/20' />
-                                    <span className='text-xs text-base-content/50 uppercase tracking-wider'>
-                                        Play Again
-                                    </span>
-                                    <div className='flex-1 h-px bg-base-content/20' />
+                            {phase === 'loading' && (
+                                <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
+                                    <span className='loading loading-spinner loading-lg' />
                                 </div>
-                                <div className='flex gap-2 w-full'>
-                                    <button className='btn btn-primary flex-1' onClick={() => handleStartGame(true)}>
-                                        Play as White
-                                    </button>
-                                    <button className='btn btn-secondary flex-1' onClick={() => handleStartGame(false)}>
-                                        Play as Black
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                            )}
 
-                    {showPromotionModal && pendingPromotion && (
-                        <div className='absolute inset-0 flex items-center justify-center bg-base-100/80 backdrop-blur-sm rounded-lg z-30'>
-                            <div className='bg-base-200 rounded-xl p-4 shadow-lg'>
-                                <p className='text-sm font-medium text-center mb-3'>Promote pawn to:</p>
-                                <div className='flex gap-2'>
-                                    {PROMOTION_PIECES.map(({ piece, label }) => {
-                                        const imgKey =
-                                            playerColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
-                                        return (
+                            {(phase === 'newgame' || phase === 'resumeprompt') && (
+                                <GameStartOverlay
+                                    canResume={phase === 'resumeprompt'}
+                                    onResume={handleResume}
+                                    optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
+                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                />
+                            )}
+
+                            {phase === 'terminal' && (
+                                <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
+                                    <div
+                                        className={`text-2xl font-bold ${playerResult === 'win' ? 'text-success' : playerResult === 'loss' ? 'text-error' : 'text-warning'}`}>
+                                        {playerResult === 'win'
+                                            ? 'You Win!'
+                                            : playerResult === 'loss'
+                                              ? 'You Lose'
+                                              : 'Draw'}
+                                    </div>
+                                    <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
+                                        <div className='flex items-center gap-2 w-full'>
+                                            <div className='flex-1 h-px bg-base-content/20' />
+                                            <span className='text-xs text-base-content/50 uppercase tracking-wider'>
+                                                Play Again
+                                            </span>
+                                            <div className='flex-1 h-px bg-base-content/20' />
+                                        </div>
+                                        <div className='flex gap-2 w-full'>
                                             <button
-                                                key={piece}
-                                                className='btn btn-outline btn-square w-14 h-14'
-                                                title={label}
-                                                onClick={() => handlePromotion(piece)}>
-                                                <img
-                                                    src={PIECE_IMG[imgKey]}
-                                                    alt={label}
-                                                    className='w-10 h-10 object-contain'
-                                                />
+                                                className='btn btn-primary flex-1'
+                                                onClick={() => handleStartGame(true)}>
+                                                Play as White
                                             </button>
-                                        );
-                                    })}
+                                            <button
+                                                className='btn btn-secondary flex-1'
+                                                onClick={() => handleStartGame(false)}>
+                                                Play as Black
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {showPromotionModal && pendingPromotion && (
+                                <div className='absolute inset-0 flex items-center justify-center bg-base-100/80 backdrop-blur-sm rounded-lg z-30'>
+                                    <div className='bg-base-200 rounded-xl p-4 shadow-lg'>
+                                        <p className='text-sm font-medium text-center mb-3'>Promote pawn to:</p>
+                                        <div className='flex gap-2'>
+                                            {PROMOTION_PIECES.map(({ piece, label }) => {
+                                                const imgKey =
+                                                    playerColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
+                                                return (
+                                                    <button
+                                                        key={piece}
+                                                        className='btn btn-outline btn-square w-14 h-14'
+                                                        title={label}
+                                                        onClick={() => handlePromotion(piece)}>
+                                                        <img
+                                                            src={PIECE_IMG[imgKey]}
+                                                            alt={label}
+                                                            className='w-10 h-10 object-contain'
+                                                        />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {showInfo && inCheck && currentPlayer === playerColor && phase === 'playing' && (
+                        <div className='text-center mb-1'>
+                            <span className='badge badge-error badge-lg'>Check!</span>
                         </div>
                     )}
+
+                    <PlayerCard
+                        name={user.displayName || user.username}
+                        avatarUrl={user.profilePicture}
+                        symbol={showInfo ? playerColorLabel : undefined}
+                        result={playerResult}
+                    />
                 </div>
-            </div>
 
-            {showInfo && inCheck && currentPlayer === playerColor && phase === 'playing' && (
-                <div className='text-center mb-1'>
-                    <span className='badge badge-error badge-lg'>Check!</span>
-                </div>
-            )}
+                {showInfo && (
+                    <div className='flex flex-col flex-1 overflow-hidden bg-base-200 rounded-lg p-3'>
+                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
+                            {capturedPieces.ai.map((p, i) => (
+                                <img key={i} src={PIECE_IMG[p]} alt={p} className='w-5 h-5 object-contain' />
+                            ))}
+                        </div>
 
-            <PlayerCard
-                name={user.displayName || user.username}
-                avatarUrl={user.profilePicture}
-                symbol={showInfo ? playerColorLabel : undefined}
-                result={playerResult}
-                captureIcons={playerCaptureIcons}
-            />
+                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
 
-            {showInfo && moveHistory.length > 0 && (
-                <div className='mt-2 bg-base-200 rounded-lg p-2'>
-                    <div className='overflow-y-auto max-h-20 flex flex-wrap gap-x-2 gap-y-0.5 text-sm text-base-content/70'>
-                        {moveHistory.map((move, i) => (
-                            <span key={i}>{move}</span>
-                        ))}
+                        <div ref={moveListRef} className='flex-1 min-h-0 overflow-y-auto'>
+                            {movePairs.map((pair, i) => (
+                                <div key={i} className='flex text-xs gap-1 leading-5'>
+                                    <span className='w-6 text-base-content/50 shrink-0'>{i + 1}.</span>
+                                    <span className='flex-1'>{pair.white ?? ''}</span>
+                                    <span className='flex-1'>{pair.black ?? ''}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
+
+                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
+                            {capturedPieces.player.map((p, i) => (
+                                <img key={i} src={PIECE_IMG[p]} alt={p} className='w-5 h-5 object-contain' />
+                            ))}
+                        </div>
+
+                        {phase === 'playing' && (
+                            <div className='mt-2 shrink-0'>
+                                <NewGameButtons
+                                    optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
+                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                    onResign={handleResign}
+                                />
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {showAuthModal && (
                 <AuthModal

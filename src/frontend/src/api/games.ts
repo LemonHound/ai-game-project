@@ -58,3 +58,12 @@ export async function makeMove(
 export async function getGameSession(gameId: string, sessionId: string): Promise<unknown> {
     return request(`/api/game/${gameId}/session/${sessionId}`);
 }
+
+export async function forfeitGame(gameId: string, sessionId: string): Promise<void> {
+    await fetch(`/api/game/${gameId}/end`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameSessionId: sessionId, move: null }),
+    });
+}

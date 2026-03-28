@@ -7,7 +7,7 @@ interface GameStartOverlayProps {
 
 export default function GameStartOverlay({ canResume, onResume, optionA, optionB }: GameStartOverlayProps) {
     return (
-        <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/85 backdrop-blur-sm'>
+        <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
             <button className='btn btn-wide' disabled={!canResume} onClick={canResume ? onResume : undefined}>
                 Continue Game
             </button>

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import Connect4Board from '../../components/games/Connect4Board';
 import { useAuth } from '../../hooks/useAuth';
 import { c4Move, c4NewGame, c4Resume, c4SubscribeSSE, type C4GameState } from '../../api/connect4';
+import { forfeitGame } from '../../api/games';
 
 const HINT_KEY = 'c4_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -45,6 +47,7 @@ export default function Connect4Page() {
     const [statusText, setStatusText] = useState<string>('');
     const [boardLocked, setBoardLocked] = useState(false);
     const [playerStarts, setPlayerStarts] = useState(true);
+    const [lastDrop, setLastDrop] = useState<[number, number] | null>(null);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [pendingResume, setPendingResume] = useState<{ sessionId: string; state: C4GameState } | null>(null);
@@ -67,6 +70,9 @@ export default function Connect4Page() {
                     if (data.board) setBoard(data.board);
                     if (data.winning_cells !== undefined) setWinningCells(data.winning_cells);
                     if (data.current_turn) setCurrentTurn(data.current_turn);
+                    if (data.row !== null && data.row !== undefined && data.col !== null && data.col !== undefined) {
+                        setLastDrop([data.row, data.col]);
+                    }
 
                     if (data.status === 'complete') {
                         setWinner(data.winner ?? null);
@@ -98,17 +104,16 @@ export default function Connect4Page() {
         try {
             const { session_id, state } = await c4Resume();
             if (session_id && state) {
-                setBoard(state.board);
-                setCurrentTurn(state.current_turn ?? 'player');
-                setWinningCells(null);
-                setWinner(null);
-                setPlayerStarts(state.player_starts);
                 setHint();
                 if (!state.game_active) {
+                    setBoard(state.board);
+                    setCurrentTurn(state.current_turn ?? 'player');
+                    setPlayerStarts(state.player_starts);
                     setSessionId(session_id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
+                    setPlayerStarts(state.player_starts);
                     setPendingResume({ sessionId: session_id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
@@ -149,10 +154,17 @@ export default function Connect4Page() {
 
     const handleResume = () => {
         if (!pendingResume) return;
-        setSessionId(pendingResume.sessionId);
-        setBoardLocked(pendingResume.state.current_turn === 'ai');
+        const { sessionId: sid, state } = pendingResume;
+        setSessionId(sid);
+        setBoard(state.board);
+        setCurrentTurn(state.current_turn ?? 'player');
+        setWinningCells(null);
+        setWinner(null);
+        setPlayerStarts(state.player_starts);
+        if (state.last_move) setLastDrop([state.last_move.row, state.last_move.col]);
+        setBoardLocked(state.current_turn === 'ai');
         setPhase('playing');
-        subscribeSSE(pendingResume.sessionId);
+        subscribeSSE(sid);
         setPendingResume(null);
     };
 
@@ -166,6 +178,7 @@ export default function Connect4Page() {
         setBoard(emptyBoard());
         setWinningCells(null);
         setWinner(null);
+        setLastDrop(null);
         setStatusText('');
         setBoardLocked(true);
         setPhase('playing');
@@ -175,6 +188,7 @@ export default function Connect4Page() {
             setBoard(state.board);
             setCurrentTurn(state.current_turn ?? 'player');
             setPlayerStarts(state.player_starts);
+            if (state.last_move) setLastDrop([state.last_move.row, state.last_move.col]);
             setBoardLocked(state.current_turn === 'ai');
             setHint();
             subscribeSSE(session_id);
@@ -200,6 +214,7 @@ export default function Connect4Page() {
         const newBoard = board.map(r => [...r]);
         newBoard[landingRow][col] = 'player';
         setBoard(newBoard);
+        setLastDrop([landingRow, col]);
         setCurrentTurn('ai');
         setBoardLocked(true);
         setStatusText('');
@@ -224,9 +239,19 @@ export default function Connect4Page() {
         setSessionId(null);
         setPendingResume(null);
         setWinner(null);
+        setLastDrop(null);
         setStatusText('');
         setBoardLocked(true);
         setPhase('newgame');
+    };
+
+    const handleResign = () => {
+        closeSSE();
+        clearHint();
+        if (sessionId) forfeitGame('connect4', sessionId).catch(() => {});
+        setWinner('ai');
+        setBoardLocked(true);
+        setPhase('terminal');
     };
 
     const playerSymbol = playerStarts ? 'Red' : 'Yellow';
@@ -274,6 +299,8 @@ export default function Connect4Page() {
         );
     }
 
+    void sessionId;
+
     return (
         <div className='container mx-auto px-4 py-6 max-w-lg'>
             <h1 className='mb-4 text-4xl font-bold text-center'>Connect 4</h1>
@@ -293,7 +320,9 @@ export default function Connect4Page() {
                     currentTurn={currentTurn}
                     locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
                     winningCells={winningCells}
+                    lastDrop={lastDrop}
                     onColumnClick={handleColumnClick}
+                    hidePieces={phase !== 'playing'}
                 />
 
                 {phase === 'loading' && (
@@ -312,7 +341,7 @@ export default function Connect4Page() {
                 )}
 
                 {phase === 'terminal' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-base-100/85 backdrop-blur-sm'>
+                    <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 rounded-lg bg-base-100/90 backdrop-blur-sm'>
                         <p className='text-2xl font-bold'>
                             {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
                         </p>
@@ -345,11 +374,12 @@ export default function Connect4Page() {
             />
 
             {phase === 'playing' && (
-                <div className='flex justify-center mt-4'>
-                    <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
-                        New Game
-                    </button>
-                </div>
+                <NewGameButtons
+                    className='flex justify-center mt-4'
+                    optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                    optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
+                    onResign={handleResign}
+                />
             )}
 
             {showAuthModal && (
