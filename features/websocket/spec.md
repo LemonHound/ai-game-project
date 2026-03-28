@@ -83,4 +83,15 @@ reconnect strategy for real-time games is an open question for this spec's plann
 
 ## Test Cases
 
-_To be defined during planning session._
+_To be defined once open questions above are resolved._
+
+| # | Scenario | Tier | Test Name |
+|---|----------|------|-----------|
+| 1 | WebSocket connection established with valid session cookie | API integration | `ws_connects_with_valid_auth` |
+| 2 | Connection rejected with missing or invalid session cookie | API integration | `ws_rejects_invalid_auth` |
+| 3 | Server pushes message to client after AI move computed | API integration | `ws_server_pushes_ai_move` |
+| 4 | Client receives error frame on malformed message | API integration | `ws_error_on_bad_message` |
+| 5 | OTel span created for connection open and close events | API integration | `ws_otel_connection_spans` |
+| 6 | Duplicate tab opens same game — second connection handled gracefully | E2E | `ws_duplicate_tab_handled` |
+| 7 | Network drop mid-game — client surfaces disconnect state to user | E2E | `ws_disconnect_surfaces_to_ui` |
+| 8 | Idle connection closed by server after timeout | manual | Open game, leave idle past timeout, verify clean close |
