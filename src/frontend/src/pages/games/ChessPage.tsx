@@ -333,6 +333,19 @@ export default function ChessPage() {
                 ? promotionPiece.toUpperCase()
                 : promotionPiece.toLowerCase()
             : movingPiece;
+
+        if (movingPiece?.toLowerCase() === 'k' && Math.abs(toCol - fromCol) === 2) {
+            const isKingside = toCol > fromCol;
+            const rookFromCol = isKingside ? 7 : 0;
+            const rookToCol = isKingside ? toCol - 1 : toCol + 1;
+            newBoard[fromRow][rookToCol] = newBoard[fromRow][rookFromCol];
+            newBoard[fromRow][rookFromCol] = null;
+        }
+
+        if (movingPiece?.toLowerCase() === 'p' && fromCol !== toCol && !board[toRow][toCol]) {
+            newBoard[fromRow][toCol] = null;
+        }
+
         setBoard(newBoard);
         setLastMove({ fromRow, fromCol, toRow, toCol });
 
@@ -620,7 +633,7 @@ export default function ChessPage() {
                 </div>
 
                 {showInfo && (
-                    <div className='flex flex-col flex-1 overflow-hidden bg-base-200 rounded-lg p-3'>
+                    <div className='flex flex-col flex-1 min-h-0 overflow-hidden bg-base-200 rounded-lg p-3'>
                         <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
                             {capturedPieces.ai.map((p, i) => (
                                 <img key={i} src={PIECE_IMG[p]} alt={p} className='w-5 h-5 object-contain' />
@@ -629,7 +642,7 @@ export default function ChessPage() {
 
                         <div className='h-px bg-base-content/20 my-2 shrink-0' />
 
-                        <div ref={moveListRef} className='flex-1 min-h-0 overflow-y-auto'>
+                        <div ref={moveListRef} className='flex-1 min-h-0 max-h-[50vh] overflow-y-auto'>
                             {movePairs.map((pair, i) => (
                                 <div key={i} className='flex text-xs gap-1 leading-5'>
                                     <span className='w-6 text-base-content/50 shrink-0'>{i + 1}.</span>
