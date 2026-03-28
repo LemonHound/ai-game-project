@@ -299,6 +299,7 @@ export default function TicTacToePage() {
                     lastPosition={lastPosition}
                     locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
                     onCellClick={handleCellClick}
+                    hidePieces={phase !== 'playing'}
                 />
 
                 {phase === 'loading' && (

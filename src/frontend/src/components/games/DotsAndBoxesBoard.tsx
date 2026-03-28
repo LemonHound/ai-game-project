@@ -9,6 +9,7 @@ interface DotsAndBoxesBoardProps {
     locked: boolean;
     lastLine: { type: 'h' | 'v'; row: number; col: number } | null;
     onLineClick: (type: 'horizontal' | 'vertical', row: number, col: number) => void;
+    hidePieces?: boolean;
 }
 
 const CELL = 80;
@@ -34,6 +35,7 @@ export default function DotsAndBoxesBoard({
     locked,
     lastLine,
     onLineClick,
+    hidePieces = false,
 }: DotsAndBoxesBoardProps) {
     const [hoveredLine, setHoveredLine] = useState<string | null>(null);
 
@@ -109,12 +111,12 @@ export default function DotsAndBoxesBoard({
         for (let c = 0; c < gridSize; c++) {
             const key = `${r},${c}`;
             const owner = horizontalLines[key];
-            const isDrawn = !!owner;
+            const isDrawn = !hidePieces && !!owner;
             const hoverKey = `h-${key}`;
             const isHovered = hoveredLine === hoverKey;
             const isClickable = !locked && !isDrawn;
 
-            const isLastLine = lastLine?.type === 'h' && lastLine.row === r && lastLine.col === c;
+            const isLastLine = !hidePieces && lastLine?.type === 'h' && lastLine.row === r && lastLine.col === c;
 
             let stroke = UNDRAWN_COLOR;
             if (isLastLine) {
@@ -164,12 +166,12 @@ export default function DotsAndBoxesBoard({
         for (let c = 0; c <= gridSize; c++) {
             const key = `${r},${c}`;
             const owner = verticalLines[key];
-            const isDrawn = !!owner;
+            const isDrawn = !hidePieces && !!owner;
             const hoverKey = `v-${key}`;
             const isHovered = hoveredLine === hoverKey;
             const isClickable = !locked && !isDrawn;
 
-            const isLastLine = lastLine?.type === 'v' && lastLine.row === r && lastLine.col === c;
+            const isLastLine = !hidePieces && lastLine?.type === 'v' && lastLine.row === r && lastLine.col === c;
 
             let stroke = UNDRAWN_COLOR;
             if (isLastLine) {
@@ -220,7 +222,7 @@ export default function DotsAndBoxesBoard({
             width='100%'
             style={{ display: 'block', maxWidth: svgSize }}
             aria-label='Dots and Boxes board'>
-            {boxFills}
+            {!hidePieces && boxFills}
             {horizontalLineElements}
             {verticalLineElements}
             {dots}

@@ -322,6 +322,7 @@ export default function Connect4Page() {
                     winningCells={winningCells}
                     lastDrop={lastDrop}
                     onColumnClick={handleColumnClick}
+                    hidePieces={phase !== 'playing'}
                 />
 
                 {phase === 'loading' && (

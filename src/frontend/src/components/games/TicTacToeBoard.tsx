@@ -4,9 +4,10 @@ interface TicTacToeBoardProps {
     lastPosition: number | null;
     locked: boolean;
     onCellClick: (index: number) => void;
+    hidePieces?: boolean;
 }
 
-export default function TicTacToeBoard({ board, winningPositions, lastPosition, locked, onCellClick }: TicTacToeBoardProps) {
+export default function TicTacToeBoard({ board, winningPositions, lastPosition, locked, onCellClick, hidePieces = false }: TicTacToeBoardProps) {
     return (
         <div className='grid grid-cols-3 gap-2 w-full max-w-xs sm:max-w-sm mx-auto' aria-label='Tic-Tac-Toe board'>
             {board.map((cell, index) => {
@@ -34,7 +35,7 @@ export default function TicTacToeBoard({ board, winningPositions, lastPosition, 
                             .filter(Boolean)
                             .join(' ')}>
                         <span className={cell === 'X' ? 'text-primary' : cell === 'O' ? 'text-secondary' : ''}>
-                            {cell ?? ''}
+                            {hidePieces ? '' : (cell ?? '')}
                         </span>
                     </button>
                 );

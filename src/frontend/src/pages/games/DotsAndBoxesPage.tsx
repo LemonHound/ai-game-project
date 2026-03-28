@@ -330,6 +330,7 @@ export default function DotsAndBoxesPage() {
                     locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
                     lastLine={lastLine}
                     onLineClick={handleLineClick}
+                    hidePieces={phase !== 'playing'}
                 />
 
                 {phase === 'loading' && (

@@ -12,6 +12,7 @@ interface ChessBoardProps {
     onSquareDrop: (row: number, col: number) => void;
     kingInCheckColor?: 'white' | 'black' | null;
     kingPositions?: { white: [number, number]; black: [number, number] } | null;
+    hidePieces?: boolean;
 }
 
 const PIECE_IMAGES: Record<string, string> = {
@@ -50,6 +51,7 @@ export default function ChessBoard({
     onSquareDrop,
     kingInCheckColor,
     kingPositions,
+    hidePieces = false,
 }: ChessBoardProps) {
     const rows = playerColor === 'black' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
     const cols = playerColor === 'black' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
@@ -192,12 +194,12 @@ export default function ChessBoard({
                                         }}
                                         className={`relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 select-none ${getSquareBg(r, c)} ${!locked ? 'cursor-pointer hover:opacity-90' : ''}`}
                                         onMouseDown={e => handleMouseDown(r, c, e)}>
-                                        {isLegalDest(r, c) && (
+                                        {!hidePieces && isLegalDest(r, c) && (
                                             <div
                                                 className={`absolute rounded-full z-10 ${piece ? 'inset-0 border-4 border-black/30' : 'w-3 h-3 bg-black/30'}`}
                                             />
                                         )}
-                                        {imgSrc && (
+                                        {!hidePieces && imgSrc && (
                                             <img
                                                 src={imgSrc}
                                                 alt={piece ?? ''}
@@ -222,7 +224,7 @@ export default function ChessBoard({
                 </div>
             </div>
 
-            {dragGhost && (
+            {!hidePieces && dragGhost && (
                 <img
                     src={PIECE_IMAGES[dragGhost.piece]}
                     alt=''

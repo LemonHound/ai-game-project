@@ -8,6 +8,7 @@ interface Connect4BoardProps {
     winningCells: [number, number][] | null;
     lastDrop: [number, number] | null;
     onColumnClick: (col: number) => void;
+    hidePieces?: boolean;
 }
 
 export default function Connect4Board({
@@ -18,6 +19,7 @@ export default function Connect4Board({
     winningCells,
     lastDrop,
     onColumnClick,
+    hidePieces = false,
 }: Connect4BoardProps) {
     const playerColor = playerStarts ? 'red' : 'yellow';
     const aiColor = playerStarts ? 'yellow' : 'red';
@@ -138,15 +140,15 @@ export default function Connect4Board({
                                     <div
                                         className={[
                                             'w-full aspect-square rounded-full transition-all duration-200',
-                                            cell
+                                            !hidePieces && cell
                                                 ? discClass
-                                                : isPreview
+                                                : !hidePieces && isPreview
                                                   ? getPreviewClass()
                                                   : 'border-2 border-base-content/20',
-                                            winning ? 'animate-pulse' : '',
-                                            dimmed ? 'opacity-40' : '',
-                                            isNew && !winning ? 'scale-95' : '',
-                                            isLastDrop ? 'ring-2 ring-white/60 ring-offset-1 ring-offset-blue-700' : '',
+                                            !hidePieces && winning ? 'animate-pulse' : '',
+                                            !hidePieces && dimmed ? 'opacity-40' : '',
+                                            !hidePieces && isNew && !winning ? 'scale-95' : '',
+                                            !hidePieces && isLastDrop ? 'ring-2 ring-white/60 ring-offset-1 ring-offset-blue-700' : '',
                                         ]
                                             .filter(Boolean)
                                             .join(' ')}

@@ -447,6 +447,7 @@ export default function CheckersPage() {
                                 }
                                 flipped={flipped}
                                 lastMove={lastMove}
+                                hidePieces={phase !== 'playing'}
                                 onPieceClick={handlePieceClick}
                                 onPieceDragStart={handlePieceDragStart}
                                 onSquareClick={handleSquareClick}

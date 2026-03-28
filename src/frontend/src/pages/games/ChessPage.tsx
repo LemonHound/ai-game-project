@@ -524,6 +524,7 @@ export default function ChessPage() {
                                 onSquareDrop={handleSquareDrop}
                                 kingInCheckColor={kingInCheckColor}
                                 kingPositions={kingPositions}
+                                hidePieces={phase !== 'playing'}
                             />
 
                             {phase === 'loading' && (

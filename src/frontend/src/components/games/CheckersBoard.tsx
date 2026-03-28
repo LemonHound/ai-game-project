@@ -15,6 +15,7 @@ interface CheckersBoardProps {
     onPieceDragStart: (pos: number) => void;
     onSquareClick: (pos: number) => void;
     onSquareDrop: (pos: number) => void;
+    hidePieces?: boolean;
 }
 
 interface DragState {
@@ -53,6 +54,7 @@ export default function CheckersBoard({
     onPieceDragStart,
     onSquareClick,
     onSquareDrop,
+    hidePieces = false,
 }: CheckersBoardProps) {
     const rows = flipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
 
@@ -185,10 +187,10 @@ export default function CheckersBoard({
                                 }
                             }}
                             style={{ cursor: isDestinationInteractive ? 'pointer' : 'default' }}>
-                            {isDestination && !hasPiece && (
+                            {!hidePieces && isDestination && !hasPiece && (
                                 <div className='absolute w-1/3 h-1/3 rounded-full bg-green-400/70 pointer-events-none' />
                             )}
-                            {hasPiece && (
+                            {!hidePieces && hasPiece && (
                                 <div
                                     className={`absolute inset-0 flex items-center justify-center ${isInteractivePiece ? 'cursor-pointer' : 'cursor-default'}`}
                                     onMouseDown={e => {
@@ -210,7 +212,7 @@ export default function CheckersBoard({
                 })
             )}
 
-            {dragGhost && (
+            {!hidePieces && dragGhost && (
                 <div
                     style={{
                         position: 'fixed',
