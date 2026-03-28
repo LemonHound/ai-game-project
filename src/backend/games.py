@@ -1,10 +1,12 @@
+import asyncio
 import logging
+import os
 import time
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException
+from fastapi.responses import JSONResponse, StreamingResponse
 from opentelemetry import metrics, trace
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,12 +15,14 @@ import persistence_service
 from auth_service import AuthService
 from db import db_dependency, get_session
 from db_models import GAME_ID_TO_TYPE
+from game_engine.base import MoveProcessor, StatusBroadcaster, StatusEvent
+from game_engine.ttt_engine import TicTacToeAIStrategy, TicTacToeEngine
 from game_logic.checkers import checkers_game
 from game_logic.chess import chess_game
 from game_logic.connect4 import connect4_game
 from game_logic.dots_and_boxes import dots_and_boxes_game
 from game_logic.tic_tac_toe import tic_tac_toe_game
-from models import MoveRequest, StartGameRequest
+from models import MoveRequest, StartGameRequest, TttMoveRequest, TttNewGameRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,6 +30,13 @@ _auth_service = AuthService()
 tracer = trace.get_tracer(__name__)
 meter = metrics.get_meter(__name__)
 _ai_duration = meter.create_histogram("game.ai.compute_duration", unit="ms", description="AI move computation time")
+
+_ttt_engine = TicTacToeEngine()
+_ttt_strategy = TicTacToeAIStrategy()
+_ttt_processor = MoveProcessor()
+
+# Per-session asyncio queues: SSE handler waits here; POST /move puts moves here.
+_ttt_move_queues: dict[UUID, asyncio.Queue] = {}
 
 _GAME_ENGINES = {
     "tic-tac-toe": tic_tac_toe_game,
@@ -52,6 +63,261 @@ def _winner_to_outcome(winner: str, game_state: dict) -> str:
     if winner == player_symbol or winner == "player":
         return "player_won"
     return "ai_won"
+
+
+# ============================================
+# TIC-TAC-TOE (SSE ARCHITECTURE)
+# ============================================
+
+
+def _ttt_state_payload(state: dict, position: Optional[int] = None) -> dict:
+    return {
+        "position": position,
+        "player_starts": state.get("player_starts", True),
+        "board": state["board"],
+        "current_turn": state.get("current_turn"),
+        "status": state.get("status", "in_progress"),
+        "winner": state.get("winner"),
+        "winning_positions": state.get("winning_positions"),
+    }
+
+
+@router.get("/game/tic-tac-toe/resume")
+async def ttt_resume(
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    span = trace.get_current_span()
+    span.set_attribute("game.id", "tic-tac-toe")
+
+    session = await persistence_service.get_active_session_by_user_game(
+        db, user["id"], "tic_tac_toe"
+    )
+    if not session:
+        return {"session_id": None, "state": None}
+
+    span.set_attribute("game.session_id", str(session.id))
+    state = await persistence_service.get_latest_board_state(db, session.id, "tic_tac_toe")
+    return {"session_id": str(session.id), "state": state}
+
+
+@router.post("/game/tic-tac-toe/newgame")
+async def ttt_newgame(
+    request: TttNewGameRequest,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    span = trace.get_current_span()
+    span.set_attribute("game.id", "tic-tac-toe")
+
+    existing = await persistence_service.get_active_session_by_user_game(
+        db, user["id"], "tic_tac_toe"
+    )
+    if existing:
+        q = _ttt_move_queues.pop(existing.id, None)
+        if q:
+            q.put_nowait({"__close__": True})
+        await persistence_service.close_session(db, existing.id)
+
+    session = await persistence_service.create_game_session(db, user["id"], "tic_tac_toe")
+    span.set_attribute("game.session_id", str(session.id))
+
+    state = _ttt_engine.initial_state(request.player_starts)
+
+    if not request.player_starts:
+        ai_state, engine_eval = _ttt_processor.process_ai_turn(
+            _ttt_engine, _ttt_strategy, state
+        )
+        await persistence_service.record_move(
+            db, session.id, "tic_tac_toe", "ai", None, ai_state, engine_eval
+        )
+        state = ai_state
+    else:
+        await persistence_service.record_move(
+            db, session.id, "tic_tac_toe", "setup", None, state
+        )
+
+    return {"session_id": str(session.id), "state": state}
+
+
+@router.post("/game/tic-tac-toe/move")
+async def ttt_move(
+    request: TttMoveRequest,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    span = trace.get_current_span()
+    span.set_attribute("game.id", "tic-tac-toe")
+
+    session = await persistence_service.get_active_session_by_user_game(
+        db, user["id"], "tic_tac_toe"
+    )
+    if not session:
+        raise HTTPException(status_code=409, detail="No active session")
+
+    span.set_attribute("game.session_id", str(session.id))
+
+    state = await persistence_service.get_latest_board_state(db, session.id, "tic_tac_toe")
+    if not state:
+        raise HTTPException(status_code=409, detail="No board state found")
+
+    if not _ttt_engine.validate_move(state, request.position):
+        raise HTTPException(status_code=422, detail="Invalid move")
+
+    q = _ttt_move_queues.get(session.id)
+    if q:
+        await q.put({"position": request.position})
+
+    return JSONResponse(status_code=202, content=None)
+
+
+@router.get("/game/tic-tac-toe/events/{session_id}")
+async def ttt_events(
+    session_id: str,
+    user: dict = Depends(_require_user),
+    db: AsyncSession = Depends(db_dependency),
+):
+    try:
+        sid = UUID(session_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid session ID")
+
+    game_session = await persistence_service.get_game_session_state(db, sid)
+    if not game_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if game_session.user_id != user["id"]:
+        raise HTTPException(status_code=403, detail="Session does not belong to current user")
+    if game_session.game_ended:
+        raise HTTPException(status_code=410, detail="Session already closed")
+
+    span = trace.get_current_span()
+    span.set_attribute("game.id", "tic-tac-toe")
+    span.set_attribute("game.session_id", session_id)
+
+    q: asyncio.Queue = asyncio.Queue()
+    _ttt_move_queues[sid] = q
+
+    broadcaster = StatusBroadcaster()
+
+    async def process_moves():
+        try:
+            state = await persistence_service.get_latest_board_state(db, sid, "tic_tac_toe")
+            while True:
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=StatusBroadcaster.HEARTBEAT_INTERVAL + 1)
+                except asyncio.TimeoutError:
+                    broadcaster.emit(StatusEvent("heartbeat"))
+                    continue
+
+                if msg.get("__close__"):
+                    broadcaster.close()
+                    return
+
+                position = msg["position"]
+                player_state = _ttt_engine.apply_move(state, position)
+                await persistence_service.record_move(
+                    db, sid, "tic_tac_toe", "human", position, player_state
+                )
+
+                is_terminal, outcome = _ttt_engine.is_terminal(player_state)
+                if is_terminal:
+                    persistence_outcome = _ttt_engine.outcome_to_persistence(player_state)
+                    await persistence_service.end_game_session(
+                        db, sid, persistence_outcome or "draw", "tic_tac_toe"
+                    )
+                    broadcaster.emit(StatusEvent("move", payload=_ttt_state_payload(player_state, position)))
+                    broadcaster.close()
+                    return
+
+                broadcaster.emit(StatusEvent("status", message="Thinking..."))
+
+                with tracer.start_as_current_span("game.ai.move") as ai_span:
+                    ai_span.set_attribute("game.id", "tic-tac-toe")
+                    ai_span.set_attribute("game.session_id", session_id)
+                    t0 = time.monotonic()
+                    ai_state, engine_eval = _ttt_processor.process_ai_turn(
+                        _ttt_engine, _ttt_strategy, player_state
+                    )
+                    compute_ms = (time.monotonic() - t0) * 1000
+                    ai_span.set_attribute("compute_duration_ms", compute_ms)
+                    _ai_duration.record(compute_ms, {"game.id": "tic-tac-toe"})
+
+                ai_position = next(
+                    (i for i in range(9) if ai_state["board"][i] != player_state["board"][i]),
+                    None,
+                )
+                await persistence_service.record_move(
+                    db, sid, "tic_tac_toe", "ai", ai_position, ai_state, engine_eval
+                )
+
+                is_terminal, outcome = _ttt_engine.is_terminal(ai_state)
+                if is_terminal:
+                    persistence_outcome = _ttt_engine.outcome_to_persistence(ai_state)
+                    await persistence_service.end_game_session(
+                        db, sid, persistence_outcome or "draw", "tic_tac_toe"
+                    )
+
+                broadcaster.emit(StatusEvent("move", payload=_ttt_state_payload(ai_state, ai_position)))
+                state = ai_state
+
+                if is_terminal:
+                    broadcaster.close()
+                    return
+
+        except Exception as exc:
+            logger.exception("ttt_sse_error", extra={"session_id": session_id})
+            span.record_exception(exc)
+            span.set_status(trace.StatusCode.ERROR)
+            broadcaster.emit(StatusEvent("error", code="internal_error", message="An error occurred"))
+            broadcaster.close()
+        finally:
+            _ttt_move_queues.pop(sid, None)
+            logger.info("ttt_sse_closed", extra={"session_id": session_id})
+
+    asyncio.create_task(process_moves())
+
+    return StreamingResponse(
+        broadcaster.stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ============================================
+# INTERNAL ENDPOINTS
+# ============================================
+
+
+@router.post("/internal/cleanup-sessions")
+async def cleanup_sessions(
+    x_internal_key: Optional[str] = Header(None, alias="X-Internal-Key"),
+    db: AsyncSession = Depends(db_dependency),
+):
+    expected = os.getenv("INTERNAL_API_KEY")
+    if not expected or x_internal_key != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    async with get_session() as s:
+        result = await s.execute(
+            text(
+                "SELECT id, session_timeout_hours FROM games WHERE status = 'active'"
+            )
+        )
+        rows = result.fetchall()
+
+    total = 0
+    for row in rows:
+        game_id, timeout_hours = row[0], row[1]
+        game_type = GAME_ID_TO_TYPE.get(game_id)
+        if not game_type:
+            continue
+        count = await persistence_service.cleanup_stale_sessions(db, game_type, timeout_hours)
+        total += count
+
+    return {"cleaned": total}
 
 
 # ============================================

@@ -23,6 +23,12 @@ class MoveRequest(BaseModel):
     move: Any
     userId: Optional[int] = None
 
+class TttNewGameRequest(BaseModel):
+    player_starts: bool = True
+
+class TttMoveRequest(BaseModel):
+    position: int
+
 class CompleteGameRequest(BaseModel):
     gameSessionId: str
     moveSequence: str
