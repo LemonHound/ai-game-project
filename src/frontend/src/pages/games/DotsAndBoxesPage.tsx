@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import DotsAndBoxesBoard from '../../components/games/DotsAndBoxesBoard';
 import { useAuth } from '../../hooks/useAuth';
 import { dabMove, dabNewGame, dabResume, dabSubscribeSSE, type DaBGameState } from '../../api/dab';
+import { forfeitGame } from '../../api/games';
 
 const HINT_KEY = 'dab_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -43,6 +45,7 @@ export default function DotsAndBoxesPage() {
     const [winner, setWinner] = useState<'player' | 'ai' | 'draw' | null>(null);
     const [statusText, setStatusText] = useState('');
     const [boardLocked, setBoardLocked] = useState(false);
+    const [lastLine, setLastLine] = useState<{ type: 'h' | 'v'; row: number; col: number } | null>(null);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [pendingResume, setPendingResume] = useState<{
@@ -71,6 +74,9 @@ export default function DotsAndBoxesPage() {
                     if (data.player_score !== undefined) setPlayerScore(data.player_score ?? 0);
                     if (data.ai_score !== undefined) setAiScore(data.ai_score ?? 0);
                     if (data.current_turn !== undefined) setCurrentTurn(data.current_turn ?? null);
+                    if (data.line_type !== null && data.line_type !== undefined && data.row !== null && data.row !== undefined && data.col !== null && data.col !== undefined) {
+                        setLastLine({ type: data.line_type === 'horizontal' ? 'h' : 'v', row: data.row, col: data.col });
+                    }
                     setHint();
                     if (data.status === 'complete') {
                         setWinner(data.winner ?? null);
@@ -101,14 +107,21 @@ export default function DotsAndBoxesPage() {
         try {
             const { session_id, state } = await dabResume();
             if (session_id && state) {
-                setHorizontalLines(state.horizontal_lines);
-                setVerticalLines(state.vertical_lines);
-                setBoxes(state.boxes);
-                setPlayerScore(state.player_score);
-                setAiScore(state.ai_score);
-                setCurrentTurn(state.current_turn);
                 setHint();
                 if (!state.game_active) {
+                    setHorizontalLines(state.horizontal_lines);
+                    setVerticalLines(state.vertical_lines);
+                    setBoxes(state.boxes);
+                    setPlayerScore(state.player_score);
+                    setAiScore(state.ai_score);
+                    setCurrentTurn(state.current_turn);
+                    if (state.last_move) {
+                        setLastLine({
+                            type: state.last_move.type === 'horizontal' ? 'h' : 'v',
+                            row: state.last_move.row,
+                            col: state.last_move.col,
+                        });
+                    }
                     setSessionId(session_id);
                     setBoardLocked(true);
                     setPhase('terminal');
@@ -153,10 +166,24 @@ export default function DotsAndBoxesPage() {
 
     const handleResume = () => {
         if (!pendingResume) return;
-        setSessionId(pendingResume.sessionId);
-        setBoardLocked(pendingResume.state.current_turn === 'ai');
+        const { sessionId: sid, state } = pendingResume;
+        setSessionId(sid);
+        setHorizontalLines(state.horizontal_lines);
+        setVerticalLines(state.vertical_lines);
+        setBoxes(state.boxes);
+        setPlayerScore(state.player_score);
+        setAiScore(state.ai_score);
+        setCurrentTurn(state.current_turn);
+        if (state.last_move) {
+            setLastLine({
+                type: state.last_move.type === 'horizontal' ? 'h' : 'v',
+                row: state.last_move.row,
+                col: state.last_move.col,
+            });
+        }
+        setBoardLocked(state.current_turn === 'ai');
         setPhase('playing');
-        subscribeSSE(pendingResume.sessionId);
+        subscribeSSE(sid);
         setPendingResume(null);
     };
 
@@ -174,6 +201,7 @@ export default function DotsAndBoxesPage() {
         setAiScore(0);
         setCurrentTurn(null);
         setWinner(null);
+        setLastLine(null);
         setStatusText('');
         setBoardLocked(true);
         setPhase('playing');
@@ -202,6 +230,7 @@ export default function DotsAndBoxesPage() {
         if (type === 'horizontal' && horizontalLines[key]) return;
         if (type === 'vertical' && verticalLines[key]) return;
 
+        setLastLine({ type: type === 'horizontal' ? 'h' : 'v', row, col });
         setBoardLocked(true);
         setStatusText('');
         try {
@@ -219,9 +248,19 @@ export default function DotsAndBoxesPage() {
         setSessionId(null);
         setPendingResume(null);
         setWinner(null);
+        setLastLine(null);
         setStatusText('');
         setBoardLocked(true);
         setPhase('newgame');
+    };
+
+    const handleResign = () => {
+        closeSSE();
+        clearHint();
+        if (sessionId) forfeitGame('dots-and-boxes', sessionId).catch(() => {});
+        setWinner('ai');
+        setBoardLocked(true);
+        setPhase('terminal');
     };
 
     const showScores = phase === 'resumeprompt' || phase === 'playing' || phase === 'terminal';
@@ -267,6 +306,8 @@ export default function DotsAndBoxesPage() {
         );
     }
 
+    void sessionId;
+
     return (
         <div className='container mx-auto px-4 py-6 max-w-lg'>
             <h1 className='mb-4 text-4xl font-bold text-center'>Dots and Boxes</h1>
@@ -287,6 +328,7 @@ export default function DotsAndBoxesPage() {
                     boxes={boxes}
                     currentTurn={currentTurn}
                     locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
+                    lastLine={lastLine}
                     onLineClick={handleLineClick}
                 />
 
@@ -306,7 +348,7 @@ export default function DotsAndBoxesPage() {
                 )}
 
                 {phase === 'terminal' && (
-                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-base-100/85 backdrop-blur-sm'>
+                    <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 rounded-lg bg-base-100/90 backdrop-blur-sm'>
                         <p className='text-2xl font-bold'>
                             {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
                         </p>
@@ -339,11 +381,12 @@ export default function DotsAndBoxesPage() {
             />
 
             {phase === 'playing' && (
-                <div className='flex justify-center mt-4'>
-                    <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
-                        New Game
-                    </button>
-                </div>
+                <NewGameButtons
+                    className='flex justify-center mt-4'
+                    optionA={{ label: 'Go First', onClick: () => handleStartGame(true) }}
+                    optionB={{ label: 'Go Second', onClick: () => handleStartGame(false) }}
+                    onResign={handleResign}
+                />
             )}
 
             {showAuthModal && (

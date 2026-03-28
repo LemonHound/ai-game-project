@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import ChessBoard from '../../components/games/ChessBoard';
 import { useAuth } from '../../hooks/useAuth';
@@ -13,6 +14,7 @@ import {
     type ChessGameState,
     type ChessMoveData,
 } from '../../api/chess';
+import { forfeitGame } from '../../api/games';
 
 const HINT_KEY = 'chess_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -428,6 +430,15 @@ export default function ChessPage() {
         setPhase('newgame');
     };
 
+    const handleResign = () => {
+        closeSSE();
+        clearHint();
+        if (sessionId) forfeitGame('chess', sessionId).catch(() => {});
+        setWinner('ai');
+        setBoardLocked(true);
+        setPhase('terminal');
+    };
+
     const showInfo = phase === 'resumeprompt' || phase === 'playing' || phase === 'terminal';
     const aiColor = playerColor === 'white' ? 'Black' : 'White';
     const playerColorLabel = playerColor === 'white' ? 'White' : 'Black';
@@ -638,9 +649,13 @@ export default function ChessPage() {
                         </div>
 
                         {phase === 'playing' && (
-                            <button className='btn btn-neutral btn-sm mt-2 shrink-0' onClick={handleNewGame}>
-                                New Game
-                            </button>
+                            <div className='mt-2 shrink-0'>
+                                <NewGameButtons
+                                    optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
+                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                    onResign={handleResign}
+                                />
+                            </div>
                         )}
                     </div>
                 )}

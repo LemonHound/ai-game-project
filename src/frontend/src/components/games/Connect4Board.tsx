@@ -6,6 +6,7 @@ interface Connect4BoardProps {
     currentTurn: 'player' | 'ai' | null;
     locked: boolean;
     winningCells: [number, number][] | null;
+    lastDrop: [number, number] | null;
     onColumnClick: (col: number) => void;
 }
 
@@ -15,6 +16,7 @@ export default function Connect4Board({
     currentTurn,
     locked,
     winningCells,
+    lastDrop,
     onColumnClick,
 }: Connect4BoardProps) {
     const playerColor = playerStarts ? 'red' : 'yellow';
@@ -112,6 +114,11 @@ export default function Connect4Board({
                             const winning = isWinningCell(rowIdx, colIdx);
                             const dimmed = hasAnyWinner() && !winning && cell !== null;
                             const isNew = newCellRef.current === `${rowIdx}-${colIdx}`;
+                            const isLastDrop =
+                                !winning &&
+                                lastDrop !== null &&
+                                lastDrop[0] === rowIdx &&
+                                lastDrop[1] === colIdx;
                             const isPreview = cell === null && rowIdx === landingRow && colIdx === hoveredCol;
                             const full = isColumnFull(colIdx);
                             const cellClickable = isInteractive && !full;
@@ -139,6 +146,7 @@ export default function Connect4Board({
                                             winning ? 'animate-pulse' : '',
                                             dimmed ? 'opacity-40' : '',
                                             isNew && !winning ? 'scale-95' : '',
+                                            isLastDrop ? 'ring-2 ring-white/60 ring-offset-1 ring-offset-blue-700' : '',
                                         ]
                                             .filter(Boolean)
                                             .join(' ')}

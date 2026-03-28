@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import CheckersBoard from '../../components/games/CheckersBoard';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,6 +13,7 @@ import {
     type CheckersGameState,
     type CheckersMoveData,
 } from '../../api/checkers';
+import { forfeitGame } from '../../api/games';
 
 const HINT_KEY = 'checkers_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -104,14 +106,6 @@ function getValidDestinations(board: string[], pos: number, pieceSymbol: string,
     return destinations;
 }
 
-function TurnArrow() {
-    return (
-        <svg viewBox='0 0 24 24' fill='currentColor' className='w-5 h-5'>
-            <path d='M8 5l8 7-8 7V5z' />
-        </svg>
-    );
-}
-
 export default function CheckersPage() {
     const { user, isLoading: authLoading } = useAuth();
 
@@ -128,6 +122,7 @@ export default function CheckersPage() {
     const [statusText, setStatusText] = useState<string>('');
     const [boardLocked, setBoardLocked] = useState(false);
     const [winner, setWinner] = useState<'player' | 'ai' | null>(null);
+    const [lastMove, setLastMove] = useState<{ from: number; to: number } | null>(null);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [pendingResume, setPendingResume] = useState<{
@@ -149,6 +144,9 @@ export default function CheckersPage() {
         if (data.current_turn !== undefined) setCurrentTurn(data.current_turn);
         if (data.must_capture !== undefined) setMustCapture(data.must_capture);
         if (data.legal_pieces !== undefined) setLegalPieces(data.legal_pieces);
+        if (data.from !== null && data.from !== undefined && data.to !== null && data.to !== undefined) {
+            setLastMove({ from: data.from, to: data.to });
+        }
         setSelectedPiece(null);
         setValidDestinations([]);
     }, []);
@@ -190,19 +188,23 @@ export default function CheckersPage() {
         try {
             const { session_id, state } = await checkersResume();
             if (session_id && state) {
-                setBoard(state.board);
-                setCurrentTurn(state.current_turn);
-                setPlayerSymbol(state.player_symbol);
-                setAiSymbol(state.ai_symbol);
-                setPlayerStarts(state.player_starts);
-                setMustCapture(state.must_capture);
-                setLegalPieces(state.legal_pieces);
                 setHint();
                 if (!state.game_active) {
+                    setBoard(state.board);
+                    setCurrentTurn(state.current_turn);
+                    setPlayerSymbol(state.player_symbol);
+                    setAiSymbol(state.ai_symbol);
+                    setPlayerStarts(state.player_starts);
+                    setMustCapture(state.must_capture);
+                    setLegalPieces(state.legal_pieces);
+                    if (state.last_move) setLastMove({ from: state.last_move.from, to: state.last_move.to });
                     setSessionId(session_id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
+                    setPlayerSymbol(state.player_symbol);
+                    setAiSymbol(state.ai_symbol);
+                    setPlayerStarts(state.player_starts);
                     setPendingResume({ sessionId: session_id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
@@ -243,10 +245,19 @@ export default function CheckersPage() {
 
     const handleResume = () => {
         if (!pendingResume) return;
-        setSessionId(pendingResume.sessionId);
-        setBoardLocked(pendingResume.state.current_turn === 'ai');
+        const { sessionId: sid, state } = pendingResume;
+        setSessionId(sid);
+        setBoard(state.board);
+        setCurrentTurn(state.current_turn);
+        setPlayerSymbol(state.player_symbol);
+        setAiSymbol(state.ai_symbol);
+        setPlayerStarts(state.player_starts);
+        setMustCapture(state.must_capture);
+        setLegalPieces(state.legal_pieces);
+        if (state.last_move) setLastMove({ from: state.last_move.from, to: state.last_move.to });
+        setBoardLocked(state.current_turn === 'ai');
         setPhase('playing');
-        subscribeSSE(pendingResume.sessionId);
+        subscribeSSE(sid);
         setPendingResume(null);
     };
 
@@ -259,6 +270,7 @@ export default function CheckersPage() {
         setPendingResume(null);
         setBoard(Array(64).fill('_'));
         setWinner(null);
+        setLastMove(null);
         setStatusText('');
         setSelectedPiece(null);
         setValidDestinations([]);
@@ -298,6 +310,13 @@ export default function CheckersPage() {
         setValidDestinations(dests);
     };
 
+    const handlePieceDragStart = (pos: number) => {
+        if (boardLocked || currentTurn !== 'player') return;
+        setSelectedPiece(pos);
+        const dests = getValidDestinations(board, pos, playerSymbol, mustCapture);
+        setValidDestinations(dests);
+    };
+
     const handleSquareClick = async (pos: number) => {
         if (boardLocked || currentTurn !== 'player' || selectedPiece === null) return;
         if (!validDestinations.includes(pos)) return;
@@ -325,6 +344,7 @@ export default function CheckersPage() {
         setSessionId(null);
         setPendingResume(null);
         setWinner(null);
+        setLastMove(null);
         setStatusText('');
         setSelectedPiece(null);
         setValidDestinations([]);
@@ -334,8 +354,18 @@ export default function CheckersPage() {
         setPhase('newgame');
     };
 
+    const handleResign = () => {
+        closeSSE();
+        clearHint();
+        if (sessionId) forfeitGame('checkers', sessionId).catch(() => {});
+        setWinner('ai');
+        setBoardLocked(true);
+        setPhase('terminal');
+    };
+
     const flipped = !playerStarts;
     const showSymbols = phase === 'resumeprompt' || phase === 'playing' || phase === 'terminal';
+    const showSidePanel = phase === 'playing' || phase === 'terminal';
 
     const playerLabel = playerSymbol === 'R' ? 'Red' : 'Black';
     const aiLabel = aiSymbol === 'R' ? 'Red' : 'Black';
@@ -346,7 +376,13 @@ export default function CheckersPage() {
     const aiResult: 'win' | 'loss' | 'draw' | null =
         playerResult === null ? null : playerResult === 'win' ? 'loss' : 'win';
 
-    const showTurnIndicator = phase === 'playing' && currentTurn !== null;
+    const playerPiecesOnBoard = board.filter(p => p !== '_' && p.toUpperCase() === playerSymbol).length;
+    const aiPiecesOnBoard = board.filter(p => p !== '_' && p.toUpperCase() === aiSymbol).length;
+    const playerCaptures = showSidePanel ? 12 - aiPiecesOnBoard : 0;
+    const aiCaptures = showSidePanel ? 12 - playerPiecesOnBoard : 0;
+
+    const isPlayerRed = playerSymbol === 'R';
+    const isAiRed = aiSymbol === 'R';
 
     if (authLoading) {
         return (
@@ -380,73 +416,135 @@ export default function CheckersPage() {
     void sessionId;
 
     return (
-        <div className='container mx-auto px-4 py-6 max-w-2xl'>
+        <div className='container mx-auto px-4 py-6 max-w-4xl'>
             <h1 className='mb-4 text-4xl font-bold text-center'>Checkers</h1>
 
-            <PlayerCard
-                name='AI Opponent'
-                isAi
-                symbol={showSymbols ? aiLabel : undefined}
-                statusText={phase === 'playing' ? statusText : undefined}
-                result={aiResult}
-            />
-
-            <div className='relative my-4 flex justify-center items-stretch gap-2'>
-                {showTurnIndicator && (
-                    <div className='relative w-6 flex-shrink-0'>
-                        <div
-                            className={`absolute left-0 transition-all duration-500 text-primary ${currentTurn === 'ai' ? 'top-2' : 'bottom-2'}`}>
-                            <TurnArrow />
-                        </div>
-                    </div>
-                )}
-
-                <div className='relative flex-1 min-w-0'>
-                    <CheckersBoard
-                        board={board}
-                        playerSymbol={playerSymbol}
-                        currentTurn={currentTurn}
-                        selectedPiece={selectedPiece}
-                        validDestinations={validDestinations}
-                        legalPieces={legalPieces}
-                        mustCapture={mustCapture}
-                        locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
-                        flipped={flipped}
-                        onPieceClick={handlePieceClick}
-                        onSquareClick={handleSquareClick}
+            <div className='flex gap-4 items-stretch'>
+                <div className='flex flex-col flex-1 min-w-0'>
+                    <PlayerCard
+                        name='AI Opponent'
+                        isAi
+                        symbol={showSymbols ? aiLabel : undefined}
+                        statusText={phase === 'playing' ? statusText : undefined}
+                        result={aiResult}
                     />
 
-                    {phase === 'loading' && (
-                        <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
-                            <span className='loading loading-spinner loading-lg' />
+                    <div className='relative my-4 flex justify-center'>
+                        <div className='relative w-full max-w-sm'>
+                            <CheckersBoard
+                                board={board}
+                                playerSymbol={playerSymbol}
+                                currentTurn={currentTurn}
+                                selectedPiece={selectedPiece}
+                                validDestinations={validDestinations}
+                                legalPieces={legalPieces}
+                                mustCapture={mustCapture}
+                                locked={
+                                    boardLocked ||
+                                    phase === 'terminal' ||
+                                    phase === 'newgame' ||
+                                    phase === 'resumeprompt'
+                                }
+                                flipped={flipped}
+                                lastMove={lastMove}
+                                onPieceClick={handlePieceClick}
+                                onPieceDragStart={handlePieceDragStart}
+                                onSquareClick={handleSquareClick}
+                                onSquareDrop={handleSquareClick}
+                            />
+
+                            {phase === 'loading' && (
+                                <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
+                                    <span className='loading loading-spinner loading-lg' />
+                                </div>
+                            )}
+
+                            {(phase === 'newgame' || phase === 'resumeprompt') && (
+                                <GameStartOverlay
+                                    canResume={phase === 'resumeprompt'}
+                                    onResume={handleResume}
+                                    optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                />
+                            )}
+
+                            {phase === 'terminal' && (
+                                <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
+                                    <div
+                                        className={`text-2xl font-bold ${playerResult === 'win' ? 'text-success' : 'text-error'}`}>
+                                        {playerResult === 'win' ? 'You Win!' : 'You Lose'}
+                                    </div>
+                                    <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
+                                        <div className='flex items-center gap-2 w-full'>
+                                            <div className='flex-1 h-px bg-base-content/20' />
+                                            <span className='text-xs text-base-content/50 uppercase tracking-wider'>
+                                                Play Again
+                                            </span>
+                                            <div className='flex-1 h-px bg-base-content/20' />
+                                        </div>
+                                        <div className='flex gap-2 w-full'>
+                                            <button
+                                                className='btn btn-primary flex-1'
+                                                onClick={() => handleStartGame(true)}>
+                                                Play as Red
+                                            </button>
+                                            <button
+                                                className='btn btn-secondary flex-1'
+                                                onClick={() => handleStartGame(false)}>
+                                                Play as Black
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
 
-                    {(phase === 'newgame' || phase === 'resumeprompt') && (
-                        <GameStartOverlay
-                            canResume={phase === 'resumeprompt'}
-                            onResume={handleResume}
-                            optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
-                            optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
-                        />
-                    )}
+                    <PlayerCard
+                        name={user.displayName || user.username}
+                        avatarUrl={user.profilePicture}
+                        symbol={showSymbols ? playerLabel : undefined}
+                        result={playerResult}
+                    />
                 </div>
+
+                {showSidePanel && (
+                    <div className='flex flex-col overflow-hidden bg-base-200 rounded-lg p-3 w-32 shrink-0'>
+                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
+                            {Array.from({ length: aiCaptures }, (_, i) => (
+                                <div
+                                    key={i}
+                                    className={`w-4 h-4 rounded-full border ${isPlayerRed ? 'bg-red-500 border-red-700' : 'bg-neutral-800 border-neutral-600'}`}
+                                />
+                            ))}
+                        </div>
+
+                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
+
+                        <div className='flex-1' />
+
+                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
+
+                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
+                            {Array.from({ length: playerCaptures }, (_, i) => (
+                                <div
+                                    key={i}
+                                    className={`w-4 h-4 rounded-full border ${isAiRed ? 'bg-red-500 border-red-700' : 'bg-neutral-800 border-neutral-600'}`}
+                                />
+                            ))}
+                        </div>
+
+                        {phase === 'playing' && (
+                            <NewGameButtons
+                                className='mt-2'
+                                optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                                optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                onResign={handleResign}
+                            />
+                        )}
+                    </div>
+                )}
             </div>
-
-            <PlayerCard
-                name={user.displayName || user.username}
-                avatarUrl={user.profilePicture}
-                symbol={showSymbols ? playerLabel : undefined}
-                result={playerResult}
-            />
-
-            {(phase === 'playing' || phase === 'terminal') && (
-                <div className='flex justify-center mt-4'>
-                    <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
-                        New Game
-                    </button>
-                </div>
-            )}
 
             {showAuthModal && (
                 <AuthModal
