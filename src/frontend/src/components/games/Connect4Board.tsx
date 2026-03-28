@@ -70,9 +70,8 @@ export default function Connect4Board({
         return winningCells !== null && winningCells.length > 0;
     }
 
-    const landingRow = hoveredCol !== null && isInteractive && !isColumnFull(hoveredCol)
-        ? getLandingRow(hoveredCol)
-        : -1;
+    const landingRow =
+        hoveredCol !== null && isInteractive && !isColumnFull(hoveredCol) ? getLandingRow(hoveredCol) : -1;
 
     return (
         <div
@@ -132,7 +131,11 @@ export default function Connect4Board({
                                     <div
                                         className={[
                                             'w-full aspect-square rounded-full transition-all duration-200',
-                                            cell ? discClass : isPreview ? getPreviewClass() : 'border-2 border-base-content/20',
+                                            cell
+                                                ? discClass
+                                                : isPreview
+                                                  ? getPreviewClass()
+                                                  : 'border-2 border-base-content/20',
                                             winning ? 'animate-pulse' : '',
                                             dimmed ? 'opacity-40' : '',
                                             isNew && !winning ? 'scale-95' : '',

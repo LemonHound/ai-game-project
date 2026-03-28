@@ -41,7 +41,15 @@ function resultBadgeClass(result: 'win' | 'loss' | 'draw'): string {
     return 'badge-warning';
 }
 
-export default function PlayerCard({ name, avatarUrl, isAi, symbol, statusText, result, captureIcons }: PlayerCardProps) {
+export default function PlayerCard({
+    name,
+    avatarUrl,
+    isAi,
+    symbol,
+    statusText,
+    result,
+    captureIcons,
+}: PlayerCardProps) {
     return (
         <div className='flex items-center gap-3 p-3 bg-base-200 rounded-lg w-full'>
             <div className='shrink-0'>

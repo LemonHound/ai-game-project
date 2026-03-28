@@ -485,13 +485,16 @@ export default function ChessPage() {
 
                     {phase === 'terminal' && (
                         <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
-                            <div className={`text-2xl font-bold ${playerResult === 'win' ? 'text-success' : playerResult === 'loss' ? 'text-error' : 'text-warning'}`}>
+                            <div
+                                className={`text-2xl font-bold ${playerResult === 'win' ? 'text-success' : playerResult === 'loss' ? 'text-error' : 'text-warning'}`}>
                                 {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw'}
                             </div>
                             <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
                                 <div className='flex items-center gap-2 w-full'>
                                     <div className='flex-1 h-px bg-base-content/20' />
-                                    <span className='text-xs text-base-content/50 uppercase tracking-wider'>Play Again</span>
+                                    <span className='text-xs text-base-content/50 uppercase tracking-wider'>
+                                        Play Again
+                                    </span>
                                     <div className='flex-1 h-px bg-base-content/20' />
                                 </div>
                                 <div className='flex gap-2 w-full'>
@@ -512,7 +515,8 @@ export default function ChessPage() {
                                 <p className='text-sm font-medium text-center mb-3'>Promote pawn to:</p>
                                 <div className='flex gap-2'>
                                     {PROMOTION_PIECES.map(({ piece, label }) => {
-                                        const imgKey = playerColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
+                                        const imgKey =
+                                            playerColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
                                         return (
                                             <button
                                                 key={piece}

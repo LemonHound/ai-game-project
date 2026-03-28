@@ -313,7 +313,9 @@ export default function DotsAndBoxesPage() {
                         <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
                             <div className='flex items-center gap-2 w-full'>
                                 <div className='flex-1 h-px bg-base-content/20' />
-                                <span className='text-xs text-base-content/50 uppercase tracking-wider'>Play Again</span>
+                                <span className='text-xs text-base-content/50 uppercase tracking-wider'>
+                                    Play Again
+                                </span>
                                 <div className='flex-1 h-px bg-base-content/20' />
                             </div>
                             <div className='flex gap-2 w-full'>

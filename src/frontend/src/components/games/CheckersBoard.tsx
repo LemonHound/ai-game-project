@@ -61,10 +61,7 @@ export default function CheckersBoard({
                         (mustCapture !== null ? pos === mustCapture : isLegalPiece);
 
                     const isNonInteractivePiece =
-                        !locked &&
-                        currentTurn === 'player' &&
-                        hasPiece &&
-                        !isInteractivePiece;
+                        !locked && currentTurn === 'player' && hasPiece && !isInteractivePiece;
 
                     const isDestinationInteractive = !locked && currentTurn === 'player' && !hasPiece && isDestination;
 
