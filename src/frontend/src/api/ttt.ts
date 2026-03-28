@@ -71,9 +71,8 @@ export function tttSubscribeSSE(
         withCredentials: true,
     });
 
-    es.onmessage = (event) => {
-        let parsed: { type: string; message?: string; data?: unknown; code?: string } | null =
-            null;
+    es.onmessage = event => {
+        let parsed: { type: string; message?: string; data?: unknown; code?: string } | null = null;
         try {
             parsed = JSON.parse(event.data);
         } catch {

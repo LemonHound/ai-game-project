@@ -2,13 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import TicTacToeBoard from '../../components/games/TicTacToeBoard';
 import { useAuth } from '../../hooks/useAuth';
-import {
-    tttMove,
-    tttNewGame,
-    tttResume,
-    tttSubscribeSSE,
-    type TttGameState,
-} from '../../api/ttt';
+import { tttMove, tttNewGame, tttResume, tttSubscribeSSE, type TttGameState } from '../../api/ttt';
 
 const HINT_KEY = 'ttt_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -62,11 +56,10 @@ export default function TicTacToePage() {
         (sid: string) => {
             closeSSE();
             const es = tttSubscribeSSE(sid, {
-                onStatus: (msg) => setStatusText(msg),
-                onMove: (data) => {
+                onStatus: msg => setStatusText(msg),
+                onMove: data => {
                     if (data.board) setBoard(data.board);
-                    if (data.winning_positions !== undefined)
-                        setWinningPositions(data.winning_positions);
+                    if (data.winning_positions !== undefined) setWinningPositions(data.winning_positions);
                     if (data.current_turn) setCurrentTurn(data.current_turn);
 
                     if (data.status === 'complete') {
@@ -210,20 +203,20 @@ export default function TicTacToePage() {
 
     if (authLoading) {
         return (
-            <div className="container mx-auto px-4 py-10 flex justify-center">
-                <span className="loading loading-spinner loading-lg" />
+            <div className='container mx-auto px-4 py-10 flex justify-center'>
+                <span className='loading loading-spinner loading-lg' />
             </div>
         );
     }
 
     if (!user) {
         return (
-            <div className="container mx-auto px-4 py-10">
-                <h1 className="mb-6 text-4xl font-bold">Tic-Tac-Toe</h1>
-                <div className="card bg-base-200 max-w-sm">
-                    <div className="card-body text-center">
-                        <p className="mb-4">Sign in to play.</p>
-                        <button className="btn btn-primary" onClick={() => setShowAuthModal(true)}>
+            <div className='container mx-auto px-4 py-10'>
+                <h1 className='mb-6 text-4xl font-bold'>Tic-Tac-Toe</h1>
+                <div className='card bg-base-200 max-w-sm'>
+                    <div className='card-body text-center'>
+                        <p className='mb-4'>Sign in to play.</p>
+                        <button className='btn btn-primary' onClick={() => setShowAuthModal(true)}>
                             Sign In
                         </button>
                     </div>
@@ -234,40 +227,38 @@ export default function TicTacToePage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-6 max-w-lg">
-            <h1 className="mb-4 text-4xl font-bold text-center">Tic-Tac-Toe</h1>
+        <div className='container mx-auto px-4 py-6 max-w-lg'>
+            <h1 className='mb-4 text-4xl font-bold text-center'>Tic-Tac-Toe</h1>
 
             {phase === 'loading' && (
-                <div className="flex justify-center py-20">
-                    <span className="loading loading-spinner loading-lg" />
+                <div className='flex justify-center py-20'>
+                    <span className='loading loading-spinner loading-lg' />
                 </div>
             )}
 
             {phase === 'newgame' && (
-                <div className="flex flex-col items-center gap-6 py-10">
-                    <p className="text-base-content/70">Choose who goes first:</p>
-                    <div className="join">
+                <div className='flex flex-col items-center gap-6 py-10'>
+                    <p className='text-base-content/70'>Choose who goes first:</p>
+                    <div className='join'>
                         <button
                             className={`btn join-item ${playerStarts ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => setPlayerStarts(true)}
-                        >
+                            onClick={() => setPlayerStarts(true)}>
                             Go first (X)
                         </button>
                         <button
                             className={`btn join-item ${!playerStarts ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => setPlayerStarts(false)}
-                        >
+                            onClick={() => setPlayerStarts(false)}>
                             Go second (O)
                         </button>
                     </div>
-                    <button className="btn btn-primary btn-wide" onClick={handleStartGame}>
+                    <button className='btn btn-primary btn-wide' onClick={handleStartGame}>
                         New Game
                     </button>
                 </div>
             )}
 
             {(phase === 'playing' || phase === 'terminal') && (
-                <div className="flex flex-col items-center gap-4">
+                <div className='flex flex-col items-center gap-4'>
                     <TicTacToeBoard
                         board={board}
                         winningPositions={winningPositions}
@@ -275,9 +266,9 @@ export default function TicTacToePage() {
                         onCellClick={handleCellClick}
                     />
 
-                    <div className="min-h-8 text-center">
+                    <div className='min-h-8 text-center'>
                         {phase === 'terminal' ? (
-                            <div className="alert max-w-xs">
+                            <div className='alert max-w-xs'>
                                 <span>
                                     {winner === 'draw'
                                         ? "It's a draw!"
@@ -287,14 +278,14 @@ export default function TicTacToePage() {
                                 </span>
                             </div>
                         ) : statusText ? (
-                            <div className="flex items-center gap-2 text-base-content/70">
-                                <span className="loading loading-dots loading-sm" />
+                            <div className='flex items-center gap-2 text-base-content/70'>
+                                <span className='loading loading-dots loading-sm' />
                                 <span>{statusText}</span>
                             </div>
                         ) : null}
                     </div>
 
-                    <button className="btn btn-outline btn-sm" onClick={handleNewGame}>
+                    <button className='btn btn-outline btn-sm' onClick={handleNewGame}>
                         New Game
                     </button>
                 </div>
