@@ -94,6 +94,7 @@ test.describe("error-handling", () => {
 
     const unauthRes = await request.post(`${BASE}/game/tic-tac-toe/newgame`, {
       data: { player_starts: true },
+      headers: { Cookie: "" },
     });
     expect(unauthRes.status()).toBe(401);
     const unauthBody = await unauthRes.json();
