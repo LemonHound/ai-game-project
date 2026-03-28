@@ -158,3 +158,61 @@ async def get_latest_board_state(
     )
     row = result.first()
     return row[0] if row else None
+
+
+async def get_active_session_by_user_game(
+    session: AsyncSession, user_id: int, game_type: str
+) -> Optional[GameSession]:
+    result = await session.execute(
+        select(GameSession).where(
+            GameSession.user_id == user_id,
+            GameSession.game_type == game_type,
+            GameSession.game_ended.is_(False),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def close_session(session: AsyncSession, session_id: UUID) -> None:
+    await session.execute(
+        update(GameSession)
+        .where(GameSession.id == session_id)
+        .values(game_ended=True, game_abandoned=True)
+    )
+    await session.commit()
+
+
+async def create_game_session(
+    session: AsyncSession, user_id: int, game_type: str
+) -> GameSession:
+    new_session = GameSession(user_id=user_id, game_type=game_type)
+    session.add(new_session)
+    await session.commit()
+    await session.refresh(new_session)
+    _sessions_started.add(1, {"game.type": game_type})
+    return new_session
+
+
+async def cleanup_stale_sessions(
+    session: AsyncSession, game_type: str, timeout_hours: int
+) -> int:
+    from sqlalchemy import text as sa_text
+
+    result = await session.execute(
+        sa_text("""
+            UPDATE game_sessions
+            SET game_ended = true, game_abandoned = true
+            WHERE game_type = :game_type
+              AND NOT game_ended
+              AND last_move_at < NOW() - (:timeout_hours || ' hours')::interval
+            RETURNING id
+        """),
+        {"game_type": game_type, "timeout_hours": timeout_hours},
+    )
+    rows = result.fetchall()
+    count = len(rows)
+    await session.commit()
+    if count:
+        _sessions_completed.add(count, {"game.type": game_type, "game.outcome": "abandoned"})
+        logger.info("cleanup_stale_sessions", extra={"game_type": game_type, "count": count})
+    return count

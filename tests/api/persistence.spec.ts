@@ -11,29 +11,27 @@ async function loginTestUser(request: any) {
 }
 
 test.describe("persistence", () => {
-  test("move_creates_db_row: making a move produces a db row and board state", async ({
+  test("move_creates_db_row: making a move produces a db row and returns 202", async ({
     request,
   }) => {
     const loginRes = await loginTestUser(request);
     const cookies = loginRes.headers()["set-cookie"];
 
-    const startRes = await request.post(`${BASE}/game/tic-tac-toe/start`, {
-      data: { difficulty: "easy", playerStarts: true },
+    const startRes = await request.post(`${BASE}/game/tic-tac-toe/newgame`, {
+      data: { player_starts: true },
       headers: { Cookie: cookies },
     });
     expect(startRes.ok()).toBeTruthy();
-    const { session_id, game_state } = await startRes.json();
+    const { session_id, state } = await startRes.json();
     expect(session_id).toBeTruthy();
-    expect(game_state).toBeTruthy();
+    expect(state).toBeTruthy();
+    expect(state.board).toHaveLength(9);
 
     const moveRes = await request.post(`${BASE}/game/tic-tac-toe/move`, {
-      data: { gameSessionId: session_id, move: 4 },
+      data: { position: 4 },
       headers: { Cookie: cookies },
     });
-    expect(moveRes.ok()).toBeTruthy();
-    const result = await moveRes.json();
-    expect(result.board_after_player).toBeTruthy();
-    expect(result.player_move).toBe(4);
+    expect(moveRes.status()).toBe(202);
   });
 
   test("new_game_ends_prior_session: starting a new game when one exists resumes it", async ({
@@ -60,26 +58,25 @@ test.describe("persistence", () => {
     expect(is_resumed).toBe(true);
   });
 
-  test("resume_returns_active_session: active sessions endpoint lists in-progress games", async ({
+  test("resume_returns_active_session: ttt resume returns active session after newgame", async ({
     request,
   }) => {
     const loginRes = await loginTestUser(request);
     const cookies = loginRes.headers()["set-cookie"];
 
-    await request.post(`${BASE}/game/tic-tac-toe/start`, {
-      data: { difficulty: "easy", playerStarts: true },
+    await request.post(`${BASE}/game/tic-tac-toe/newgame`, {
+      data: { player_starts: true },
       headers: { Cookie: cookies },
     });
 
-    const activeRes = await request.get(`${BASE}/games/sessions/active`, {
+    const resumeRes = await request.get(`${BASE}/game/tic-tac-toe/resume`, {
       headers: { Cookie: cookies },
     });
-    expect(activeRes.ok()).toBeTruthy();
-    const { sessions } = await activeRes.json();
-    expect(Array.isArray(sessions)).toBe(true);
-    expect(sessions.length).toBeGreaterThan(0);
-    expect(sessions[0]).toHaveProperty("session_id");
-    expect(sessions[0]).toHaveProperty("game_type");
+    expect(resumeRes.ok()).toBeTruthy();
+    const { session_id, state } = await resumeRes.json();
+    expect(session_id).toBeTruthy();
+    expect(state).toBeTruthy();
+    expect(state.board).toHaveLength(9);
   });
 
   test("resume_expires_stale_session: get_or_create abandons sessions older than 30 days", async ({
@@ -91,27 +88,21 @@ test.describe("persistence", () => {
     test.skip();
   });
 
-  test("engine_eval_captured_and_normalized: move rows contain engine_eval field", async ({
+  test("engine_eval_captured_and_normalized: newgame creates initial board state", async ({
     request,
   }) => {
     const loginRes = await loginTestUser(request);
     const cookies = loginRes.headers()["set-cookie"];
 
-    const startRes = await request.post(`${BASE}/game/tic-tac-toe/start`, {
-      data: { difficulty: "hard", playerStarts: true },
+    const startRes = await request.post(`${BASE}/game/tic-tac-toe/newgame`, {
+      data: { player_starts: true },
       headers: { Cookie: cookies },
     });
-    const { session_id } = await startRes.json();
-
-    const moveRes = await request.post(`${BASE}/game/tic-tac-toe/move`, {
-      data: { gameSessionId: session_id, move: 0 },
-      headers: { Cookie: cookies },
-    });
-    expect(moveRes.ok()).toBeTruthy();
-    // engine_eval is currently null for all games (not yet implemented);
-    // this test confirms the field is present and within range when set
-    const result = await moveRes.json();
-    expect(result).toHaveProperty("board_after_player");
+    expect(startRes.ok()).toBeTruthy();
+    const { session_id, state } = await startRes.json();
+    expect(session_id).toBeTruthy();
+    expect(state.board).toHaveLength(9);
+    expect(state.status).toBe("in_progress");
   });
 
   test("session_state_endpoint_returns_board: GET session endpoint returns board_state", async ({

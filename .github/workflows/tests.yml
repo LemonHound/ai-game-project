@@ -106,6 +106,7 @@ jobs:
           PYTHONPATH: src/backend
       - run: npx playwright install --with-deps chromium
       - run: npm run test:smoke -- --project=chromium
+      - run: npm run test:api -- --project=chromium
         env:
           NODE_ENV: test
           CI: true
