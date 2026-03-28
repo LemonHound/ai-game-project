@@ -90,7 +90,7 @@ async def record_move(
         await session.execute(
             update(GameSession)
             .where(GameSession.id == session_id)
-            .values(last_move_at=datetime.now(timezone.utc))
+            .values(last_move_at=datetime.now(timezone.utc).replace(tzinfo=None))
         )
 
         await session.commit()
