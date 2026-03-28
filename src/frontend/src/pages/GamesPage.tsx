@@ -84,7 +84,7 @@ const PLACEHOLDER_GAMES: Game[] = [
 export default function GamesPage() {
     const { data: apiGames, isLoading } = useQuery({
         queryKey: ['games'],
-        queryFn: fetchGames,
+        queryFn: () => fetchGames(),
     });
     const games = apiGames?.length ? apiGames : PLACEHOLDER_GAMES;
 
