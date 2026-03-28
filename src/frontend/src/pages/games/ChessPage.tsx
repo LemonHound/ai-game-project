@@ -1,8 +1,543 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import AuthModal from '../../components/AuthModal';
+import PlayerCard from '../../components/PlayerCard';
+import ChessBoard from '../../components/games/ChessBoard';
+import { useAuth } from '../../hooks/useAuth';
+import {
+    chessLegalMoves,
+    chessMove,
+    chessNewGame,
+    chessResume,
+    chessSubscribeSSE,
+    type ChessGameState,
+    type ChessMoveData,
+} from '../../api/chess';
+
+const HINT_KEY = 'chess_game_hint';
+const HINT_TTL_MS = 10 * 60 * 1000;
+
+function getHint(): boolean {
+    try {
+        const raw = localStorage.getItem(HINT_KEY);
+        if (!raw) return false;
+        const { expires } = JSON.parse(raw) as { expires: number };
+        return Date.now() < expires;
+    } catch {
+        return false;
+    }
+}
+
+function setHint() {
+    localStorage.setItem(HINT_KEY, JSON.stringify({ expires: Date.now() + HINT_TTL_MS }));
+}
+
+function clearHint() {
+    localStorage.removeItem(HINT_KEY);
+}
+
+type Phase = 'loading' | 'newgame' | 'resumeprompt' | 'playing' | 'terminal';
+
+const PROMOTION_PIECES = [
+    { piece: 'Q', white: '♕', black: '♛', label: 'Queen' },
+    { piece: 'R', white: '♖', black: '♜', label: 'Rook' },
+    { piece: 'B', white: '♗', black: '♝', label: 'Bishop' },
+    { piece: 'N', white: '♘', black: '♞', label: 'Knight' },
+];
+
 export default function ChessPage() {
+    const { user, isLoading: authLoading } = useAuth();
+
+    const [phase, setPhase] = useState<Phase>(getHint() ? 'loading' : 'newgame');
+    const [board, setBoard] = useState<(string | null)[][]>(
+        Array(8)
+            .fill(null)
+            .map(() => Array(8).fill(null))
+    );
+    const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
+    const [currentPlayer, setCurrentPlayer] = useState<'white' | 'black'>('white');
+    const [inCheck, setInCheck] = useState(false);
+    const [capturedPieces, setCapturedPieces] = useState<{ player: string[]; ai: string[] }>({ player: [], ai: [] });
+    const [moveHistory, setMoveHistory] = useState<string[]>([]);
+    const [kingPositions, setKingPositions] = useState<{ white: [number, number]; black: [number, number] }>({
+        white: [7, 4],
+        black: [0, 4],
+    });
+    const [selectedSquare, setSelectedSquare] = useState<[number, number] | null>(null);
+    const [legalDestinations, setLegalDestinations] = useState<[number, number][]>([]);
+    const [lastMove, setLastMove] = useState<{ fromRow: number; fromCol: number; toRow: number; toCol: number } | null>(
+        null
+    );
+    const [statusText, setStatusText] = useState<string>('');
+    const [boardLocked, setBoardLocked] = useState(false);
+    const [winner, setWinner] = useState<string | null>(null);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [pendingResume, setPendingResume] = useState<{ sessionId: string; state: ChessGameState } | null>(null);
+    const [showPromotionModal, setShowPromotionModal] = useState(false);
+    const [pendingPromotion, setPendingPromotion] = useState<{
+        fromRow: number;
+        fromCol: number;
+        toRow: number;
+        toCol: number;
+    } | null>(null);
+
+    const esRef = useRef<EventSource | null>(null);
+
+    const closeSSE = useCallback(() => {
+        if (esRef.current) {
+            esRef.current.close();
+            esRef.current = null;
+        }
+    }, []);
+
+    const applyStateFromData = useCallback((data: ChessMoveData | ChessGameState) => {
+        if ('board' in data && data.board) setBoard(data.board);
+        if ('current_player' in data && data.current_player) setCurrentPlayer(data.current_player);
+        if ('in_check' in data && data.in_check !== undefined) setInCheck(data.in_check ?? false);
+        if ('captured_pieces' in data && data.captured_pieces) setCapturedPieces(data.captured_pieces);
+        if ('king_positions' in data && data.king_positions) setKingPositions(data.king_positions);
+    }, []);
+
+    const subscribeSSE = useCallback(
+        (sid: string) => {
+            closeSSE();
+            const es = chessSubscribeSSE(sid, {
+                onStatus: msg => setStatusText(msg),
+                onMove: (data: ChessMoveData) => {
+                    applyStateFromData(data);
+                    if (data.notation) setMoveHistory(h => [...h, data.notation!]);
+                    if (
+                        data.toRow !== null &&
+                        data.toRow !== undefined &&
+                        data.fromRow !== null &&
+                        data.fromRow !== undefined
+                    ) {
+                        setLastMove({
+                            fromRow: data.fromRow!,
+                            fromCol: data.fromCol!,
+                            toRow: data.toRow!,
+                            toCol: data.toCol!,
+                        });
+                    }
+                    setSelectedSquare(null);
+                    setLegalDestinations([]);
+
+                    if (data.status === 'complete') {
+                        setWinner(data.winner ?? null);
+                        setBoardLocked(true);
+                        setPhase('terminal');
+                        clearHint();
+                        closeSSE();
+                    } else {
+                        setBoardLocked(false);
+                        setStatusText('');
+                        setHint();
+                    }
+                },
+                onError: (code, message) => {
+                    if (code === 'unauthorized' || message.toLowerCase().includes('auth')) {
+                        setShowAuthModal(true);
+                    } else {
+                        setStatusText(`Error: ${message}`);
+                    }
+                },
+            });
+            esRef.current = es;
+        },
+        [closeSSE, applyStateFromData]
+    );
+
+    const loadSession = useCallback(async () => {
+        if (!user) return;
+        try {
+            const { session_id, state } = await chessResume();
+            if (session_id && state) {
+                setBoard(state.board);
+                setCurrentPlayer(state.current_player);
+                setPlayerColor(state.player_color);
+                setInCheck(state.in_check ?? false);
+                setCapturedPieces(state.captured_pieces);
+                if (state.king_positions) setKingPositions(state.king_positions);
+                if (state.last_move) {
+                    setLastMove({
+                        fromRow: state.last_move.fromRow,
+                        fromCol: state.last_move.fromCol,
+                        toRow: state.last_move.toRow,
+                        toCol: state.last_move.toCol,
+                    });
+                }
+                setHint();
+                if (!state.game_active) {
+                    setSessionId(session_id);
+                    setBoardLocked(true);
+                    setPhase('terminal');
+                } else {
+                    setPendingResume({ sessionId: session_id, state });
+                    setBoardLocked(true);
+                    setPhase('resumeprompt');
+                }
+            } else {
+                clearHint();
+                setPhase('newgame');
+            }
+        } catch (err: unknown) {
+            const status = (err as { status?: number }).status;
+            if (status === 401) {
+                setShowAuthModal(true);
+            } else {
+                clearHint();
+                setPhase('newgame');
+            }
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (authLoading) return;
+        if (!user) {
+            setPhase('newgame');
+            return;
+        }
+        loadSession();
+    }, [user, authLoading, loadSession]);
+
+    useEffect(() => {
+        const handler = () => clearHint();
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, []);
+
+    useEffect(() => {
+        return () => closeSSE();
+    }, [closeSSE]);
+
+    const handleResume = () => {
+        if (!pendingResume) return;
+        setSessionId(pendingResume.sessionId);
+        const isPlayerTurn = pendingResume.state.current_player === pendingResume.state.player_color;
+        setBoardLocked(!isPlayerTurn);
+        setPhase('playing');
+        subscribeSSE(pendingResume.sessionId);
+        setPendingResume(null);
+    };
+
+    const handleStartGame = async (goFirst: boolean) => {
+        if (!user) {
+            setShowAuthModal(true);
+            return;
+        }
+        clearHint();
+        setPendingResume(null);
+        setBoard(
+            Array(8)
+                .fill(null)
+                .map(() => Array(8).fill(null))
+        );
+        setMoveHistory([]);
+        setCapturedPieces({ player: [], ai: [] });
+        setLastMove(null);
+        setWinner(null);
+        setStatusText('');
+        setSelectedSquare(null);
+        setLegalDestinations([]);
+        setInCheck(false);
+        setBoardLocked(true);
+        setPhase('playing');
+        try {
+            const { session_id, state } = await chessNewGame(goFirst);
+            setSessionId(session_id);
+            setBoard(state.board);
+            setCurrentPlayer(state.current_player);
+            setPlayerColor(state.player_color);
+            setInCheck(state.in_check ?? false);
+            setCapturedPieces(state.captured_pieces);
+            if (state.king_positions) setKingPositions(state.king_positions);
+            if (state.last_move) {
+                setLastMove({
+                    fromRow: state.last_move.fromRow,
+                    fromCol: state.last_move.fromCol,
+                    toRow: state.last_move.toRow,
+                    toCol: state.last_move.toCol,
+                });
+            }
+            const isPlayerTurn = state.current_player === state.player_color;
+            setBoardLocked(!isPlayerTurn);
+            setHint();
+            subscribeSSE(session_id);
+        } catch (err: unknown) {
+            const status = (err as { status?: number }).status;
+            if (status === 401) setShowAuthModal(true);
+            setPhase('newgame');
+        }
+    };
+
+    const isPlayerPiece = (piece: string): boolean => {
+        return playerColor === 'white' ? piece === piece.toUpperCase() : piece === piece.toLowerCase();
+    };
+
+    const submitMove = async (
+        fromRow: number,
+        fromCol: number,
+        toRow: number,
+        toCol: number,
+        promotionPiece: string | null
+    ) => {
+        setSelectedSquare(null);
+        setLegalDestinations([]);
+        setBoardLocked(true);
+        setStatusText('');
+        try {
+            await chessMove(fromRow, fromCol, toRow, toCol, promotionPiece ?? undefined);
+        } catch (err) {
+            const status = (err as { status?: number }).status;
+            if (status === 401) setShowAuthModal(true);
+            else setBoardLocked(false);
+        }
+    };
+
+    const handleSquareClick = async (row: number, col: number) => {
+        if (boardLocked || currentPlayer !== playerColor) return;
+
+        const piece = board[row][col];
+
+        if (selectedSquare) {
+            const [sr, sc] = selectedSquare;
+            if (legalDestinations.some(([r, c]) => r === row && c === col)) {
+                const movingPiece = board[sr][sc];
+                const isPromotion =
+                    movingPiece &&
+                    movingPiece.toLowerCase() === 'p' &&
+                    ((playerColor === 'white' && row === 0) || (playerColor === 'black' && row === 7));
+
+                if (isPromotion) {
+                    setPendingPromotion({ fromRow: sr, fromCol: sc, toRow: row, toCol: col });
+                    setShowPromotionModal(true);
+                    return;
+                }
+
+                await submitMove(sr, sc, row, col, null);
+            } else if (piece && isPlayerPiece(piece)) {
+                setSelectedSquare([row, col]);
+                const destinations = await chessLegalMoves(row, col);
+                setLegalDestinations(destinations.map(m => [m.toRow, m.toCol] as [number, number]));
+            } else {
+                setSelectedSquare(null);
+                setLegalDestinations([]);
+            }
+        } else {
+            if (piece && isPlayerPiece(piece)) {
+                setSelectedSquare([row, col]);
+                const destinations = await chessLegalMoves(row, col);
+                setLegalDestinations(destinations.map(m => [m.toRow, m.toCol] as [number, number]));
+            }
+        }
+    };
+
+    const handlePromotion = async (choice: string) => {
+        if (!pendingPromotion) return;
+        const promo = playerColor === 'white' ? choice.toUpperCase() : choice.toLowerCase();
+        setShowPromotionModal(false);
+        setPendingPromotion(null);
+        await submitMove(
+            pendingPromotion.fromRow,
+            pendingPromotion.fromCol,
+            pendingPromotion.toRow,
+            pendingPromotion.toCol,
+            promo
+        );
+    };
+
+    const handleNewGame = () => {
+        closeSSE();
+        clearHint();
+        setSessionId(null);
+        setPendingResume(null);
+        setWinner(null);
+        setStatusText('');
+        setSelectedSquare(null);
+        setLegalDestinations([]);
+        setBoardLocked(true);
+        setPhase('newgame');
+    };
+
+    const showInfo = phase === 'resumeprompt' || phase === 'playing' || phase === 'terminal';
+    const aiColor = playerColor === 'white' ? 'Black' : 'White';
+    const playerColorLabel = playerColor === 'white' ? 'White' : 'Black';
+
+    const playerResult: 'win' | 'loss' | 'draw' | null =
+        phase === 'terminal' && winner !== null
+            ? winner === 'draw'
+                ? 'draw'
+                : winner === 'player'
+                  ? 'win'
+                  : 'loss'
+            : null;
+
+    const aiResult: 'win' | 'loss' | 'draw' | null =
+        playerResult === null ? null : playerResult === 'draw' ? 'draw' : playerResult === 'win' ? 'loss' : 'win';
+
+    const kingInCheckColor: 'white' | 'black' | null = inCheck ? currentPlayer : null;
+
+    if (authLoading) {
+        return (
+            <div className='container mx-auto px-4 py-10 flex justify-center'>
+                <span className='loading loading-spinner loading-lg' />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className='container mx-auto px-4 py-10'>
+                <h1 className='mb-6 text-4xl font-bold text-center'>Chess</h1>
+                <div className='flex justify-center'>
+                    <div className='card bg-base-200 w-full max-w-sm'>
+                        <div className='card-body text-center'>
+                            <p className='mb-4'>Sign in to play.</p>
+                            <button className='btn btn-primary' onClick={() => setShowAuthModal(true)}>
+                                Sign In
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {showAuthModal && (
+                    <AuthModal open={showAuthModal} initialTab='login' onClose={() => setShowAuthModal(false)} />
+                )}
+            </div>
+        );
+    }
+
     return (
-        <div className='container mx-auto px-4 py-10'>
-            <h1 className='mb-2 text-4xl font-bold'>Chess</h1>
-            <p className='opacity-60'>Game implementation coming in Phase 3.</p>
+        <div className='container mx-auto px-4 py-6 max-w-2xl'>
+            <h1 className='mb-4 text-4xl font-bold text-center'>Chess</h1>
+
+            <PlayerCard
+                name='AI Opponent'
+                isAi
+                symbol={showInfo ? aiColor : undefined}
+                statusText={phase === 'playing' ? statusText : undefined}
+                result={aiResult}
+            />
+
+            {showInfo && capturedPieces.ai.length > 0 && (
+                <div className='text-lg leading-tight px-1 my-1 min-h-6'>{capturedPieces.ai.join(' ')}</div>
+            )}
+
+            <div className='relative my-4 flex justify-center'>
+                <div className='relative'>
+                    <ChessBoard
+                        board={board}
+                        playerColor={playerColor}
+                        selectedSquare={selectedSquare}
+                        legalDestinations={legalDestinations}
+                        lastMove={lastMove}
+                        inCheck={inCheck}
+                        locked={boardLocked || phase !== 'playing'}
+                        onSquareClick={handleSquareClick}
+                        kingInCheckColor={kingInCheckColor}
+                        kingPositions={kingPositions}
+                    />
+
+                    {phase === 'loading' && (
+                        <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
+                            <span className='loading loading-spinner loading-lg' />
+                        </div>
+                    )}
+
+                    {phase === 'resumeprompt' && (
+                        <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
+                            <p className='text-sm text-base-content/70 font-medium'>Game in progress</p>
+                            <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
+                                <button className='btn btn-primary btn-wide' onClick={handleResume}>
+                                    Continue Game
+                                </button>
+                                <button className='btn btn-neutral btn-wide' onClick={handleNewGame}>
+                                    New Game
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {phase === 'newgame' && (
+                        <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/80 backdrop-blur-sm'>
+                            <p className='text-sm text-base-content/70'>Choose your side:</p>
+                            <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
+                                <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
+                                    Play as White — Go First
+                                </button>
+                                <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
+                                    Play as Black — Go Second
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {showPromotionModal && pendingPromotion && (
+                        <div className='absolute inset-0 flex items-center justify-center bg-base-100/80 backdrop-blur-sm rounded-lg z-30'>
+                            <div className='bg-base-200 rounded-xl p-4 shadow-lg'>
+                                <p className='text-sm font-medium text-center mb-3'>Promote pawn to:</p>
+                                <div className='flex gap-2'>
+                                    {PROMOTION_PIECES.map(({ piece, white, black, label }) => (
+                                        <button
+                                            key={piece}
+                                            className='btn btn-outline btn-square text-3xl w-14 h-14'
+                                            title={label}
+                                            onClick={() => handlePromotion(piece)}>
+                                            {playerColor === 'white' ? white : black}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {showInfo && capturedPieces.player.length > 0 && (
+                <div className='text-lg leading-tight px-1 my-1 min-h-6'>{capturedPieces.player.join(' ')}</div>
+            )}
+
+            {showInfo && inCheck && currentPlayer === playerColor && phase === 'playing' && (
+                <div className='text-center my-1'>
+                    <span className='badge badge-error badge-lg'>Check!</span>
+                </div>
+            )}
+
+            <PlayerCard
+                name={user.displayName || user.username}
+                avatarUrl={user.profilePicture}
+                symbol={showInfo ? playerColorLabel : undefined}
+                result={playerResult}
+            />
+
+            {showInfo && moveHistory.length > 0 && (
+                <div className='mt-3 bg-base-200 rounded-lg p-2'>
+                    <div className='overflow-y-auto max-h-32 flex flex-wrap gap-x-2 gap-y-0.5 text-sm text-base-content/70'>
+                        {moveHistory.map((move, i) => (
+                            <span key={i}>{move}</span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {(phase === 'playing' || phase === 'terminal') && (
+                <div className='flex justify-center mt-4'>
+                    <button className='btn btn-neutral btn-sm' onClick={handleNewGame}>
+                        New Game
+                    </button>
+                </div>
+            )}
+
+            {showAuthModal && (
+                <AuthModal
+                    open={showAuthModal}
+                    initialTab='login'
+                    onClose={() => {
+                        setShowAuthModal(false);
+                        clearHint();
+                        handleNewGame();
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -42,3 +42,42 @@ class TrainAIRequest(BaseModel):
     boardState: str
     moveCount: int
     rating: Optional[float] = 0.0
+
+
+class C4NewGameRequest(BaseModel):
+    player_starts: bool = True
+
+
+class C4MoveRequest(BaseModel):
+    col: int
+
+
+class CheckersNewGameRequest(BaseModel):
+    player_starts: bool = True
+
+
+class CheckersMoveRequest(BaseModel):
+    from_pos: int
+    to_pos: int
+
+
+class DaBNewGameRequest(BaseModel):
+    player_starts: bool = True
+
+
+class DaBMoveRequest(BaseModel):
+    type: str
+    row: int
+    col: int
+
+
+class ChessNewGameRequest(BaseModel):
+    player_starts: bool = True
+
+
+class ChessMoveRequest(BaseModel):
+    fromRow: int
+    fromCol: int
+    toRow: int
+    toCol: int
+    promotionPiece: Optional[str] = None
