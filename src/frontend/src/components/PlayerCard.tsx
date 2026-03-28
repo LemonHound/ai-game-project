@@ -62,9 +62,7 @@ export default function PlayerCard({ name, avatarUrl, isAi, symbol, statusText, 
             <div className='flex-1 min-w-0'>
                 <div className='flex items-center gap-2 flex-wrap'>
                     <span className='font-semibold truncate'>{name}</span>
-                    {symbol && (
-                        <span className='badge badge-sm badge-outline'>{symbol}</span>
-                    )}
+                    {symbol && <span className='badge badge-sm badge-outline'>{symbol}</span>}
                 </div>
 
                 {statusText ? (
