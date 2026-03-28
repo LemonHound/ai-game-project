@@ -215,12 +215,16 @@ persistence layers only.
 
 ### Page Load and Resume
 
-1. Check `localStorage` for key `ttt_game_hint`. If present and `expires` is in the future, render a
-   loading skeleton while `/resume` is in flight.
-2. If key absent or expired, render "New Game" UI immediately. Still call `/resume` in the background.
-3. On `/resume` response:
-   - Active session → render board, subscribe to SSE at `/events/{session_id}`, refresh localStorage hint.
-   - Null → render "New Game" UI, clear any stale localStorage hint.
+The client uses five phases: `loading`, `newgame`, `resumeprompt`, `playing`, `terminal`.
+
+1. Check `localStorage` for key `ttt_game_hint`. If present and `expires` is in the future, enter
+   `loading` phase (spinner overlay on board) while `/resume` is in flight. Otherwise enter `newgame`
+   immediately.
+2. On `/resume` response:
+   - Active in-progress session → set board state from response, enter `resumeprompt` phase. SSE is
+     **not** subscribed yet.
+   - Completed session → set board state, enter `terminal` phase directly (no prompt needed).
+   - Null → enter `newgame` phase, clear any stale localStorage hint.
 
 **`ttt_game_hint` shape:**
 ```json
@@ -233,23 +237,36 @@ Cleared when:
 - Player clicks "New Game" (before `/newgame` is even sent).
 - `beforeunload` fires (handles normal tab/browser close; TTL handles crashes).
 
+### Resume Prompt
+
+When in `resumeprompt` phase, the board renders (dimmed, locked) with a centred overlay:
+
+- **Continue Game** → subscribes to SSE, enters `playing` phase.
+- **New Game** → enters `newgame` phase (overlay changes to turn-order selector; previous board stays
+  visible dimmed underneath).
+
 ### Turn Order Selection
 
-Shown before game start: an inline selector ("Go first" / "Go second") defaulting to first. Submitting
-triggers `POST /newgame` with `player_starts: true/false`.
+Shown as a board overlay in `newgame` phase. Two buttons: "Play as X — Go First" / "Play as O — Go
+Second". Submitting triggers `POST /newgame` with `player_starts: true/false`.
+
+The board renders immediately in `playing` phase (empty, locked) before the API responds so the layout
+does not shift. When going second, the AI computes its first move server-side before `/newgame` returns;
+the board updates with that move once the response arrives.
 
 ### Move Submission and Loading State
 
 1. Cell click → client validates locally (cell empty, game active, player's turn) — UX layer only.
-2. If valid: cell visually commits, board locks, status area shows a spinner.
-3. `POST /move` fires. On 202: SSE events drive the status text.
-4. SSE `status` events update the text below the board.
+2. If valid: cell visually commits, board locks.
+3. `POST /move` fires. On 202: SSE events drive status display.
+4. SSE `status` events update the AI `PlayerCard` status text ("Thinking...", etc.).
 5. SSE `move` event: board updates with AI move, locks release if game continues.
 
 ### Outcome
 
-Inline banner below the board on terminal state ("You win" / "AI wins" / "Draw"). A "New Game" button
-re-renders the turn order selector; on submission, triggers `POST /newgame`.
+Game result is displayed inside the `PlayerCard` components (above and below the board), not as a
+standalone banner. A "New Game" button appears below the player card; clicking it enters `newgame`
+phase (overlay on dimmed board).
 
 ### SSE Reconnect and Error Path
 
@@ -263,9 +280,22 @@ On any 401 from any game API: clear local game state, display `AuthModal`. No si
 
 ## UI / Layout
 
-- **Mobile (< 640px)**: board fills viewport width; cells at least 64px for comfortable tap targets;
-  status and controls stack below the board; no horizontal scroll.
-- **Desktop**: board centered; status and controls alongside or below.
+Layout (top to bottom): AI `PlayerCard` → board (with overlay) → player `PlayerCard` → "New Game" button.
+
+The `PlayerCard` component (`src/frontend/src/components/PlayerCard.tsx`) is used for both participants.
+See `features/player-card/spec.md` for the full component spec.
+
+- AI card (above board): bot icon avatar, "AI Opponent" label, game symbol, SSE status text during AI
+  turn, result badge on terminal state.
+- Player card (below board): user avatar / initials, display name, game symbol, result badge on terminal
+  state.
+- Board overlays (positioned absolute, `inset-0`, `bg-base-100/80 backdrop-blur-sm`):
+  - `loading`: centred spinner.
+  - `resumeprompt`: "Game in progress" label + Continue / New Game buttons.
+  - `newgame`: "Choose your side:" label + Go First / Go Second buttons.
+- **Mobile (< 640px)**: board fills viewport width; cells at least 64px for comfortable tap targets; cards
+  and controls stack above/below the board; no horizontal scroll.
+- **Desktop**: max-width `lg` container centred; same vertical stack.
 - All screen sizes and orientations supported without layout breakage.
 
 ## Data Persistence
@@ -324,8 +354,13 @@ within the [-1, 1] range required by the schema). Terminal state triggers
 | `test_ttt_full_game_player_wins` | Player plays to win; board updates, win banner appears |
 | `test_ttt_full_game_ai_wins` | AI wins; loss banner appears |
 | `test_ttt_full_game_draw` | Game ends in draw; draw banner appears |
+| `test_ttt_resume_prompt_shown_for_in_progress_session` | resumeprompt overlay renders over dimmed board when active session found |
+| `test_ttt_resume_prompt_continue_starts_sse` | clicking Continue from resumeprompt subscribes to SSE and enters playing |
+| `test_ttt_resume_prompt_new_game_shows_side_selector` | clicking New Game from resumeprompt shows turn-order overlay |
+| `test_ttt_go_second_board_renders_before_api_returns` | board renders empty+locked immediately when going second |
+| `test_ttt_result_shown_in_player_cards` | win/loss/draw badge appears in both PlayerCards, not as standalone alert |
 | `test_ttt_new_game_abandons_in_progress_session` | "New Game" closes old session, starts fresh |
-| `test_ttt_unauthenticated_user_sees_login_prompt` | Auth gate blocks game UI |
+| `test_ttt_unauthenticated_user_sees_login_prompt` | Auth gate shows centred sign-in card |
 | `test_ttt_resume_after_page_refresh` | Mid-game refresh restores board state |
 | `test_ttt_401_shows_auth_modal` | 401 from any game API triggers AuthModal |
 | `test_ttt_mobile_viewport_playable` | Board fully playable at 375px wide |
@@ -341,3 +376,5 @@ within the [-1, 1] range required by the schema). Terminal state triggers
 | Board tap targets are comfortable on a physical mobile device |
 | Landscape orientation on mobile renders without layout breakage |
 | SSE reconnects and restores board correctly after simulated network drop |
+| AI "Thinking..." text appears inside the AI card (not below the board) during AI turn |
+| Resume prompt shows correct board state (dimmed) when returning to an in-progress game |
