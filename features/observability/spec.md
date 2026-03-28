@@ -1,6 +1,6 @@
 # Observability Spec (OpenTelemetry)
 
-**Status: done**
+**Status: in-progress**
 
 ## Goal
 
@@ -18,6 +18,7 @@ are separate concerns with separate specs. OTel is not the right tool for either
 | Core SDK | `opentelemetry-sdk` |
 | FastAPI auto-instrumentation | `opentelemetry-instrumentation-fastapi` |
 | SQLAlchemy auto-instrumentation | `opentelemetry-instrumentation-sqlalchemy` |
+| Log trace injection | `opentelemetry-instrumentation-logging` |
 | GCP trace exporter | `opentelemetry-exporter-gcp-trace` |
 | GCP metrics exporter | `opentelemetry-exporter-gcp-monitoring` |
 | Propagation | `opentelemetry-propagator-gcp` |
@@ -61,8 +62,35 @@ has direct knowledge of session lifecycle events.
 ## Implementation
 
 ### `src/backend/telemetry.py`
-Already implemented. Configures TracerProvider + MeterProvider with BatchSpanProcessor and
-environment-based exporters (GCP in production, console locally). No changes required.
+Configures TracerProvider + MeterProvider with BatchSpanProcessor and environment-based exporters
+(GCP in production, console locally).
+
+**Requires one change:** the current `logging.basicConfig` format (`%(asctime)s %(name)s %(levelname)s
+%(message)s`) does not inject OTel trace context. In GCP Cloud Logging, log-to-trace correlation
+requires the `logging.googleapis.com/trace` field in the structured log entry. Without it, log records
+and Cloud Trace spans are siloed — you cannot click a log line and jump to its trace.
+
+Fix: call `LoggingInstrumentor().instrument(set_logging_format=True)` from
+`opentelemetry-instrumentation-logging` in `setup_telemetry()`. This adds `otelTraceID`, `otelSpanID`,
+and `otelServiceName` to every `LogRecord`. In production (Cloud Run → Cloud Logging), switch from
+`logging.basicConfig` to a JSON formatter that maps `otelTraceID` →
+`logging.googleapis.com/trace: projects/{PROJECT_ID}/traces/{trace_id}`. In development, the
+plain-text format can retain the trace ID as a readable field. The `PROJECT_ID` is read from the GCP
+metadata server or an env var.
+
+### Structured log message naming convention
+All `logger.info` / `logger.warning` / `logger.exception` calls in `games.py` for SSE lifecycle and
+move rejection events must use a consistent message string that includes the game prefix, so Cloud
+Logging filters like `jsonPayload.message="c4_sse_error"` work reliably:
+
+| Event | Level | Message |
+|-------|-------|---------|
+| SSE stream closed (normal) | INFO | `{game}_sse_closed` |
+| SSE stream closed (error / exception) | ERROR | `{game}_sse_error` |
+| Player move rejected (422) | WARNING | `{game}_invalid_move` |
+
+`extra={"session_id": session_id}` is included on all three so each log record carries the session
+context needed to correlate with the `game.session_id` span attribute.
 
 ### `src/backend/app.py`
 Already implemented. FastAPIInstrumentor and Psycopg2Instrumentor applied at startup. No changes required.
@@ -104,3 +132,4 @@ credentials required.
 | API integration | `api/telemetry.spec.ts` | Auth endpoint span includes `auth.method` attribute |
 | API integration | `api/telemetry.spec.ts` | `record_move` call produces a child DB span with correct duration and session context |
 | Manual | Cloud Trace dashboard | After first production deploy, verify traces appear and are filterable by game_id |
+| Manual | Cloud Logging → Cloud Trace | Click a log line from a game endpoint; verify the "View in Cloud Trace" link resolves to the correct span |
