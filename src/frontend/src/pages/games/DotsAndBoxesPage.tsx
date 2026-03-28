@@ -74,8 +74,19 @@ export default function DotsAndBoxesPage() {
                     if (data.player_score !== undefined) setPlayerScore(data.player_score ?? 0);
                     if (data.ai_score !== undefined) setAiScore(data.ai_score ?? 0);
                     if (data.current_turn !== undefined) setCurrentTurn(data.current_turn ?? null);
-                    if (data.line_type !== null && data.line_type !== undefined && data.row !== null && data.row !== undefined && data.col !== null && data.col !== undefined) {
-                        setLastLine({ type: data.line_type === 'horizontal' ? 'h' : 'v', row: data.row, col: data.col });
+                    if (
+                        data.line_type !== null &&
+                        data.line_type !== undefined &&
+                        data.row !== null &&
+                        data.row !== undefined &&
+                        data.col !== null &&
+                        data.col !== undefined
+                    ) {
+                        setLastLine({
+                            type: data.line_type === 'horizontal' ? 'h' : 'v',
+                            row: data.row,
+                            col: data.col,
+                        });
                     }
                     setHint();
                     if (data.status === 'complete') {

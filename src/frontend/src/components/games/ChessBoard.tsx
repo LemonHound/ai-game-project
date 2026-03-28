@@ -58,9 +58,7 @@ export default function ChessBoard({
 
     const [dragGhost, setDragGhost] = useState<{ x: number; y: number; piece: string } | null>(null);
     const dragRef = useRef<DragState | null>(null);
-    const squareRefs = useRef<(HTMLDivElement | null)[][]>(
-        Array.from({ length: 8 }, () => Array(8).fill(null))
-    );
+    const squareRefs = useRef<(HTMLDivElement | null)[][]>(Array.from({ length: 8 }, () => Array(8).fill(null)));
     const onSquareClickRef = useRef(onSquareClick);
     const onSquareDropRef = useRef(onSquareDrop);
     const lockedRef = useRef(locked);

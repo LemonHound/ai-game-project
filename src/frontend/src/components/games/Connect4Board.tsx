@@ -117,10 +117,7 @@ export default function Connect4Board({
                             const dimmed = hasAnyWinner() && !winning && cell !== null;
                             const isNew = newCellRef.current === `${rowIdx}-${colIdx}`;
                             const isLastDrop =
-                                !winning &&
-                                lastDrop !== null &&
-                                lastDrop[0] === rowIdx &&
-                                lastDrop[1] === colIdx;
+                                !winning && lastDrop !== null && lastDrop[0] === rowIdx && lastDrop[1] === colIdx;
                             const isPreview = cell === null && rowIdx === landingRow && colIdx === hoveredCol;
                             const full = isColumnFull(colIdx);
                             const cellClickable = isInteractive && !full;
@@ -148,7 +145,9 @@ export default function Connect4Board({
                                             !hidePieces && winning ? 'animate-pulse' : '',
                                             !hidePieces && dimmed ? 'opacity-40' : '',
                                             !hidePieces && isNew && !winning ? 'scale-95' : '',
-                                            !hidePieces && isLastDrop ? 'ring-2 ring-white/60 ring-offset-1 ring-offset-blue-700' : '',
+                                            !hidePieces && isLastDrop
+                                                ? 'ring-2 ring-white/60 ring-offset-1 ring-offset-blue-700'
+                                                : '',
                                         ]
                                             .filter(Boolean)
                                             .join(' ')}

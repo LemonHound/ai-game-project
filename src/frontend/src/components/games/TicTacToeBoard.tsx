@@ -7,7 +7,14 @@ interface TicTacToeBoardProps {
     hidePieces?: boolean;
 }
 
-export default function TicTacToeBoard({ board, winningPositions, lastPosition, locked, onCellClick, hidePieces = false }: TicTacToeBoardProps) {
+export default function TicTacToeBoard({
+    board,
+    winningPositions,
+    lastPosition,
+    locked,
+    onCellClick,
+    hidePieces = false,
+}: TicTacToeBoardProps) {
     return (
         <div className='grid grid-cols-3 gap-2 w-full max-w-xs sm:max-w-sm mx-auto' aria-label='Tic-Tac-Toe board'>
             {board.map((cell, index) => {

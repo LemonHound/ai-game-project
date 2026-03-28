@@ -152,8 +152,7 @@ export default function CheckersBoard({
                     const isSelected = selectedPiece === pos;
                     const isDestination = validDestinations.includes(pos);
                     const isLegalPiece = legalPieces.includes(pos);
-                    const isLastMoveSquare =
-                        lastMove !== null && (lastMove.from === pos || lastMove.to === pos);
+                    const isLastMoveSquare = lastMove !== null && (lastMove.from === pos || lastMove.to === pos);
 
                     const isInteractivePiece =
                         !locked &&
@@ -166,8 +165,7 @@ export default function CheckersBoard({
 
                     const isDestinationInteractive = !locked && currentTurn === 'player' && !hasPiece && isDestination;
 
-                    const isDraggingThis =
-                        dragGhost !== null && selectedPiece === pos && isInteractivePiece;
+                    const isDraggingThis = dragGhost !== null && selectedPiece === pos && isInteractivePiece;
 
                     let squareBg = isLight ? 'bg-amber-100' : 'bg-amber-800';
                     if (!isLight && isSelected) squareBg = 'bg-yellow-500';

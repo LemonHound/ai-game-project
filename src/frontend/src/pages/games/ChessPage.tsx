@@ -583,9 +583,7 @@ export default function ChessPage() {
                                         <div className='flex gap-2'>
                                             {PROMOTION_PIECES.map(({ piece, label }) => {
                                                 const imgKey =
-                                                    playerColor === 'white'
-                                                        ? piece.toUpperCase()
-                                                        : piece.toLowerCase();
+                                                    playerColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
                                                 return (
                                                     <button
                                                         key={piece}
