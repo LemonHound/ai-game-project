@@ -1,97 +1,123 @@
 # WebSocket Feature Spec
 
-**Status: ready**
+**Status: finalized**
 
 ## Background
 
-Currently all game interactions (start, move, complete) use REST API calls. Real-time games like Pong require
-continuous bidirectional communication. Even turn-based games (TTT, Connect4, Chess, Checkers, Dots & Boxes) would
-benefit from WebSocket connections to reduce per-move overhead, keep game traffic off the REST API, and enable
-future real-time features.
+All current game interactions use REST (turn-based) or SSE (server→client push for turn-based games). Real-time
+games like Pong require continuous bidirectional communication that neither REST nor SSE can support. This feature
+establishes a WebSocket infrastructure layer used exclusively by Pong. REST and SSE remain unchanged for all
+other traffic.
 
-## Resolved: Turn-Based Games Use SSE, Not WebSocket
+## Resolved Decisions
 
-The open question about whether turn-based games should use WebSocket is closed. Turn-based games (TTT,
-Connect4, Chess, Checkers, Dots & Boxes) use Server-Sent Events (SSE) for server→client push. The
-client POSTs moves via REST (202 Accepted) and receives state updates over a persistent SSE stream. SSE
-is HTTP-native, sufficient for unidirectional push, and avoids WebSocket infrastructure overhead for games
-that do not require bidirectional real-time communication.
+- **Scope**: WebSocket is scoped exclusively to Pong. Turn-based games (TTT, Connect4, Chess, Checkers, Dots & Boxes)
+  continue to use SSE for server→client push and REST for moves. No shared WS connection per client.
+- **Auth required**: Authentication is required to open a WebSocket connection. The session cookie is validated
+  during the HTTP upgrade handshake. If the cookie is missing or invalid, the server responds with 403 and the
+  upgrade is rejected before a WebSocket is established.
+- **One connection per game session**: Each active game session has exactly one WebSocket connection. If a second
+  connection is opened for the same session (e.g., duplicate tab), the server closes the first connection with
+  code 4001 and accepts the new one.
+- **No session recovery**: Pong does not support reconnect-to-in-progress-game. A disconnect resets to a new
+  game. The server tears down in-memory game state on close.
+- **Message protocol**: JSON envelope `{"type": "<event_type>", "payload": {...}}` for all messages in both
+  directions. No binary frames.
+- **Idle timeout**: Server closes idle connections after 60 seconds with code 4002. Normal game activity
+  (player input messages) resets the idle timer.
+- **Heartbeat**: Server sends a heartbeat message every 30 seconds on connections that have not received a
+  player input in that window, to distinguish idle-but-alive from dropped connections.
+- **FastAPI native WebSocket**: No third-party library (no Socket.IO, no channels). FastAPI's built-in
+  `WebSocket` support is sufficient.
+- **Server authoritative**: Server owns all game state. Clients accept server state unconditionally.
 
-WebSocket is scoped exclusively to Pong, which requires a high-frequency bidirectional game loop.
+## Architecture
 
-See `features/game-tic-tac-toe/spec.md` and `adr.md` for the full turn-based game transport design.
+### Endpoint
 
-## Proposed Scope
+```
+GET /ws/pong/{session_id}
+Upgrade: websocket
+Cookie: session=<token>
+```
 
-- Establish a WebSocket infrastructure layer (server + client)
-- **Confirmed use case**: Pong requires real-time bidirectional communication and cannot use REST for its game
-  loop; WebSocket support is required before Pong can be implemented
-- REST API remains for non-game interactions regardless: auth, game metadata, game list, user stats
-- SSE handles all turn-based game state push (not in scope for this spec)
+The session cookie is extracted and validated before the WebSocket handshake completes. `session_id` must
+correspond to an active Pong session owned by the authenticated user. Mismatch returns 403.
 
-## Known Requirements
+The WebSocket router lives in a new `src/backend/ws_pong.py` module, registered on `app` (not on the games
+API router, since WebSocket endpoints cannot use FastAPI dependency injection the same way as HTTP routes).
 
-- Must support continuous bidirectional communication for Pong (high-frequency game loop)
-- Must integrate with existing session-cookie authentication
-- Same observability/logging requirements as REST (OTel spans, structured logs via GCP Cloud Logging)
-- Must work across mobile and desktop clients (browser WebSocket API)
-- Game data capture (see game-data-persistence spec) must hook into WebSocket message handling
+### Message Types
 
-## Open Questions
+**Server → Client**
 
-### Goals & Use Cases
-- What is the primary driver: latency reduction, real-time AI feedback, or architectural cleanliness?
-- Are there use cases beyond game moves — e.g., live spectating, multi-player, AI commentary?
-- Should the WebSocket layer be designed to support future multiplayer (player vs. player), or single-player only?
+| type | payload | when |
+|------|---------|------|
+| `game_state` | `{ball: {x,y,vx,vy}, player_y, ai_y, score: {player,ai}, status}` | every server push tick (~30Hz) |
+| `game_over` | `{winner: "player"\|"ai", score: {player,ai}}` | win condition reached |
+| `error` | `{code, message}` | malformed client message or server fault |
+| `heartbeat` | `{}` | every 30s when no player input received |
 
-### Architecture
-- Server is always authoritative for game state — clients accept server state unconditionally on reconnect
-  or desync (consistent with error-handling and game-data-persistence specs).
-- One shared WebSocket connection per client, or one connection per active game session?
-- Message protocol: JSON envelope with type/payload fields, or game-specific schemas?
-- How does a WebSocket connection map to DB-backed game sessions on the backend? (In-memory sessions are
-  replaced by DB-backed sessions per game-data-persistence spec — this applies to WebSocket connections too)
-- Should the backend emit unprompted messages (e.g., AI move response pushed after server computes it)?
+**Client → Server**
 
-### Error Handling & Recovery
-Real-time games (Pong and future equivalents) do not support session recovery. A disconnect resets to a new
-game — continuous game state is intentionally not persisted between connections. Error handling for
-WebSocket connections must be standardized to the same degree as HTTP error handling (see error-handling
-spec): connection lifecycle events (open, close, error) must be classified, surfaced to the user
-consistently, and instrumented via OTel (see observability spec WebSocket note). The specific retry and
-reconnect strategy for real-time games is an open question for this spec's planning session.
+| type | payload | when |
+|------|---------|------|
+| `player_input` | `{action: "up"|"down"|"none"}` | on player input change (key/button press and release) |
+| `start_game` | `{difficulty: "easy"\|"medium"\|"hard"}` | once, after connection established |
 
-### Infrastructure
-- FastAPI native WebSocket support vs. third-party library (e.g., Socket.IO, channels)?
-- Connection lifecycle: who initiates close, what triggers server-side cleanup, idle timeout?
-- Reconnection strategy: how does the client re-attach to an in-progress game session after a disconnect?
-- Heartbeat / keep-alive interval?
+### Connection Lifecycle
 
-### Auth & Security
-- How is the session cookie validated during the WebSocket handshake?
-- Rate limiting on inbound WebSocket messages?
-- What happens if the same user opens the same game in two browser tabs simultaneously?
+```
+Client opens WS → server validates cookie + session_id → sends initial game_state (paused)
+Client sends start_game → server begins game loop
+[game loop runs: physics → AI → push game_state at 30Hz]
+[player sends player_input events as paddle moves]
+Win condition reached → server sends game_over → server closes connection (code 1000)
+Client disconnect → server closes game loop, discards in-memory state
+Idle 60s → server sends error {code: 4002} → closes connection
+Duplicate tab → server closes first connection (code 4001) → accepts new one
+```
 
-### Deployment
-- Cloud Run WebSocket timeout: default is 300s, max 3600s — what is the right value for game sessions?
-- Any changes needed to Cloud Run concurrency or load balancer settings for long-lived connections?
+### In-Memory Game State
 
-### Observability
-- How are WebSocket messages traced in OTel (no HTTP request spans)?
-- What events should be instrumented: connection open/close, each message, errors, latency?
-- How do we distinguish game WebSocket traffic in logs from REST API traffic?
+The server maintains an in-memory `PongSession` object per active WebSocket connection. It is never persisted
+between connections. Rally data (for RL training) is flushed to the DB asynchronously when a point is scored
+(see Pong spec). The `PongSession` is keyed by `session_id` in a module-level dict, enabling the duplicate-tab
+eviction logic.
+
+### OTel Instrumentation
+
+WebSocket connections do not produce HTTP request spans. Instrumentation is manual:
+- Span opened on connection upgrade (attributes: `session_id`, `user_id`, `game=pong`)
+- Span closed on connection close (attributes: `close_code`, `duration_ms`, `points_played`)
+- `game.ws.messages_received` counter (per-connection, flushed on close — not per-message to avoid cardinality explosion)
+- `game.ws.messages_sent` counter (same)
+- Error events recorded on the open span for malformed messages and server faults
+
+Log lines use `logger` (not `print`), structured with `session_id` and `user_id` in `extra`.
+
+### Cloud Run Considerations
+
+- Cloud Run default request timeout is 300s. WebSocket connections are long-lived HTTP upgrades.
+- Set `--timeout 600` on the Cloud Run service. A game to 7 points averages ~3.5 minutes; 600s gives double the headroom without inflating costs.
+- The server-side idle timeout (60s) means connections self-terminate well before the Cloud Run limit.
+- No load balancer changes required for single-instance development; session affinity is not needed since
+  each session maps to one connection on one instance. If horizontal scaling is added later, in-memory
+  `PongSession` state must be moved to a shared store (out of scope for v1).
 
 ## Test Cases
 
-_To be defined once open questions above are resolved._
-
 | # | Scenario | Tier | Test Name |
 |---|----------|------|-----------|
-| 1 | WebSocket connection established with valid session cookie | API integration | `ws_connects_with_valid_auth` |
-| 2 | Connection rejected with missing or invalid session cookie | API integration | `ws_rejects_invalid_auth` |
-| 3 | Server pushes message to client after AI move computed | API integration | `ws_server_pushes_ai_move` |
-| 4 | Client receives error frame on malformed message | API integration | `ws_error_on_bad_message` |
-| 5 | OTel span created for connection open and close events | API integration | `ws_otel_connection_spans` |
-| 6 | Duplicate tab opens same game — second connection handled gracefully | E2E | `ws_duplicate_tab_handled` |
-| 7 | Network drop mid-game — client surfaces disconnect state to user | E2E | `ws_disconnect_surfaces_to_ui` |
-| 8 | Idle connection closed by server after timeout | manual | Open game, leave idle past timeout, verify clean close |
+| 1 | WS connection established with valid session cookie | API integration | `ws_connects_with_valid_auth` |
+| 2 | Connection rejected (403) with missing session cookie | API integration | `ws_rejects_missing_cookie` |
+| 3 | Connection rejected (403) with invalid/expired session | API integration | `ws_rejects_invalid_cookie` |
+| 4 | Connection rejected (403) when session_id doesn't match authenticated user | API integration | `ws_rejects_session_mismatch` |
+| 5 | Server pushes `game_state` messages after `start_game` | API integration | `ws_server_pushes_game_state` |
+| 6 | Server sends `heartbeat` after 30s of no player input | API integration | `ws_heartbeat_sent` |
+| 7 | Server closes connection with 4002 after 60s idle | API integration | `ws_idle_timeout_closes` |
+| 8 | Malformed client message results in `error` frame | API integration | `ws_error_on_bad_message` |
+| 9 | OTel span created on open and closed on disconnect | API integration | `ws_otel_connection_spans` |
+| 10 | Duplicate tab: first connection closed with 4001 | E2E | `ws_duplicate_tab_closes_first` |
+| 11 | Network drop mid-game: client surfaces disconnect state to user | E2E | `ws_disconnect_surfaces_to_ui` |
+| 12 | Idle connection closed by server — verify in Cloud Run logs | manual | Open game, leave idle 60s, check structured log for close event |
