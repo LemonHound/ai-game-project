@@ -1,6 +1,6 @@
 # Development Phases & Dependency Order
 
-**Last updated: 2026-03-30**
+**Last updated: 2026-03-30** *(documentation in-progress 2026-03-30)*
 
 This file defines the order in which features should be implemented, based on hard dependencies between
 specs. Update it whenever specs are added, completed, or their dependencies change.
@@ -30,20 +30,14 @@ These are done or in-progress and unblock everything else.
 
 ## Phase 1 — Core Persistence + Documentation Foundation
 
-**Must be fully complete before game implementation begins.**
-
 | Spec | Status | Blocked by |
 |------|--------|------------|
 | game-data-persistence | done | — |
-| documentation | needs implementation | — |
+| documentation | in-progress | — |
 
-`game-data-persistence` replaced all existing DB tables and migrated `db_models.py` and
-`persistence_service.py`. It is complete and deployed.
+`game-data-persistence` is complete (PRs #106–108). Three deferred cleanup items remain (SSE param rename, frontend var rename, DB constraint unit tests) — logged in the spec but not blocking Phase 2+.
 
-`documentation` is the remaining Phase 1 blocker: inline docstrings (backfill + lint enforcement),
-CONTRIBUTING.md, README overhaul, and pre-submit hook. No contributor onboarding is valid until this
-is done. Game implementation in Phase 2+ can proceed in parallel — documentation does not block
-those phases, but it should be completed as soon as possible.
+`documentation`: Python docstrings added to persistence layer, game engine ABCs, chess engine, and all API endpoints. Remaining: TypeScript JSDoc, lint enforcement (pydocstyle + eslint-plugin-jsdoc), CONTRIBUTING.md, and pre-submit hook.
 
 ---
 
