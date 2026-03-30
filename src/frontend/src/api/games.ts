@@ -8,6 +8,11 @@ export class GameApiError extends Error {
     status: number;
     boardState: unknown | null;
 
+    /**
+     * @param detail - Human-readable error message.
+     * @param status - HTTP status code from the server response.
+     * @param boardState - Optional board state from the error body, if present.
+     */
     constructor(detail: string, status: number, boardState: unknown | null = null) {
         super(detail);
         this.name = 'GameApiError';

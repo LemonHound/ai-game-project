@@ -17,6 +17,7 @@ interface State {
 export default class ErrorBoundary extends React.Component<Props, State> {
     private routeKey: string;
 
+    /** @param props - Component props containing the children to protect. */
     constructor(props: Props) {
         super(props);
         this.routeKey = `crash_count_${window.location.pathname}`;
@@ -24,10 +25,20 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         this.state = { hasError: false, error: null, crashCount };
     }
 
+    /**
+     * Updates state to trigger the error UI when a render error is caught.
+     * @param error - The error that was thrown during rendering.
+     * @returns Partial state update setting hasError and the caught error.
+     */
     static getDerivedStateFromError(error: Error): Partial<State> {
         return { hasError: true, error };
     }
 
+    /**
+     * Logs the error and increments the crash counter in localStorage.
+     * @param error - The error that was thrown.
+     * @param info - React component stack info.
+     */
     componentDidCatch(error: Error, info: React.ErrorInfo) {
         console.error('ErrorBoundary caught:', error, info);
         const count = this.state.crashCount + 1;
@@ -35,6 +46,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         this.setState({ crashCount: count });
     }
 
+    /** Clears the crash counter from localStorage on successful mount. */
     componentDidMount() {
         if (!this.state.hasError) {
             localStorage.removeItem(this.routeKey);
@@ -44,6 +56,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         }
     }
 
+    /** @returns The children if no error, otherwise the recovery UI. */
     render() {
         if (!this.state.hasError) {
             return this.props.children;

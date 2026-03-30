@@ -21,8 +21,8 @@
         "test:performance": "playwright test tests/performance",
         "lint": "eslint src/frontend/src/",
         "lint:check": "eslint src/frontend/src/ --max-warnings=0",
-        "format": "prettier --write \"src/**/*.{ts,tsx,js,css,html}\" \"tests/**/*.js\" \"*.{js,ts,json,md}\"",
-        "format:check": "prettier --check \"src/**/*.{ts,tsx,js,css,html}\" \"tests/**/*.js\" \"*.{js,ts,json,md}\"",
+        "format": "prettier --write \"src/**/*.{ts,tsx,js,css,html}\" \"tests/**/*.js\" \"*.{js,mjs,ts,json,md}\"",
+        "format:check": "prettier --check \"src/**/*.{ts,tsx,js,css,html}\" \"tests/**/*.js\" \"*.{js,mjs,ts,json,md}\"",
         "quality:check": "npm run format:check && npm audit --audit-level=high",
         "deps:check": "npm outdated",
         "deps:update": "npx npm-check-updates --upgrade --target minor && npm install"
@@ -40,6 +40,7 @@
         "@tailwindcss/vite": "^4.2.2",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
+        "@typescript-eslint/parser": "^8.58.0",
         "@vitejs/plugin-react": "^6.0.1",
         "autoprefixer": "^10.4.27",
         "concurrently": "^9.2.1",
