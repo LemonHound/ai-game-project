@@ -13,27 +13,95 @@ Move = Any
 
 class GameEngine(ABC):
     @abstractmethod
-    def validate_move(self, state: GameState, move: Move) -> bool: ...
+    def validate_move(self, state: GameState, move: Move) -> bool:
+        """Returns True if the move is legal in the given state, False otherwise.
 
-    @abstractmethod
-    def apply_move(self, state: GameState, move: Move) -> GameState: ...
+        Does not mutate state. Called before apply_move; also used by MoveProcessor
+        to validate AI-generated moves before applying them.
 
-    @abstractmethod
-    def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
-        """Returns (is_terminal, outcome) where outcome is 'player_won'|'ai_won'|'draw'|None."""
+        Args:
+            state: Current game state dict.
+            move: Move representation for this game type (int for TTT, dict for chess, etc.).
+        """
         ...
 
     @abstractmethod
-    def get_legal_moves(self, state: GameState) -> list[Move]: ...
+    def apply_move(self, state: GameState, move: Move) -> GameState:
+        """Applies a validated move and returns the resulting game state.
+
+        Does not mutate the input state — returns a new dict. Callers must pass
+        a move that has already been validated via validate_move.
+
+        Args:
+            state: Current game state dict.
+            move: Validated move to apply.
+
+        Returns:
+            New game state dict after the move is applied.
+        """
+        ...
 
     @abstractmethod
-    def initial_state(self, player_starts: bool) -> GameState: ...
+    def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
+        """Returns (is_terminal, outcome) where outcome is 'player_won'|'ai_won'|'draw'|None.
+
+        Args:
+            state: Current game state dict.
+
+        Returns:
+            Tuple of (is_terminal, outcome). outcome is None when is_terminal is False.
+        """
+        ...
+
+    @abstractmethod
+    def get_legal_moves(self, state: GameState) -> list[Move]:
+        """Returns all legal moves available to the current player in the given state.
+
+        Used by MoveProcessor as the fallback pool when the AI exceeds max_retries.
+        The returned list is guaranteed non-empty for any non-terminal state.
+
+        Args:
+            state: Current game state dict.
+
+        Returns:
+            List of move objects in the format expected by validate_move and apply_move.
+        """
+        ...
+
+    @abstractmethod
+    def initial_state(self, player_starts: bool) -> GameState:
+        """Returns the starting game state for a new session.
+
+        The returned dict is stored as board_state on the game record at creation
+        and is the canonical starting point for move replay.
+
+        Args:
+            player_starts: If True, it is the player's turn first. If False, the AI
+                moves first (the router calls process_ai_turn before returning /newgame).
+
+        Returns:
+            Initial game state dict suitable for passing to apply_move and is_terminal.
+        """
+        ...
 
 
 class AIStrategy(ABC):
     @abstractmethod
     def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
-        """Returns (move, engine_eval). Move may be invalid; no guarantee of validity."""
+        """Returns (move, engine_eval). Move may be invalid; no guarantee of validity.
+
+        The returned move is passed to GameEngine.validate_move by MoveProcessor. If
+        invalid, MoveProcessor retries up to max_retries times before falling back to a
+        random legal move from get_legal_moves. The engine_eval float is currently unused
+        by the router but may be logged or stored in future iterations.
+
+        Args:
+            state: Current game state dict. current_turn is set to "ai" by the caller.
+
+        Returns:
+            Tuple of (move, engine_eval). engine_eval may be None. Move format must match
+            what the corresponding GameEngine expects (e.g. dict with fromRow/toRow for chess).
+        """
         ...
 
 
@@ -41,6 +109,19 @@ class MoveProcessor:
     def process_player_move(
         self, engine: GameEngine, state: GameState, move: Move
     ) -> GameState:
+        """Validates and applies a player move.
+
+        Args:
+            engine: GameEngine instance for this game type.
+            state: Current game state. Must have current_turn == "player".
+            move: Move submitted by the player.
+
+        Returns:
+            New game state after the move is applied.
+
+        Raises:
+            ValueError: If it is not the player's turn or the move is invalid.
+        """
         if state.get("current_turn") != "player":
             raise ValueError("Not player's turn")
         if not engine.validate_move(state, move):
@@ -54,6 +135,21 @@ class MoveProcessor:
         state: GameState,
         max_retries: int = 5,
     ) -> tuple[GameState, Optional[float]]:
+        """Generates and applies the AI's move, with retry and random fallback.
+
+        Calls strategy.generate_move up to max_retries times. If all attempts produce
+        invalid moves, selects a random move from engine.get_legal_moves. The fallback
+        guarantees a valid move is always applied for non-terminal states.
+
+        Args:
+            engine: GameEngine instance for this game type.
+            strategy: AIStrategy instance whose generate_move will be called.
+            state: Current game state (after the player's move).
+            max_retries: Maximum AI attempts before falling back to a random legal move.
+
+        Returns:
+            Tuple of (new_state, engine_eval). engine_eval is None on fallback.
+        """
         ai_state = {**state, "current_turn": "ai"}
         for attempt in range(max_retries):
             move, score = strategy.generate_move(ai_state)

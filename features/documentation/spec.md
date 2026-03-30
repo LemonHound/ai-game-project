@@ -1,6 +1,6 @@
 # Documentation
 
-**Status: needs implementation**
+**Status: in-progress** — Python docstrings complete (persistence service, game engine ABCs, chess engine, all API endpoints). Remaining: TypeScript JSDoc backfill, pydocstyle + eslint-plugin-jsdoc lint enforcement, CONTRIBUTING.md, pre-submit hook.
 
 ## Background
 

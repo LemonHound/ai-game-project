@@ -78,7 +78,35 @@ _COLS = "abcdefgh"
 
 
 class ChessEngine(GameEngine):
+    """GameEngine implementation for chess.
+
+    State shape (the dict stored in chess_games.board_state):
+        board: 8×8 list of lists. Row 0 = black back rank, row 7 = white back rank.
+            Uppercase = white pieces (K Q R B N P), lowercase = black (k q r b n p), None = empty.
+        current_player: "white" | "black" — whose turn it is to move.
+        player_color: "white" | "black" — which color the human player controls. Fixed for the session.
+        game_active: bool — False once a terminal state is reached.
+        player_starts: bool — whether the human player moved first (stored for display).
+        king_positions: {"white": [row, col], "black": [row, col]}.
+        castling_rights: {"white": {"kingside": bool, "queenside": bool}, "black": {...}}.
+        en_passant_target: [row, col] of the en passant capture square, or None.
+        captured_pieces: {"player": list[str], "ai": list[str]} — piece chars of captured pieces.
+        last_move: dict with fromRow/fromCol/toRow/toCol/piece/captured/is_castling/is_en_passant/
+            promotion/notation, or None if no move has been made.
+        in_check: bool — True if current_player's king is in check.
+        fen: str — FEN string after the most recent move (set by apply_move).
+    """
+
     def initial_state(self, player_starts: bool) -> GameState:
+        """Returns the opening chess position as a game state dict.
+
+        Args:
+            player_starts: If True, player controls white and moves first.
+                If False, player controls black and the AI (white) moves first.
+
+        Returns:
+            Full game state dict with the standard starting position.
+        """
         return {
             "board": chess_game._create_initial_board(),
             "current_player": "white",
@@ -97,6 +125,20 @@ class ChessEngine(GameEngine):
         }
 
     def validate_move(self, state: GameState, move: Move) -> bool:
+        """Returns True if the move is pseudo-legal for the current player.
+
+        Checks that the piece exists, belongs to current_player, and that the
+        destination is in the piece's legal move list (which already accounts for
+        check, pins, castling legality, and en passant).
+
+        Args:
+            state: Current game state dict.
+            move: Dict with fromRow, fromCol, toRow, toCol (all int). promotionPiece is ignored here.
+
+        Returns:
+            False if game_active is False, the move fields are missing, no piece is at the source,
+            the piece does not belong to current_player, or the destination is not a legal target.
+        """
         if not state.get("game_active", False):
             return False
         from_row = move.get("fromRow")
@@ -116,6 +158,20 @@ class ChessEngine(GameEngine):
         return [to_row, to_col] in valid
 
     def apply_move(self, state: GameState, move: Move) -> GameState:
+        """Applies a validated move and returns a new game state.
+
+        Handles all special cases: castling (moves rook alongside king), en passant
+        (removes captured pawn), pawn promotion (replaces pawn with promotionPiece).
+        Updates last_move, in_check, and fen on the returned state.
+
+        Args:
+            state: Current game state dict.
+            move: Dict with fromRow, fromCol, toRow, toCol (all int) and optional
+                promotionPiece (str, e.g. "Q"). Must be validated before calling.
+
+        Returns:
+            New game state dict. Does not mutate the input state.
+        """
         gs = copy.deepcopy(state)
         from_row = move["fromRow"]
         from_col = move["fromCol"]
@@ -266,6 +322,20 @@ class ChessEngine(GameEngine):
         return f"{pieces} {turn} {castling} {ep_str} 0 1"
 
     def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
+        """Returns (is_terminal, outcome) for the given chess state.
+
+        Delegates to chess_game._check_game_end for checkmate and draw detection
+        (stalemate, insufficient material, 50-move rule, etc.).
+
+        Args:
+            state: Current game state dict.
+
+        Returns:
+            (True, "player_won") if the AI is checkmated.
+            (True, "ai_won") if the player is checkmated.
+            (True, "draw") on any draw condition.
+            (False, None) if the game is still in progress.
+        """
         state_copy = copy.deepcopy(state)
         game_over, winner_color = chess_game._check_game_end(state_copy)
         if not game_over:
@@ -277,6 +347,18 @@ class ChessEngine(GameEngine):
         return True, "ai_won"
 
     def get_legal_moves(self, state: GameState) -> list[Move]:
+        """Returns all legal moves for current_player in the given state.
+
+        Iterates every square, finds pieces belonging to current_player, and collects
+        their valid destinations. Pawn promotions are expanded to queen promotions only
+        (matching the AI strategy's promotion handling).
+
+        Args:
+            state: Current game state dict.
+
+        Returns:
+            List of move dicts, each with fromRow, fromCol, toRow, toCol, promotionPiece.
+        """
         current_color = state["current_player"]
         moves = []
         board = state["board"]
@@ -301,6 +383,18 @@ class ChessEngine(GameEngine):
         return moves
 
     def get_legal_moves_for_square(self, state: GameState, from_row: int, from_col: int) -> list[dict]:
+        """Returns legal destination squares for the piece at (from_row, from_col).
+
+        Used by the legal-moves API endpoint to populate the frontend move highlights.
+
+        Args:
+            state: Current game state dict.
+            from_row: Row index of the piece (0 = black back rank, 7 = white back rank).
+            from_col: Column index of the piece (0 = a-file, 7 = h-file).
+
+        Returns:
+            List of dicts with toRow and toCol for each reachable square.
+        """
         valid = chess_game._get_valid_moves(state, from_row, from_col)
         return [{"toRow": tr, "toCol": tc} for tr, tc in valid]
 
@@ -312,6 +406,14 @@ class ChessEngine(GameEngine):
 
 
 class ChessAIStrategy(AIStrategy):
+    """AIStrategy implementation for chess using minimax with alpha-beta pruning.
+
+    Uses material balance plus per-piece position tables for evaluation. Search depth
+    is controlled by SEARCH_DEPTH (default 2). To replace this with an external engine
+    or ML model, subclass AIStrategy and implement generate_move — see the AI integration
+    guide in features/documentation/spec.md.
+    """
+
     def _evaluate(self, state: GameState) -> float:
         ai_color = "white" if state["player_color"] == "black" else "black"
         score = 0.0
@@ -375,6 +477,19 @@ class ChessAIStrategy(AIStrategy):
             return min_eval
 
     def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
+        """Selects the best move via minimax with alpha-beta pruning.
+
+        Evaluates all legal moves at the current state to SEARCH_DEPTH plies.
+        Pawn promotions default to queen. The returned engine_eval is normalized to [-1, 1]
+        (positive = AI advantage).
+
+        Args:
+            state: Current game state dict with current_player set to the AI's color.
+
+        Returns:
+            Tuple of (best_move_dict, normalized_eval). Returns (None, None) if no legal
+            moves exist (should not occur for non-terminal states).
+        """
         engine = ChessEngine()
         moves = engine.get_legal_moves(state)
         if not moves:

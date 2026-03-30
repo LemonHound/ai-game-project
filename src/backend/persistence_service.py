@@ -21,6 +21,23 @@ _STALE_DAYS = 30
 async def get_active_game(
     session: AsyncSession, user_id: int, game_type: str
 ) -> Optional[GameRecord]:
+    """Returns the in-progress game record for a user, or None if none exists.
+
+    Auto-expires stale records: if the active record's last_move_at is older than 30 days,
+    it is marked game_ended=True, game_abandoned=True and None is returned. Called by the
+    resume endpoint before presenting the user with a resume prompt.
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        user_id: ID of the authenticated user.
+        game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
+
+    Returns:
+        The active GameRecord if one exists and is not stale, otherwise None.
+
+    Raises:
+        KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
+    """
     with tracer.start_as_current_span("persistence.get_active_game") as span:
         span.set_attribute("game.type", game_type)
         span.set_attribute("user.id", user_id)
@@ -54,6 +71,27 @@ async def get_active_game(
 async def create_game(
     session: AsyncSession, user_id: int, game_type: str, initial_board_state: dict
 ) -> GameRecord:
+    """Creates a new game record with empty move_list and the given initial board state.
+
+    The caller is responsible for closing any prior active game first (via close_game).
+    If player_starts is False, the router must process the AI's first move via the game
+    engine and call record_move before returning the /newgame response.
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        user_id: ID of the authenticated user creating the session.
+        game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
+        initial_board_state: Full board state dict from GameEngine.initial_state. Stored
+            as board_state on the new record.
+
+    Returns:
+        The newly created and committed GameRecord with id populated.
+
+    Raises:
+        KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
+        IntegrityError: If a partial unique index violation occurs (active record already
+            exists for this user + game type). Callers must close_game first.
+    """
     with tracer.start_as_current_span("persistence.create_game") as span:
         span.set_attribute("game.type", game_type)
         span.set_attribute("user.id", user_id)
@@ -79,6 +117,31 @@ async def record_move(
     board_state_after: dict,
     algebraic_notation: Optional[str] = None,
 ) -> None:
+    """Appends a move to the game record and updates the live board state.
+
+    Called after every validated player or AI move. Updates move_list (append),
+    board_state (overwrite), and last_move_at on the game record. Does not insert
+    a new row.
+
+    Move notation format by game type:
+        chess: UCI string, e.g. "e2e4" or "e7e8q" for promotion.
+        tic_tac_toe: "r{row}c{col}", e.g. "r1c2".
+        connect4: "c{col}", e.g. "c3".
+        checkers: algebraic from+to, e.g. "b6d4".
+        dots_and_boxes: "h{r}{c}" (horizontal edge) or "v{r}{c}" (vertical edge).
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        game_id: UUID of the game record (the id column / session identifier).
+        game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
+        move_notation: Move in the standard notation for this game type (see above).
+        board_state_after: Full board state dict after the move. Overwrites board_state.
+        algebraic_notation: Standard algebraic notation for chess moves (e.g. "Nf3").
+            Only used for chess — stored in move_list_algebraic. Ignored for other game types.
+
+    Raises:
+        KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
+    """
     with tracer.start_as_current_span("persistence.record_move") as span:
         span.set_attribute("game.id", str(game_id))
         span.set_attribute("game.type", game_type)
@@ -100,6 +163,20 @@ async def record_move(
 async def end_game(
     session: AsyncSession, game_id: UUID, game_type: str, outcome: str
 ) -> None:
+    """Marks a game record as ended with the given outcome.
+
+    Sets game_ended=True and the corresponding outcome boolean. Called on win, loss,
+    draw, or forfeit. Also called by close_game internally when a new game is started.
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        game_id: UUID of the game record.
+        game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
+        outcome: One of "player_won", "ai_won", "draw", "abandoned".
+
+    Raises:
+        KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
+    """
     with tracer.start_as_current_span("persistence.end_game") as span:
         span.set_attribute("game.id", str(game_id))
         span.set_attribute("game.type", game_type)
@@ -126,6 +203,22 @@ async def end_game(
 async def get_game(
     session: AsyncSession, game_id: UUID, game_type: str
 ) -> Optional[GameRecord]:
+    """Returns the game record by id, regardless of ended status.
+
+    Used by the session state endpoint (GET /api/game/{type}/session/{id}) to retrieve
+    board_state for client-side recovery and resume.
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        game_id: UUID of the game record.
+        game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
+
+    Returns:
+        The GameRecord if found, otherwise None.
+
+    Raises:
+        KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
+    """
     Model = GAME_TYPE_TO_MODEL[game_type]
     result = await session.execute(select(Model).where(Model.id == game_id))
     return result.scalar_one_or_none()
@@ -134,6 +227,18 @@ async def get_game(
 async def get_all_active_games(
     session: AsyncSession, user_id: int
 ) -> list[tuple[str, GameRecord]]:
+    """Returns all in-progress game records across all game types for a user.
+
+    Used to build the cross-game resume prompt shown when the user logs in or navigates
+    to a game page with active sessions in other game types.
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        user_id: ID of the authenticated user.
+
+    Returns:
+        List of (game_type, GameRecord) pairs, one per active game. Empty list if none.
+    """
     results = []
     for game_type, Model in GAME_TYPE_TO_MODEL.items():
         result = await session.execute(
@@ -149,6 +254,19 @@ async def get_all_active_games(
 
 
 async def close_game(session: AsyncSession, game_id: UUID, game_type: str) -> None:
+    """Marks a game record as ended and abandoned without an explicit outcome.
+
+    Called by the /newgame router before creating a new record, to close any prior
+    active session. Sets game_ended=True and game_abandoned=True.
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        game_id: UUID of the game record to close.
+        game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
+
+    Raises:
+        KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
+    """
     Model = GAME_TYPE_TO_MODEL[game_type]
     await session.execute(
         update(Model)
@@ -161,6 +279,19 @@ async def close_game(session: AsyncSession, game_id: UUID, game_type: str) -> No
 async def cleanup_stale_games(
     session: AsyncSession, game_type: str, timeout_hours: int
 ) -> int:
+    """Bulk-marks abandoned any records where last_move_at exceeds the timeout.
+
+    Intended for scheduled invocation via Cloud Scheduler. Operates on a single game
+    type per call. Does not affect records already marked game_ended=True.
+
+    Args:
+        session: Active SQLAlchemy AsyncSession.
+        game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
+        timeout_hours: Records inactive for longer than this many hours are abandoned.
+
+    Returns:
+        Count of records updated. 0 if game_type is unknown or no stale records exist.
+    """
     Model = GAME_TYPE_TO_MODEL.get(game_type)
     if not Model:
         return 0

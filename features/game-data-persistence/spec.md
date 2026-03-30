@@ -1,6 +1,6 @@
 # Game Data Persistence Spec
 
-**Status: needs implementation** — schema redesigned; prior code against old schema must be replaced.
+**Status: done** — implemented in PRs #106 (consolidated schema + persistence service) and #107/#108 (chess algebraic notation, move history fix). Remaining deferred items: SSE path param rename (`{session_id}` → `{id}` in `games.py`), frontend local var rename (`sessionId` → `gameId`), and three DB-constraint unit tests (`test_record_move_no_new_row`, `test_outcome_check_constraint`, `test_partial_unique_index`) whose correct test tier is unresolved.
 
 ## Background
 
