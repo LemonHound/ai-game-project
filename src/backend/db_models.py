@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import CheckConstraint, Column, Index, String, text
@@ -16,10 +16,8 @@ class GameRecord(SQLModel):
     user_id: int
     created_at: datetime = Field(default_factory=_utcnow)
     last_move_at: datetime = Field(default_factory=_utcnow)
-    board_state: Any = Field(sa_column=Column(JSONB, nullable=False))
-    move_list: list[str] = Field(
-        sa_column=Column(ARRAY(String), nullable=False, server_default="{}")
-    )
+    board_state: Optional[Any] = Field(default=None)
+    move_list: list[str] = Field(default_factory=list)
     game_ended: bool = Field(default=False)
     game_abandoned: bool = Field(default=False)
     is_draw: bool = Field(default=False)
@@ -29,6 +27,10 @@ class GameRecord(SQLModel):
 
 class TicTacToeGame(GameRecord, table=True):
     __tablename__ = "tic_tac_toe_games"
+    board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
+    move_list: list[str] = Field(
+        sa_column=Column("move_list", ARRAY(String), nullable=False, server_default="{}")
+    )
     __table_args__ = (
         CheckConstraint(
             "(is_draw::int + player_won::int + ai_won::int) <= 1",
@@ -45,6 +47,10 @@ class TicTacToeGame(GameRecord, table=True):
 
 class ChessGame(GameRecord, table=True):
     __tablename__ = "chess_games"
+    board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
+    move_list: list[str] = Field(
+        sa_column=Column("move_list", ARRAY(String), nullable=False, server_default="{}")
+    )
     __table_args__ = (
         CheckConstraint(
             "(is_draw::int + player_won::int + ai_won::int) <= 1",
@@ -61,6 +67,10 @@ class ChessGame(GameRecord, table=True):
 
 class CheckersGame(GameRecord, table=True):
     __tablename__ = "checkers_games"
+    board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
+    move_list: list[str] = Field(
+        sa_column=Column("move_list", ARRAY(String), nullable=False, server_default="{}")
+    )
     __table_args__ = (
         CheckConstraint(
             "(is_draw::int + player_won::int + ai_won::int) <= 1",
@@ -77,6 +87,10 @@ class CheckersGame(GameRecord, table=True):
 
 class Connect4Game(GameRecord, table=True):
     __tablename__ = "connect4_games"
+    board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
+    move_list: list[str] = Field(
+        sa_column=Column("move_list", ARRAY(String), nullable=False, server_default="{}")
+    )
     __table_args__ = (
         CheckConstraint(
             "(is_draw::int + player_won::int + ai_won::int) <= 1",
@@ -93,6 +107,10 @@ class Connect4Game(GameRecord, table=True):
 
 class DotsAndBoxesGame(GameRecord, table=True):
     __tablename__ = "dots_and_boxes_games"
+    board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
+    move_list: list[str] = Field(
+        sa_column=Column("move_list", ARRAY(String), nullable=False, server_default="{}")
+    )
     __table_args__ = (
         CheckConstraint(
             "(is_draw::int + player_won::int + ai_won::int) <= 1",
