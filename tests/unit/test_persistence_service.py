@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src/backend"))
 
 import persistence_service
-from db_models import TicTacToeGame
+from db_models import ChessGame, TicTacToeGame
 
 
 def _make_game(user_id: int, game_type: str = "tic_tac_toe", **kwargs) -> TicTacToeGame:
@@ -146,6 +146,26 @@ async def test_close_game_marks_abandoned():
     db.commit = AsyncMock()
 
     await persistence_service.close_game(db, game_id, "tic_tac_toe")
+
+    db.execute.assert_called_once()
+    db.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_record_move_chess_appends_algebraic():
+    game_id = uuid4()
+    db = AsyncMock()
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+
+    await persistence_service.record_move(
+        db,
+        game_id,
+        "chess",
+        "e2e4",
+        {"board": [], "current_player": "ai"},
+        algebraic_notation="e4",
+    )
 
     db.execute.assert_called_once()
     db.commit.assert_called_once()

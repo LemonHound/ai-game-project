@@ -77,21 +77,23 @@ async def record_move(
     game_type: str,
     move_notation: str,
     board_state_after: dict,
+    algebraic_notation: Optional[str] = None,
 ) -> None:
     with tracer.start_as_current_span("persistence.record_move") as span:
         span.set_attribute("game.id", str(game_id))
         span.set_attribute("game.type", game_type)
 
         Model = GAME_TYPE_TO_MODEL[game_type]
-        await session.execute(
-            update(Model)
-            .where(Model.id == game_id)
-            .values(
-                board_state=board_state_after,
-                move_list=func.array_append(Model.move_list, move_notation),
-                last_move_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        values: dict = {
+            "board_state": board_state_after,
+            "move_list": func.array_append(Model.move_list, move_notation),
+            "last_move_at": datetime.now(timezone.utc).replace(tzinfo=None),
+        }
+        if algebraic_notation is not None and hasattr(Model, "move_list_algebraic"):
+            values["move_list_algebraic"] = func.array_append(
+                Model.move_list_algebraic, algebraic_notation
             )
-        )
+        await session.execute(update(Model).where(Model.id == game_id).values(**values))
         await session.commit()
 
 
