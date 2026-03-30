@@ -1191,6 +1191,7 @@ async def chess_events(
                     broadcaster.close()
                     return
 
+                broadcaster.emit(StatusEvent("player_move", payload=_chess_state_payload(player_state, "player")))
                 broadcaster.emit(StatusEvent("status", message="Thinking..."))
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
