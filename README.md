@@ -88,7 +88,8 @@ ai-game-project/
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add AI logic, read game data, run tests, and set up the pre-commit hook.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add AI logic, read game data, run tests, and set up the pre-commit
+hook.
 
 ---
 
@@ -104,11 +105,11 @@ The production service runs on GCP Cloud Run backed by Cloud SQL (PostgreSQL).
 
 ### GCP Access
 
-| Resource       | Where to find it                                                |
-| -------------- | --------------------------------------------------------------- |
-| Cloud Run logs | GCP Console → Cloud Run → `game-ai-website` → Logs             |
-| Cloud SQL      | GCP Console → Cloud SQL → `game-ai-db`                         |
-| Cloud Trace    | GCP Console → Trace → Trace list                                |
-| Cloud Build    | `gcloud builds list --limit=5 --region=global`                  |
+| Resource       | Where to find it                                   |
+| -------------- | -------------------------------------------------- |
+| Cloud Run logs | GCP Console → Cloud Run → `game-ai-website` → Logs |
+| Cloud SQL      | GCP Console → Cloud SQL → `game-ai-db`             |
+| Cloud Trace    | GCP Console → Trace → Trace list                   |
+| Cloud Build    | `gcloud builds list --limit=5 --region=global`     |
 
 Contact the team for GCP project access.

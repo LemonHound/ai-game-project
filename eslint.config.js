@@ -6,16 +6,19 @@ export default [
     {
         plugins: { jsdoc },
         rules: {
-            'jsdoc/require-jsdoc': ['error', {
-                require: {
-                    FunctionDeclaration: true,
-                    MethodDefinition: true,
-                    ClassDeclaration: true,
-                    ArrowFunctionExpression: false,
-                    FunctionExpression: false,
+            'jsdoc/require-jsdoc': [
+                'error',
+                {
+                    require: {
+                        FunctionDeclaration: true,
+                        MethodDefinition: true,
+                        ClassDeclaration: true,
+                        ArrowFunctionExpression: false,
+                        FunctionExpression: false,
+                    },
+                    publicOnly: true,
                 },
-                publicOnly: true,
-            }],
+            ],
             'jsdoc/require-param': 'warn',
             'jsdoc/require-returns': 'warn',
         },
