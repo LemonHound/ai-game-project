@@ -102,6 +102,7 @@ export function chessSubscribeSSE(
     handlers: {
         onStatus: (message: string) => void;
         onMove: (data: ChessMoveData) => void;
+        onPlayerMove?: (data: ChessMoveData) => void;
         onError: (code: string, message: string) => void;
         onHeartbeat?: () => void;
     }
@@ -123,6 +124,8 @@ export function chessSubscribeSSE(
             handlers.onStatus(parsed.message);
         } else if (parsed.type === 'move' && parsed.data) {
             handlers.onMove(parsed.data as ChessMoveData);
+        } else if (parsed.type === 'player_move' && parsed.data) {
+            handlers.onPlayerMove?.(parsed.data as ChessMoveData);
         } else if (parsed.type === 'error') {
             handlers.onError(parsed.code ?? 'unknown', parsed.message ?? 'Unknown error');
         } else if (parsed.type === 'heartbeat') {

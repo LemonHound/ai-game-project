@@ -124,6 +124,9 @@ export default function ChessPage() {
             closeSSE();
             const es = chessSubscribeSSE(sid, {
                 onStatus: msg => setStatusText(msg),
+                onPlayerMove: (data: ChessMoveData) => {
+                    if (data.notation) setMoveHistory(h => [...h, data.notation!]);
+                },
                 onMove: (data: ChessMoveData) => {
                     applyStateFromData(data);
                     if (data.notation) setMoveHistory(h => [...h, data.notation!]);
@@ -297,6 +300,9 @@ export default function ChessPage() {
                     toRow: state.last_move.toRow,
                     toCol: state.last_move.toCol,
                 });
+                if (state.last_move.notation) {
+                    setMoveHistory([state.last_move.notation]);
+                }
             }
             const isPlayerTurn = state.current_player === state.player_color;
             setBoardLocked(!isPlayerTurn);
