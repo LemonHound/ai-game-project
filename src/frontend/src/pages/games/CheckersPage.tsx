@@ -186,8 +186,8 @@ export default function CheckersPage() {
     const loadSession = useCallback(async () => {
         if (!user) return;
         try {
-            const { session_id, state } = await checkersResume();
-            if (session_id && state) {
+            const { id, state } = await checkersResume();
+            if (id && state) {
                 setHint();
                 if (!state.game_active) {
                     setBoard(state.board);
@@ -198,14 +198,14 @@ export default function CheckersPage() {
                     setMustCapture(state.must_capture);
                     setLegalPieces(state.legal_pieces);
                     if (state.last_move) setLastMove({ from: state.last_move.from, to: state.last_move.to });
-                    setSessionId(session_id);
+                    setSessionId(id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
                     setPlayerSymbol(state.player_symbol);
                     setAiSymbol(state.ai_symbol);
                     setPlayerStarts(state.player_starts);
-                    setPendingResume({ sessionId: session_id, state });
+                    setPendingResume({ sessionId: id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
                 }
@@ -279,8 +279,8 @@ export default function CheckersPage() {
         setBoardLocked(true);
         setPhase('playing');
         try {
-            const { session_id, state } = await checkersNewGame(goFirst);
-            setSessionId(session_id);
+            const { id, state } = await checkersNewGame(goFirst);
+            setSessionId(id);
             setBoard(state.board);
             setCurrentTurn(state.current_turn);
             setPlayerSymbol(state.player_symbol);
@@ -290,7 +290,7 @@ export default function CheckersPage() {
             setLegalPieces(state.legal_pieces);
             setBoardLocked(state.current_turn === 'ai');
             setHint();
-            subscribeSSE(session_id);
+            subscribeSSE(id);
         } catch (err: unknown) {
             const status = (err as { status?: number }).status;
             if (status === 401) setShowAuthModal(true);

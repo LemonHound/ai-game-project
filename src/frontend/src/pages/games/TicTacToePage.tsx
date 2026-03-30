@@ -95,8 +95,8 @@ export default function TicTacToePage() {
     const loadSession = useCallback(async () => {
         if (!user) return;
         try {
-            const { session_id, state } = await tttResume();
-            if (session_id && state) {
+            const { id, state } = await tttResume();
+            if (id && state) {
                 setPlayerSymbol(state.player_symbol);
                 setHint();
                 if (state.status === 'complete') {
@@ -104,11 +104,11 @@ export default function TicTacToePage() {
                     setCurrentTurn(state.current_turn);
                     setWinningPositions(state.winning_positions);
                     setWinner(state.winner);
-                    setSessionId(session_id);
+                    setSessionId(id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
-                    setPendingResume({ sessionId: session_id, state });
+                    setPendingResume({ sessionId: id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
                 }
@@ -174,14 +174,14 @@ export default function TicTacToePage() {
         setBoardLocked(true);
         setPhase('playing');
         try {
-            const { session_id, state } = await tttNewGame(goFirst);
-            setSessionId(session_id);
+            const { id, state } = await tttNewGame(goFirst);
+            setSessionId(id);
             setBoard(state.board);
             setCurrentTurn(state.current_turn);
             setPlayerSymbol(state.player_symbol);
             setBoardLocked(state.current_turn === 'ai');
             setHint();
-            subscribeSSE(session_id);
+            subscribeSSE(id);
         } catch (err: unknown) {
             const status = (err as { status?: number }).status;
             if (status === 401) setShowAuthModal(true);

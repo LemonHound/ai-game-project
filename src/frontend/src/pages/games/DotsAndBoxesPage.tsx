@@ -116,8 +116,8 @@ export default function DotsAndBoxesPage() {
     const loadSession = useCallback(async () => {
         if (!user) return;
         try {
-            const { session_id, state } = await dabResume();
-            if (session_id && state) {
+            const { id, state } = await dabResume();
+            if (id && state) {
                 setHint();
                 if (!state.game_active) {
                     setHorizontalLines(state.horizontal_lines);
@@ -133,11 +133,11 @@ export default function DotsAndBoxesPage() {
                             col: state.last_move.col,
                         });
                     }
-                    setSessionId(session_id);
+                    setSessionId(id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
-                    setPendingResume({ sessionId: session_id, state });
+                    setPendingResume({ sessionId: id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
                 }
@@ -217,8 +217,8 @@ export default function DotsAndBoxesPage() {
         setBoardLocked(true);
         setPhase('playing');
         try {
-            const { session_id, state } = await dabNewGame(goFirst);
-            setSessionId(session_id);
+            const { id, state } = await dabNewGame(goFirst);
+            setSessionId(id);
             setHorizontalLines(state.horizontal_lines);
             setVerticalLines(state.vertical_lines);
             setBoxes(state.boxes);
@@ -227,7 +227,7 @@ export default function DotsAndBoxesPage() {
             setCurrentTurn(state.current_turn);
             setBoardLocked(state.current_turn === 'ai');
             setHint();
-            subscribeSSE(session_id);
+            subscribeSSE(id);
         } catch (err: unknown) {
             const status = (err as { status?: number }).status;
             if (status === 401) setShowAuthModal(true);

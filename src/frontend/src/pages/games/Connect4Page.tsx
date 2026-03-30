@@ -102,19 +102,19 @@ export default function Connect4Page() {
     const loadSession = useCallback(async () => {
         if (!user) return;
         try {
-            const { session_id, state } = await c4Resume();
-            if (session_id && state) {
+            const { id, state } = await c4Resume();
+            if (id && state) {
                 setHint();
                 if (!state.game_active) {
                     setBoard(state.board);
                     setCurrentTurn(state.current_turn ?? 'player');
                     setPlayerStarts(state.player_starts);
-                    setSessionId(session_id);
+                    setSessionId(id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
                     setPlayerStarts(state.player_starts);
-                    setPendingResume({ sessionId: session_id, state });
+                    setPendingResume({ sessionId: id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
                 }
@@ -183,15 +183,15 @@ export default function Connect4Page() {
         setBoardLocked(true);
         setPhase('playing');
         try {
-            const { session_id, state } = await c4NewGame(goFirst);
-            setSessionId(session_id);
+            const { id, state } = await c4NewGame(goFirst);
+            setSessionId(id);
             setBoard(state.board);
             setCurrentTurn(state.current_turn ?? 'player');
             setPlayerStarts(state.player_starts);
             if (state.last_move) setLastDrop([state.last_move.row, state.last_move.col]);
             setBoardLocked(state.current_turn === 'ai');
             setHint();
-            subscribeSSE(session_id);
+            subscribeSSE(id);
         } catch (err: unknown) {
             const status = (err as { status?: number }).status;
             if (status === 401) setShowAuthModal(true);

@@ -48,7 +48,7 @@ test.describe("error-handling", () => {
     });
     expect(resumeRes.ok()).toBeTruthy();
     const body = await resumeRes.json();
-    expect(body).toHaveProperty("session_id");
+    expect(body).toHaveProperty("id");
     expect(body).toHaveProperty("state");
     expect(body.state).not.toBeNull();
     expect(body.state.board).toHaveLength(9);

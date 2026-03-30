@@ -20,8 +20,8 @@ test.describe('persistence', () => {
             headers: { Cookie: cookies },
         });
         expect(startRes.ok()).toBeTruthy();
-        const { session_id, state } = await startRes.json();
-        expect(session_id).toBeTruthy();
+        const { id, state } = await startRes.json();
+        expect(id).toBeTruthy();
         expect(state).toBeTruthy();
         expect(state.board).toHaveLength(9);
 
@@ -43,14 +43,14 @@ test.describe('persistence', () => {
             headers: { Cookie: cookies },
         });
         expect(start1.ok()).toBeTruthy();
-        const { session_id: sid1 } = await start1.json();
+        const { id: sid1 } = await start1.json();
 
         const start2 = await request.post(`${BASE}/game/checkers/newgame`, {
             data: { player_starts: true },
             headers: { Cookie: cookies },
         });
         expect(start2.ok()).toBeTruthy();
-        const { session_id: sid2 } = await start2.json();
+        const { id: sid2 } = await start2.json();
 
         expect(sid2).not.toBe(sid1);
     });
@@ -68,8 +68,8 @@ test.describe('persistence', () => {
             headers: { Cookie: cookies },
         });
         expect(resumeRes.ok()).toBeTruthy();
-        const { session_id, state } = await resumeRes.json();
-        expect(session_id).toBeTruthy();
+        const { id, state } = await resumeRes.json();
+        expect(id).toBeTruthy();
         expect(state).toBeTruthy();
         expect(state.board).toHaveLength(9);
     });
@@ -90,8 +90,8 @@ test.describe('persistence', () => {
             headers: { Cookie: cookies },
         });
         expect(startRes.ok()).toBeTruthy();
-        const { session_id, state } = await startRes.json();
-        expect(session_id).toBeTruthy();
+        const { id, state } = await startRes.json();
+        expect(id).toBeTruthy();
         expect(state.board).toHaveLength(9);
         expect(state.status).toBe('in_progress');
     });
@@ -105,14 +105,14 @@ test.describe('persistence', () => {
             headers: { Cookie: cookies },
         });
         expect(startRes.ok()).toBeTruthy();
-        const { session_id } = await startRes.json();
+        const { id } = await startRes.json();
 
         await request.post(`${BASE}/game/connect4/move`, {
             data: { col: 3 },
             headers: { Cookie: cookies },
         });
 
-        const stateRes = await request.get(`${BASE}/game/connect4/session/${session_id}`, {
+        const stateRes = await request.get(`${BASE}/game/connect4/session/${id}`, {
             headers: { Cookie: cookies },
         });
         expect(stateRes.ok()).toBeTruthy();

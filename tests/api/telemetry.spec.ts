@@ -31,8 +31,8 @@ test.describe("telemetry", () => {
       headers: { Cookie: cookies },
     });
     expect(startRes.ok()).toBeTruthy();
-    const { session_id, state } = await startRes.json();
-    expect(session_id).toBeTruthy();
+    const { id, state } = await startRes.json();
+    expect(id).toBeTruthy();
     expect(state).toBeTruthy();
     expect(state.board).toHaveLength(9);
   });

@@ -4,10 +4,10 @@ from typing import Optional
 from uuid import UUID
 
 from opentelemetry import metrics, trace
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text as sa_text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db_models import GAME_TYPE_TO_MOVE_MODEL, GameSession
+from db_models import GAME_TYPE_TO_MODEL, GameRecord
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -18,91 +18,92 @@ _sessions_completed = meter.create_counter("game.sessions.completed", descriptio
 _STALE_DAYS = 30
 
 
-async def get_or_create_game_session(
-    session: AsyncSession, user_id: int, game_type: str, difficulty: str = "medium"
-) -> GameSession:
-    with tracer.start_as_current_span("persistence.get_or_create_game_session") as span:
+async def get_active_game(
+    session: AsyncSession, user_id: int, game_type: str
+) -> Optional[GameRecord]:
+    with tracer.start_as_current_span("persistence.get_active_game") as span:
         span.set_attribute("game.type", game_type)
         span.set_attribute("user.id", user_id)
 
-        cutoff = datetime.now(timezone.utc) - timedelta(days=_STALE_DAYS)
+        Model = GAME_TYPE_TO_MODEL[game_type]
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=_STALE_DAYS)
 
         result = await session.execute(
-            select(GameSession).where(
-                GameSession.user_id == user_id,
-                GameSession.game_type == game_type,
-                GameSession.game_ended.is_(False),
+            select(Model).where(
+                Model.user_id == user_id,
+                Model.game_ended.is_(False),
             )
         )
         existing = result.scalar_one_or_none()
 
-        if existing:
-            if existing.last_move_at.replace(tzinfo=timezone.utc) < cutoff:
-                existing.game_ended = True
-                existing.game_abandoned = True
-                session.add(existing)
-                await session.commit()
-            else:
-                return existing
+        if not existing:
+            return None
 
-        new_session = GameSession(
-            user_id=user_id, game_type=game_type, difficulty=difficulty
+        if existing.last_move_at < cutoff:
+            await session.execute(
+                update(Model)
+                .where(Model.id == existing.id)
+                .values(game_ended=True, game_abandoned=True)
+            )
+            await session.commit()
+            return None
+
+        return existing
+
+
+async def create_game(
+    session: AsyncSession, user_id: int, game_type: str, initial_board_state: dict
+) -> GameRecord:
+    with tracer.start_as_current_span("persistence.create_game") as span:
+        span.set_attribute("game.type", game_type)
+        span.set_attribute("user.id", user_id)
+
+        Model = GAME_TYPE_TO_MODEL[game_type]
+        record = Model(
+            user_id=user_id,
+            board_state=initial_board_state,
+            move_list=[],
         )
-        session.add(new_session)
+        session.add(record)
         await session.commit()
-        await session.refresh(new_session)
+        await session.refresh(record)
         _sessions_started.add(1, {"game.type": game_type})
-        return new_session
+        return record
 
 
 async def record_move(
     session: AsyncSession,
-    session_id: UUID,
+    game_id: UUID,
     game_type: str,
-    player: str,
-    move: dict,
+    move_notation: str,
     board_state_after: dict,
-    engine_eval: Optional[float] = None,
 ) -> None:
     with tracer.start_as_current_span("persistence.record_move") as span:
-        span.set_attribute("game.session_id", str(session_id))
-        span.set_attribute("game.player", player)
+        span.set_attribute("game.id", str(game_id))
+        span.set_attribute("game.type", game_type)
 
-        MoveModel = GAME_TYPE_TO_MOVE_MODEL[game_type]
-
-        count_result = await session.execute(
-            select(func.count()).select_from(MoveModel).where(
-                MoveModel.session_id == session_id
+        Model = GAME_TYPE_TO_MODEL[game_type]
+        await session.execute(
+            update(Model)
+            .where(Model.id == game_id)
+            .values(
+                board_state=board_state_after,
+                move_list=func.array_append(Model.move_list, move_notation),
+                last_move_at=datetime.now(timezone.utc).replace(tzinfo=None),
             )
         )
-        move_number = (count_result.scalar() or 0) + 1
-
-        move_record = MoveModel(
-            session_id=session_id,
-            move_number=move_number,
-            player=player,
-            move=move,
-            board_state_after=board_state_after,
-            engine_eval=engine_eval,
-        )
-        session.add(move_record)
-
-        await session.execute(
-            update(GameSession)
-            .where(GameSession.id == session_id)
-            .values(last_move_at=datetime.now(timezone.utc).replace(tzinfo=None))
-        )
-
         await session.commit()
 
 
-async def end_game_session(
-    session: AsyncSession, session_id: UUID, outcome: str, game_type: str = ""
+async def end_game(
+    session: AsyncSession, game_id: UUID, game_type: str, outcome: str
 ) -> None:
-    with tracer.start_as_current_span("persistence.end_game_session") as span:
-        span.set_attribute("game.session_id", str(session_id))
+    with tracer.start_as_current_span("persistence.end_game") as span:
+        span.set_attribute("game.id", str(game_id))
+        span.set_attribute("game.type", game_type)
         span.set_attribute("game.outcome", outcome)
 
+        Model = GAME_TYPE_TO_MODEL[game_type]
         values: dict = {"game_ended": True}
         if outcome == "player_won":
             values["player_won"] = True
@@ -114,105 +115,69 @@ async def end_game_session(
             values["game_abandoned"] = True
 
         await session.execute(
-            update(GameSession).where(GameSession.id == session_id).values(**values)
+            update(Model).where(Model.id == game_id).values(**values)
         )
         await session.commit()
-        attrs: dict = {"game.outcome": outcome}
-        if game_type:
-            attrs["game.type"] = game_type
-        _sessions_completed.add(1, attrs)
+        _sessions_completed.add(1, {"game.type": game_type, "game.outcome": outcome})
 
 
-async def get_game_session_state(
-    session: AsyncSession, session_id: UUID
-) -> Optional[GameSession]:
-    result = await session.execute(
-        select(GameSession).where(GameSession.id == session_id)
-    )
+async def get_game(
+    session: AsyncSession, game_id: UUID, game_type: str
+) -> Optional[GameRecord]:
+    Model = GAME_TYPE_TO_MODEL[game_type]
+    result = await session.execute(select(Model).where(Model.id == game_id))
     return result.scalar_one_or_none()
 
 
-async def get_active_game_sessions(
+async def get_all_active_games(
     session: AsyncSession, user_id: int
-) -> list[GameSession]:
-    result = await session.execute(
-        select(GameSession).where(
-            GameSession.user_id == user_id,
-            GameSession.game_ended.is_(False),
+) -> list[tuple[str, GameRecord]]:
+    results = []
+    for game_type, Model in GAME_TYPE_TO_MODEL.items():
+        result = await session.execute(
+            select(Model).where(
+                Model.user_id == user_id,
+                Model.game_ended.is_(False),
+            )
         )
-    )
-    return list(result.scalars().all())
+        record = result.scalar_one_or_none()
+        if record:
+            results.append((game_type, record))
+    return results
 
 
-async def get_latest_board_state(
-    session: AsyncSession, session_id: UUID, game_type: str
-) -> Optional[dict]:
-    MoveModel = GAME_TYPE_TO_MOVE_MODEL.get(game_type)
-    if not MoveModel:
-        return None
-    result = await session.execute(
-        select(MoveModel.board_state_after)
-        .where(MoveModel.session_id == session_id)
-        .order_by(MoveModel.move_number.desc())
-        .limit(1)
-    )
-    row = result.first()
-    return row[0] if row else None
-
-
-async def get_active_session_by_user_game(
-    session: AsyncSession, user_id: int, game_type: str
-) -> Optional[GameSession]:
-    result = await session.execute(
-        select(GameSession).where(
-            GameSession.user_id == user_id,
-            GameSession.game_type == game_type,
-            GameSession.game_ended.is_(False),
-        )
-    )
-    return result.scalar_one_or_none()
-
-
-async def close_session(session: AsyncSession, session_id: UUID) -> None:
+async def close_game(session: AsyncSession, game_id: UUID, game_type: str) -> None:
+    Model = GAME_TYPE_TO_MODEL[game_type]
     await session.execute(
-        update(GameSession)
-        .where(GameSession.id == session_id)
+        update(Model)
+        .where(Model.id == game_id)
         .values(game_ended=True, game_abandoned=True)
     )
     await session.commit()
 
 
-async def create_game_session(
-    session: AsyncSession, user_id: int, game_type: str, difficulty: str = "medium"
-) -> GameSession:
-    new_session = GameSession(user_id=user_id, game_type=game_type, difficulty=difficulty)
-    session.add(new_session)
-    await session.commit()
-    await session.refresh(new_session)
-    _sessions_started.add(1, {"game.type": game_type})
-    return new_session
-
-
-async def cleanup_stale_sessions(
+async def cleanup_stale_games(
     session: AsyncSession, game_type: str, timeout_hours: int
 ) -> int:
-    from sqlalchemy import text as sa_text
+    Model = GAME_TYPE_TO_MODEL.get(game_type)
+    if not Model:
+        return 0
 
+    table_name = Model.__tablename__
     result = await session.execute(
-        sa_text("""
-            UPDATE game_sessions
+        sa_text(f"""
+            UPDATE {table_name}
             SET game_ended = true, game_abandoned = true
-            WHERE game_type = :game_type
-              AND NOT game_ended
+            WHERE NOT game_ended
               AND last_move_at < NOW() - (:timeout_hours || ' hours')::interval
             RETURNING id
         """),
-        {"game_type": game_type, "timeout_hours": timeout_hours},
+        {"timeout_hours": timeout_hours},
     )
     rows = result.fetchall()
     count = len(rows)
     await session.commit()
     if count:
         _sessions_completed.add(count, {"game.type": game_type, "game.outcome": "abandoned"})
-        logger.info("cleanup_stale_sessions", extra={"game_type": game_type, "count": count})
+        logger.info("cleanup_stale_games", extra={"game_type": game_type, "count": count})
     return count

@@ -31,12 +31,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return response.json() as Promise<T>;
 }
 
-export async function c4Resume(): Promise<{ session_id: string | null; state: C4GameState | null }> {
-    return request<{ session_id: string | null; state: C4GameState | null }>('/api/game/connect4/resume');
+export async function c4Resume(): Promise<{ id: string | null; state: C4GameState | null }> {
+    return request<{ id: string | null; state: C4GameState | null }>('/api/game/connect4/resume');
 }
 
-export async function c4NewGame(playerStarts: boolean): Promise<{ session_id: string; state: C4GameState }> {
-    return request<{ session_id: string; state: C4GameState }>('/api/game/connect4/newgame', {
+export async function c4NewGame(playerStarts: boolean): Promise<{ id: string; state: C4GameState }> {
+    return request<{ id: string; state: C4GameState }>('/api/game/connect4/newgame', {
         method: 'POST',
         body: JSON.stringify({ player_starts: playerStarts }),
     });

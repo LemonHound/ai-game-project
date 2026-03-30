@@ -45,12 +45,12 @@ export interface ChessMoveData extends Partial<ChessGameState> {
 }
 
 export interface ChessResumeResponse {
-    session_id: string | null;
+    id: string | null;
     state: ChessGameState | null;
 }
 
 export interface ChessNewGameResponse {
-    session_id: string;
+    id: string;
     state: ChessGameState;
 }
 

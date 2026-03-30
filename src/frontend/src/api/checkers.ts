@@ -23,12 +23,12 @@ export interface CheckersMoveData extends Partial<CheckersGameState> {
 }
 
 export interface CheckersResumeResponse {
-    session_id: string | null;
+    id: string | null;
     state: CheckersGameState | null;
 }
 
 export interface CheckersNewGameResponse {
-    session_id: string;
+    id: string;
     state: CheckersGameState;
 }
 
