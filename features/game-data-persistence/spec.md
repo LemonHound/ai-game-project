@@ -1,86 +1,43 @@
 # Game Data Persistence Spec
 
-**Status: needs revision** — schema updated: `{game_type}_moves` replaced by `{game_type}_games` (one row per session, updated in place); `game_sessions.difficulty` column added (FLOAT, see `features/game-training-data/spec.md`). Re-implementation required.
+**Status: needs implementation** — schema redesigned; prior code against old schema must be replaced.
 
 ## Background
 
-Game sessions are currently stored in-memory within each game module (e.g., `tic_tac_toe_game.sessions`).
-Some DB infrastructure already exists: per-game tables (`tic_tac_toe_games`, `checkers_games`), a generic
-`game_states` JSONB table, and an `ai_training_data` table. This schema grew organically, only 2 of 5 games
-write to it, and it is not designed for ML training pipelines or long-term maintainability. The in-memory
-session model is also fundamentally incompatible with session recovery and server-authoritative game state.
+The original schema had two layers: `game_sessions` (session lifecycle) and per-game `{game_type}_moves`
+tables (one row per move). A previous spec revision proposed `{game_type}_games` (one row per session,
+updated in place), but was never implemented — the code still uses the per-move model. This spec replaces
+both the old code and the unimplemented revision with a new consolidated design agreed with the ML team.
 
-All existing tables are dropped and replaced. There is no production data worth preserving — all stored
-records are test data from development.
+The consolidated design merges session lifecycle and game data into a single per-game table. `game_sessions`
+is eliminated. Each game table owns its session metadata directly. The `id` column on the game record is
+the session identifier used by the client — no separate session concept exists.
 
-This spec covers the full scope: schema redesign via SQLModel + Alembic, the persistence abstraction
-layer, and the data capture contract required for stats, OTel instrumentation, and ML.
+All existing tables are dropped. There is no production data worth preserving.
 
 Note: `user_sessions` (auth token/expiry table) is a separate concern owned by `auth.py` and is not
 touched by this spec.
 
 ## Design Principles
 
-1. **Write on every valid move.** Each player move and each AI response move is written to the DB
-   immediately after validation. The DB is the canonical game state — not in-memory session storage.
-2. **DB-backed sessions, not in-memory.** In-memory session dicts are replaced by DB lookups. Any request
-   carrying a valid session_id can reconstruct full game state from the DB alone.
-3. **Server is source of truth.** Clients always accept server state. On reconnect or desync, the client
-   re-fetches and overwrites local state.
-4. **Every valid board position is independently valuable.** ML models need (position → move → outcome)
-   tuples. All positions are training candidates regardless of whether the game completed.
-5. **Schema is explicitly extensible.** New columns will be added to game tables as ML model design
-   matures. Existing rows will have NULL in new columns; application logic gates on NULL where needed.
-   Adding a column requires only a model change + `alembic revision --autogenerate` + `alembic upgrade head`.
-
-**Exception: real-time games (Pong and future equivalents).** Continuous-state games do not have discrete
-moves suitable for this model. Their game state is lost on disconnect; sessions reset. Data capture for
-real-time games requires a separate strategy defined in the websocket spec.
-
-## Schema Management: SQLModel + Alembic
-
-**Stack:** SQLModel (SQLAlchemy 2.0 + Pydantic v2) + `asyncpg` driver + Alembic migrations.
-
-SQLModel combines the ORM model and the API/Pydantic schema into a single Python class. This means:
-- One class definition serves as both the DB table and the response model — no conversion layer
-- Alembic autogenerates migrations from model diffs
-- All DB calls are async (SQLAlchemy 2.0 `AsyncSession`) — no event loop blocking
-- `opentelemetry-instrumentation-sqlalchemy` covers all DB instrumentation; `database.py` and the
-  manual psycopg2 pool are retired as part of this feature's implementation
-
-Workflow for adding a column:
-1. Add the field to the SQLModel class
-2. `alembic revision --autogenerate -m "description"`
-3. `alembic upgrade head`
-
-No direct DB access required. All migrations are versioned and tracked in `scripts/migrations/`.
-`scripts/setup-database.sql` is retired; `alembic upgrade head` is the canonical DB init command.
+1. **One table per game type.** Each game has its own table with identical structure. No cross-game joins
+   required for any operational query.
+2. **One row per game session, updated in place.** A game record is created at session start, and
+   `board_state`, `move_list`, and status columns are updated on every move. No new rows are inserted after
+   creation.
+3. **`id` is the session identifier.** The client receives `id` from `/resume` or `/newgame` and uses it to
+   subscribe to the SSE stream. There is no separate `session_id` column.
+4. **`board_state` is the live state.** Overwritten on every move. Used for resume/reconstruction and
+   server-side game state. Not used for ML training.
+5. **`move_list` is the ML record.** An append-only array of moves in game-standard notation (see
+   game-training-data spec). Used by the ML pipeline and for game reconstruction by replaying from initial
+   state. Not queried during normal gameplay.
+6. **No `engine_eval`, no `difficulty` in DB.** Engine eval is a runtime concern; difficulty is a
+   UI-display concern. Neither belongs in the game record.
+7. **DB is canonical game state.** In-memory session dicts are eliminated. Any request with a valid game
+   `id` can reconstruct full game state from `board_state` alone.
 
 ## Schema
-
-### `game_sessions`
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID PK | |
-| user_id | UUID FK → users | non-null; unauthenticated users cannot create sessions |
-| game_type | VARCHAR | `tic_tac_toe`, `chess`, `checkers`, `connect4`, `dots_and_boxes` |
-| difficulty | FLOAT | AI training quality at session creation time; set from `game_difficulty` table; `[0.0, 1.0]` |
-| game_ended | BOOLEAN | default false; partial index on `(user_id, game_type) WHERE NOT game_ended` |
-| game_abandoned | BOOLEAN | default false |
-| is_draw | BOOLEAN | default false |
-| player_won | BOOLEAN | default false |
-| ai_won | BOOLEAN | default false |
-| started_at | TIMESTAMPTZ | stored as UTC |
-| last_move_at | TIMESTAMPTZ | updated on every move; used for 30-day cutoff check; stored as UTC |
-
-Check constraint: at most one of `is_draw`, `player_won`, `ai_won` may be true simultaneously.
-
-Partial unique index: `UNIQUE (user_id, game_type) WHERE NOT game_ended` — enforces one active session
-per user per game type and prevents duplicate session creation under concurrent requests.
-
-**Why booleans over an enum:** partial indexes on `WHERE NOT game_ended` are the optimal access pattern
-for resume queries against a large table. The check constraint enforces valid state at the DB level.
 
 ### `{game_type}_games` (one table per game)
 
@@ -90,158 +47,234 @@ One row per game session. Created when the game starts, updated in place on ever
 
 | Column | Type | Notes |
 |--------|------|-------|
-| id | UUID PK | |
-| session_id | UUID FK → game_sessions | unique; one game record per session |
-| current_board_state | JSONB | full board state after the most recent move; updated on every move |
-| move_history | JSONB | append-only array of move entries (see below); updated on every move |
-| move_count | INT | total moves made so far; incremented on every move |
-| created_at | TIMESTAMPTZ | set at game start |
-| updated_at | TIMESTAMPTZ | updated on every move |
+| id | UUID PK | also serves as session identifier for SSE and resume |
+| user_id | INT FK → users | non-null; unauthenticated users cannot create sessions |
+| created_at | TIMESTAMPTZ | set at game start; stored as UTC |
+| last_move_at | TIMESTAMPTZ | updated on every move; used for stale-session check; stored as UTC |
+| board_state | JSONB | full board state after the most recent move; set to initial state on creation; overwritten on every move |
+| move_list | TEXT[] | append-only array of moves in standard notation; empty on creation |
+| game_ended | BOOLEAN | default false |
+| game_abandoned | BOOLEAN | default false |
+| is_draw | BOOLEAN | default false |
+| player_won | BOOLEAN | default false |
+| ai_won | BOOLEAN | default false |
 
-`session_id` has a unique constraint — there is exactly one game record per session.
+**Check constraint** (per table): `(is_draw::int + player_won::int + ai_won::int) <= 1`
 
-**`move_history` entry format:**
-```json
-{"move_number": 1, "player": "human", "move": {...}, "engine_eval": 0.12}
+**Partial unique index** (per table): `UNIQUE (user_id) WHERE NOT game_ended` — enforces one active
+session per user per game type. Prevents duplicate session creation under concurrent requests.
+
+### SQLModel Definition Pattern
+
+All game tables share the same structure via a non-table base class:
+
+```python
+class GameRecord(SQLModel):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: int
+    created_at: datetime = Field(default_factory=_utcnow)
+    last_move_at: datetime = Field(default_factory=_utcnow)
+    board_state: Any = Field(sa_column=Column(JSONB, nullable=False))
+    move_list: list[str] = Field(sa_column=Column(ARRAY(String), nullable=False, server_default="{}"))
+    game_ended: bool = Field(default=False)
+    game_abandoned: bool = Field(default=False)
+    is_draw: bool = Field(default=False)
+    player_won: bool = Field(default=False)
+    ai_won: bool = Field(default=False)
+
+class ChessGame(GameRecord, table=True):
+    __tablename__ = "chess_games"
+    __table_args__ = (
+        CheckConstraint("(is_draw::int + player_won::int + ai_won::int) <= 1", ...),
+        Index("uq_active_chess_per_user", "user_id", unique=True, postgresql_where=text("NOT game_ended")),
+    )
 ```
-Each entry is appended to the array on the move that produced it. `engine_eval` is nullable;
-`player` is `"human"` or `"ai"`. The full board state is not stored per move — `current_board_state`
-holds the latest state, which is sufficient for session recovery. Full game reconstruction can be
-achieved by replaying `move_history` entries against the game engine.
 
-### `engine_eval` normalization
+Each game type gets its own concrete class with its own `__tablename__` and table args. No shared FK
+relationships between game tables.
 
-All engine eval scores are normalized to [-1, 1] via `tanh(raw_eval / k)` before storage, where `k` is
-a per-game scaling constant (e.g. centipawn scale for chess). Convention:
-- `+1` = forced win for player (e.g. checkmate in N by player)
-- `-1` = forced win for AI
-- `0` = equal position / draw
-- Values between represent continuous advantage
-
-This normalization is applied by the game engine before calling `record_move`. The raw eval is not
-stored. tanh ensures terminal positions map cleanly to ±1 and the range is compatible with standard
-neural network input expectations.
-
-`engine_eval` is stored for both human and AI move entries. For the player's move, one additional
-evaluation call runs alongside the AI response computation — the position evaluation is a byproduct of
-the engine's normal search and adds negligible overhead. For advanced games (chess, checkers) where
-open-source engines are used, eval scores are extracted from the engine's reported evaluation at search
-completion.
+`GAME_TYPE_TO_MODEL` dict maps game type strings to their model class, replacing `GAME_TYPE_TO_MOVE_MODEL`.
 
 ## Session Lifecycle
 
 **Authentication requirement:** all game sessions require an authenticated user. Unauthenticated requests
-to start a game are rejected with 401; the frontend surfaces a login prompt modal.
+to start or resume a game are rejected with 401; the frontend surfaces a login prompt modal.
 
-**Session start:** `get_or_create_game_session(user_id, game_type)` — returns the existing in-progress
-session if one exists, otherwise creates a new one. If the existing session's `last_move_at` is older
-than 30 days, it is marked `game_ended=true, game_abandoned=true` and a new session is created.
+**Resume:** `get_active_game(user_id, game_type)` — returns the existing in-progress game record if one
+exists. If the existing record's `last_move_at` is older than 30 days, it is marked
+`game_ended=true, game_abandoned=true` and `None` is returned. Called by `GET /{game}/resume`.
 
-If a user selects a game type they already have an in-progress session for, the frontend first offers
-the resume prompt (see error-handling spec). If the user chooses to start fresh, the old session is
-ended via `end_game_session` before the new one is created.
+**New game:** the router calls `close_game(id, game_type)` on any existing active record, then calls
+`create_game(user_id, game_type, initial_board_state)` to create a fresh record. If `player_starts=false`,
+the router processes the AI's first move via the game engine and calls `record_move` before returning the
+response. Called by `POST /{game}/newgame`.
 
-**On every valid move:** `record_move(session_id, player, move, board_state_after, engine_eval)` —
-appends to `move_history`, updates `current_board_state` and `move_count` on the game record, and
-updates `last_move_at` on the session. No new rows are inserted after game creation.
+**On every valid move:** `record_move(game_id, game_type, move_notation, board_state_after)` — appends
+`move_notation` to `move_list`, sets `board_state` to `board_state_after`, and updates `last_move_at`. No
+new rows are inserted.
 
-**Session end:** `end_game_session(session_id, outcome)` — sets `game_ended=true` and the appropriate
-outcome boolean. Called on win, loss, draw, or when the user starts a new game (which ends any prior
-in-progress session for that game type as `game_ended=true, game_abandoned=true`).
+**Session end:** `end_game(game_id, game_type, outcome)` — sets `game_ended=true` and the appropriate
+outcome boolean. Called on win, loss, draw, or when a new game is started (which closes any prior record
+for that game type as `game_ended=true, game_abandoned=true`).
 
 **Resume prompt:** checked lazily on two triggers:
 - User logs in
 - User navigates to a game page
 
-If the user has more than one in-progress game across game types, the prompt surfaces all of them
-("looks like you have some games still in progress..."). No scheduled cleanup; sessions are resolved
-as users interact with the site.
+If the user has more than one in-progress game across game types, the prompt surfaces all of them. No
+scheduled cleanup; sessions are resolved as users interact with the site.
 
-**One in-progress session per user per game type.** Multiple game types may be in-progress simultaneously.
-The partial unique index on `game_sessions` enforces this at the DB level.
+**One in-progress session per user per game type.** The partial unique index enforces this at the DB level.
 
 ## Persistence Abstraction Layer
 
-`src/backend/persistence_service.py` — async module of functions called by game engine routers.
-Game engines do not interact with the DB directly.
+`src/backend/persistence_service.py` — async module called by game engine routers. Game engines do not
+interact with the DB directly.
 
 ```python
-async def get_or_create_game_session(user_id, game_type) -> GameSession
-async def record_move(session_id, player, move, board_state_after, engine_eval) -> None
-async def end_game_session(session_id, outcome) -> None
-async def get_game_session_state(session_id) -> GameSession | None
-async def get_active_game_sessions(user_id) -> list[GameSession]
+async def get_active_game(
+    session: AsyncSession, user_id: int, game_type: str
+) -> GameRecord | None
+"""
+Returns the in-progress game record for user_id + game_type, or None if no active game exists.
+Auto-marks stale records (last_move_at older than 30 days) as abandoned and returns None.
+"""
+
+async def create_game(
+    session: AsyncSession, user_id: int, game_type: str, initial_board_state: dict
+) -> GameRecord
+"""
+Creates a new game record with move_list=[] and board_state=initial_board_state.
+Caller is responsible for closing any prior active game first.
+"""
+
+async def record_move(
+    session: AsyncSession, game_id: UUID, game_type: str,
+    move_notation: str, board_state_after: dict
+) -> None
+"""
+Appends move_notation to move_list, sets board_state to board_state_after, updates last_move_at.
+move_notation must be in the standard notation for the game type (see game-training-data spec).
+"""
+
+async def end_game(
+    session: AsyncSession, game_id: UUID, game_type: str, outcome: str
+) -> None
+"""
+Sets game_ended=true and the appropriate outcome boolean.
+outcome: "player_won" | "ai_won" | "draw" | "abandoned"
+"""
+
+async def get_game(
+    session: AsyncSession, game_id: UUID, game_type: str
+) -> GameRecord | None
+"""Returns the game record by id, or None if not found."""
+
+async def get_all_active_games(
+    session: AsyncSession, user_id: int
+) -> list[tuple[str, GameRecord]]
+"""
+Returns all in-progress records across all game types for user_id,
+as (game_type, record) pairs. Used for the cross-game resume prompt.
+"""
+
+async def close_game(
+    session: AsyncSession, game_id: UUID, game_type: str
+) -> None
+"""Marks the record as game_ended=true, game_abandoned=true."""
+
+async def cleanup_stale_games(
+    session: AsyncSession, game_type: str, timeout_hours: int
+) -> int
+"""
+Bulk-marks abandoned any records where last_move_at < now() - timeout_hours.
+Returns the count of records updated. Called by the Cloud Scheduler cleanup endpoint.
+"""
 ```
-
-`get_or_create_game_session` creates both the `game_sessions` row and the corresponding
-`{game_type}_games` row when starting a new session. `GameSession` is a SQLModel class serving as both
-ORM model and Pydantic response schema.
-
-The abstraction layer is responsible for: async DB session management, transaction handling, OTel child
-spans for DB write operations (per observability spec), and error propagation.
-
-When the WebSocket feature is implemented, this layer hooks into WebSocket message handling in addition
-to REST handlers — the same `record_move` call applies.
 
 ## State Recovery Endpoint
 
 ```
-GET /api/games/{game_type}/session/{session_id}
+GET /api/game/{game_type}/session/{id}
 ```
 
-Returns `current_board_state` from the `{game_type}_games` row for the session. Used for both
-catastrophic client rebuilds (React error boundary) and normal game resume. See error-handling spec
-for client-side usage.
+Returns `board_state` from the game record. Used for both catastrophic client rebuilds (React error
+boundary) and normal game resume. The `id` is the UUID returned by `/resume` or `/newgame`.
 
-## Data Lifecycle and ML Pipeline
+## Schema Management: SQLModel + Alembic
 
-Cloud SQL is the live operational store. When ML model training is ready to begin, completed game data
-will be **migrated out** of Cloud SQL into BigQuery rather than duplicated — this keeps the operational
-DB lean and routes analytical queries to a purpose-built store. The Alembic schema and SQLModel
-definitions will inform the BigQuery table schema at that time.
+**Stack:** SQLModel (SQLAlchemy 2.0) + `asyncpg` driver + Alembic migrations.
 
-Direct analytical queries against the production Cloud SQL instance should be avoided.
+- Alembic autogenerates migrations from model diffs
+- All DB calls are async (SQLAlchemy 2.0 `AsyncSession`)
+- `opentelemetry-instrumentation-sqlalchemy` covers all DB instrumentation
+
+Workflow for adding a column to a game table:
+1. Add the field to the `GameRecord` base class (if shared) or the specific game model
+2. `alembic revision --autogenerate -m "description"`
+3. `alembic upgrade head`
+
+`scripts/setup-database.sql` remains retired. `alembic upgrade head` is the canonical DB init command,
+applied in CI before tests and in Cloud Build deploy step before Cloud Run service update.
+
+## OTel Instrumentation
+
+Persistence service functions open child spans under the game router's root span:
+- `persistence.create_game` — attributes: `game.type`, `user.id`
+- `persistence.record_move` — attributes: `game.id`, `game.type`
+- `persistence.end_game` — attributes: `game.id`, `game.type`, `game.outcome`
+
+Metrics:
+- `game.sessions.started` counter (incremented by `create_game`, attribute: `game.type`)
+- `game.sessions.completed` counter (incremented by `end_game`, attributes: `game.type`, `game.outcome`)
 
 ## Migration Plan
 
-1. `alembic revision --autogenerate -m "initial schema"` — generates migration that drops existing tables
-   (`tic_tac_toe_games`, `checkers_games`, `game_states`, `ai_training_data`, `tic_tac_toe_states`,
-   `checkers_states`) and creates `game_sessions` + all `{game_type}_games` tables
-2. `database.py` (manual psycopg2 pool) is retired; SQLAlchemy async engine and `AsyncSession` replace it
-   across **all** backend files — `auth.py` and `games.py` use the psycopg2 pool directly and must be
-   migrated to async SQLAlchemy as part of this feature, not left as a follow-up
-3. `alembic upgrade head` applied in CI before tests, and in Cloud Build deploy step before Cloud Run
-   service update
-4. `scripts/setup-database.sql` is retired
-
-## Known Requirements
-
-- All DB calls are async — no synchronous blocking of the FastAPI event loop
-- Must integrate with OTel (child spans for DB write operations, per observability spec)
-- Data captured per move must be sufficient to reconstruct any game by replaying `move_history` entries
-- Schema changes require only a model edit + two Alembic commands — no direct DB access needed
-- This feature is a hard prerequisite for the error-handling session recovery model
-- `user_sessions` auth table is unaffected by this migration
+1. Drop all existing tables: `game_sessions`, `tic_tac_toe_moves`, `chess_moves`, `checkers_moves`,
+   `connect4_moves`, `dots_and_boxes_moves`, and any legacy tables (`game_states`, `ai_training_data`,
+   `tic_tac_toe_states`, `checkers_states`, `game_difficulty`)
+2. Define `GameRecord` base class and per-game concrete models in `db_models.py`
+3. `alembic revision --autogenerate -m "consolidated game records"` — generates migration creating all
+   `{game_type}_games` tables with constraints and indexes
+4. `alembic upgrade head`
+5. Replace all `persistence_service.py` functions with the new signatures above
+6. Update all game routers to use the new function signatures (no `difficulty`, no `engine_eval`, new
+   `move_notation` parameter on `record_move`)
+7. Update `GAME_TYPE_TO_MODEL` dict in `db_models.py`
+8. Remove stale `GAME_TYPE_TO_MOVE_MODEL` reference
+9. **Rename `session_id` → `game_id` throughout `games.py` and `persistence_service.py`:**
+   - All function parameters named `session_id` → `game_id`
+   - All `span.set_attribute("game.session_id", ...)` → `span.set_attribute("game.id", ...)`
+   - All `extra={"session_id": ...}` log dicts → `extra={"game_id": ...}`
+   - All JSON response keys `"session_id"` → `"id"` (e.g. `{"session_id": str(...)}` → `{"id": str(...)}`)
+   - All SSE endpoint path params `/events/{session_id}` → `/events/{id}`
+   - All `get_game_session_state`, `end_game_session`, `close_session` calls → new function names
+10. **Update frontend API types and page components** — every game has the same pattern:
+    - `src/frontend/src/api/{game}.ts`: response types `session_id: string` → `id: string`
+    - `src/frontend/src/pages/games/{Game}Page.tsx`: destructure `{ id, state }` from resume/newgame;
+      rename local `session_id` vars to `gameId`; update `subscribeSSE(gameId)` and `setSessionId(gameId)`
+    - Affected files: `ttt.ts`, `connect4.ts`, `chess.ts`, `checkers.ts`, `dab.ts` and their
+      corresponding `*Page.tsx` files
 
 ## Test Cases
 
 | Tier | Name | What it checks |
 |------|------|----------------|
-| Unit | `unit/test_persistence_service.py::test_get_or_create_game_session_creates_new` | Creates session when none exists for user + game type |
-| Unit | `unit/test_persistence_service.py::test_get_or_create_game_session_returns_existing` | Returns existing in-progress session |
-| Unit | `unit/test_persistence_service.py::test_get_or_create_game_session_expires_stale` | Marks session abandoned and creates new when last_move_at > 30 days |
-| Unit | `unit/test_persistence_service.py::test_record_move_appends_to_history` | `record_move()` appends entry to `move_history`, increments `move_count`, updates `current_board_state` and `last_move_at` |
-| Unit | `unit/test_persistence_service.py::test_record_move_no_new_row` | `record_move()` does not insert a new row; game record count stays at 1 after multiple moves |
-| Unit | `unit/test_persistence_service.py::test_end_game_session_sets_flags` | `end_game_session()` sets `game_ended` and correct outcome boolean |
-| Unit | `unit/test_persistence_service.py::test_outcome_check_constraint` | DB rejects row with multiple outcome booleans true |
-| Unit | `unit/test_persistence_service.py::test_duplicate_session_race_condition` | Concurrent session creation for same user+game type results in exactly one session |
-| Unit | `unit/test_persistence_service.py::test_get_or_create_creates_game_record` | New session creation also creates the `{game_type}_games` row |
-| API integration | `api/persistence.spec.ts::move_updates_game_record` | Making a move via game endpoint updates the single game record; `move_history` length increases |
-| API integration | `api/persistence.spec.ts::new_game_ends_prior_session` | Starting a new game marks prior in-progress session as ended + abandoned |
-| API integration | `api/persistence.spec.ts::resume_returns_active_session` | Resume query returns in-progress session under 30 days old |
-| API integration | `api/persistence.spec.ts::resume_expires_stale_session` | Resume query marks session abandoned and returns no active session when > 30 days old |
-| API integration | `api/persistence.spec.ts::engine_eval_captured_in_history` | `move_history` entries contain `engine_eval` in [-1, 1] range for both human and AI moves |
-| API integration | `api/persistence.spec.ts::session_state_endpoint_returns_board` | `GET /api/games/{game_type}/session/{id}` returns `current_board_state` |
-| API integration | `api/persistence.spec.ts::alembic_migration_clean` | `alembic upgrade head` applies cleanly on fresh DB; `alembic downgrade -1` reverses cleanly |
-| Manual | Cloud SQL console | After first production deploy, verify `game_sessions` and `{game_type}_games` tables exist with correct schema |
-| Manual | Cloud SQL console | Verify old tables (`tic_tac_toe_games`, `checkers_games`, `game_states`) are absent after migration |
+| Unit | `test_create_game_sets_initial_state` | `create_game()` sets `board_state` to provided initial state, `move_list=[]` |
+| Unit | `test_get_active_game_returns_existing` | Returns in-progress record for user + game type |
+| Unit | `test_get_active_game_returns_none_when_absent` | Returns None when no active game exists |
+| Unit | `test_get_active_game_expires_stale` | Marks record abandoned and returns None when `last_move_at` > 30 days |
+| Unit | `test_record_move_appends_notation` | `record_move()` appends to `move_list`, updates `board_state`, updates `last_move_at` |
+| Unit | `test_record_move_no_new_row` | `record_move()` does not insert a new row; record count stays at 1 after multiple moves |
+| Unit | `test_end_game_sets_flags` | `end_game()` sets `game_ended` and correct outcome boolean |
+| Unit | `test_outcome_check_constraint` | DB rejects row with multiple outcome booleans true |
+| Unit | `test_partial_unique_index` | Creating a second active record for same user + game type raises integrity error |
+| Unit | `test_close_game_marks_abandoned` | `close_game()` sets `game_ended=true, game_abandoned=true` |
+| API integration | `move_updates_board_state` | Making a move via game endpoint overwrites `board_state`; `move_list` length increases |
+| API integration | `new_game_closes_prior_record` | Starting a new game marks prior active record as ended + abandoned before creating new |
+| API integration | `resume_returns_active_record` | Resume query returns in-progress record under 30 days old |
+| API integration | `resume_expires_stale_record` | Resume query marks record abandoned, returns null session |
+| API integration | `session_state_endpoint_returns_board` | `GET /api/game/{type}/session/{id}` returns `board_state` |
+| API integration | `alembic_migration_clean` | `alembic upgrade head` applies cleanly on fresh DB; `alembic downgrade -1` reverses cleanly |
+| Manual | Cloud SQL console | After first production deploy, verify `{game_type}_games` tables exist with correct schema |
+| Manual | Cloud SQL console | Verify old tables (`game_sessions`, `chess_moves`, etc.) are absent after migration |

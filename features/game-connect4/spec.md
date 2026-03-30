@@ -30,8 +30,8 @@ All decisions from `features/game-tic-tac-toe/spec.md` apply unless overridden h
 - **Color assignment**: `player_starts=true` → player is Red, AI is Yellow. `player_starts=false` →
   player is Yellow, AI is Red. The client derives display colors from `player_starts` in the state; the
   board stores `"player"` and `"ai"` as piece values.
-- **Session ID ownership**: Client never stores `session_id` across page loads. Received from `/resume` or
-  `/newgame`, used only to subscribe to SSE. Move requests carry no `session_id`.
+- **Game ID ownership**: Client never stores the game `id` across page loads. Received from `/resume` or
+  `/newgame`, used only to subscribe to SSE. Move requests carry no `id`.
 - **Column selection**: The entire column is the clickable/tappable target. On hover or touch, the active
   column highlights and an arrow indicator appears above it. No separate drop-zone row needed.
 - **Drop animation**: When a move event arrives (player or AI), the piece animates falling from the top of
@@ -166,12 +166,12 @@ Called on every page load. Returns the active session if one exists.
 
 **Response 200 — active session:**
 ```json
-{"session_id": "uuid", "state": { ...game state... }}
+{"id": "uuid", "state": { ...game state... }}
 ```
 
 **Response 200 — no active session:**
 ```json
-{"session_id": null, "state": null}
+{"id": null, "state": null}
 ```
 
 ### `POST /api/game/connect4/newgame`
@@ -186,7 +186,7 @@ first move (as Red) before the response is returned.
 
 **Response 200:**
 ```json
-{"session_id": "uuid", "state": { ...initial game state... }}
+{"id": "uuid", "state": { ...initial game state... }}
 ```
 
 ### `POST /api/game/connect4/move`
@@ -204,7 +204,7 @@ Submits the player's column choice. Active session derived server-side.
 
 **Response 409:** No active session.
 
-### `GET /api/game/connect4/events/{session_id}`
+### `GET /api/game/connect4/events/{id}`
 
 Persistent SSE stream. Authenticated user must own the session.
 
@@ -222,8 +222,8 @@ row for connect4). Cleanup via the existing `POST /internal/cleanup-sessions` en
 Follows the conventions in `features/observability/spec.md`.
 
 **`games.py` (request layer):**
-- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{session_id}`: set `game.id` and
-  `game.session_id` as attributes on the auto-instrumented HTTP span via `span.set_attribute`.
+- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{id}`: set `game.id` as an attribute
+  on the auto-instrumented HTTP span via `span.set_attribute`.
 - No new spans at this layer.
 
 **`games.py` — AI move processing:**
@@ -234,13 +234,13 @@ Follows the conventions in `features/observability/spec.md`.
 - Existing child spans for `record_move` and `end_session` already cover DB writes. No changes required.
 
 **SSE connection lifecycle:**
-- SSE open: `span.set_attribute("game.id", ...), span.set_attribute("game.session_id", ...)`
-- SSE close (normal): `logger.info("c4_sse_closed", extra={"session_id": session_id})`
-- SSE close (error / unexpected): `logger.exception("c4_sse_error", extra={"session_id": session_id})` +
+- SSE open: `span.set_attribute("game.id", ...)`
+- SSE close (normal): `logger.info("c4_sse_closed", extra={"game_id": game_id})`
+- SSE close (error / unexpected): `logger.exception("c4_sse_error", extra={"game_id": game_id})` +
   `span.record_exception(e)` + `span.set_status(ERROR)`
 
 **Invalid move logging:**
-- `POST /move` returning 422: `logger.warning("c4_invalid_move", extra={"session_id": session_id, "move": move})`
+- `POST /move` returning 422: `logger.warning("c4_invalid_move", extra={"game_id": game_id, "move": move})`
 
 **No instrumentation inside `game_engine/` files.** All manual instrumentation lives at the router and
 persistence layers only.
@@ -322,10 +322,14 @@ Player card shows the player's disc color.
 
 ## Data Persistence
 
-Every valid move (player and AI) recorded via `persistence_service.record_move()`. The `player`
-argument must be `"human"` for player moves and `"ai"` for AI moves — consistent with TTT and the
-existing DB data. `engine_eval` is stored as `null` (the existing heuristic does not produce a
-normalized score). Terminal state triggers `persistence_service.end_game_session()`.
+Every valid move (player and AI) is recorded via `persistence_service.record_move()`. The
+`move_notation` argument must be the column string for the move (e.g. `"c3"` for column 3).
+Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence spec for the
+full function signatures.
+
+**Open question — notation conversion location**: The move request arrives as `{column: int}`. This
+must be converted to a `"c{col}"` string before calling `record_move`. Decide during implementation:
+does this conversion live as a method on `Connect4Engine` (preferred), or inline in the router?
 
 ## Test Cases
 
@@ -359,7 +363,7 @@ normalized score). Terminal state triggers `persistence_service.end_game_session
 
 | Test name | Scenario |
 |---|---|
-| `test_c4_resume_no_active_session` | GET /resume returns {session_id: null, state: null} |
+| `test_c4_resume_no_active_session` | GET /resume returns {id: null, state: null} |
 | `test_c4_resume_active_session_returns_state` | GET /resume returns current board state |
 | `test_c4_resume_unauthenticated_returns_401` | GET /resume without auth |
 | `test_c4_newgame_player_first` | POST /newgame player_starts=true → empty board, player's turn |

@@ -28,9 +28,9 @@ not WebSocket.
 - **Turn order**: Player selects whether to go first or second before the game starts. Internally stored and
   passed as `player_starts: bool`. If `player_starts` is false, the AI takes the first move before
   `/newgame` returns.
-- **Session ID ownership**: The client never stores `session_id` across page loads. It is received from
-  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no `session_id`;
-  the server derives the active session from the authenticated user + game type.
+- **Game ID ownership**: The client never stores the game `id` across page loads. It is received from
+  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no `id`;
+  the server derives the active game from the authenticated user + game type.
 - **Rendering**: SVG. Dots are SVG circles; lines are SVG line elements; box fills are SVG rect elements
   rendered behind lines.
 - **Interaction model**: Tap a line segment to draw it. Each undrawn line segment has a transparent SVG
@@ -62,7 +62,7 @@ initial_state(player_starts: bool) → GameState
 **`AIStrategy` (abstract base)**
 ```
 generate_move(state) → tuple[Move, Optional[float]]
-    # Move may be invalid; no guarantee. float is engine_eval or None if strategy has no score.
+    # Move may be invalid; no guarantee. float is reserved for future use; not stored.
 ```
 
 **`MoveProcessor` (shared, game-agnostic)**
@@ -264,12 +264,12 @@ authenticated user if one exists.
 
 **Response 200 — active session:**
 ```json
-{"session_id": "uuid", "state": { ...game state... }}
+{"id": "uuid", "state": { ...game state... }}
 ```
 
 **Response 200 — no active session:**
 ```json
-{"session_id": null, "state": null}
+{"id": null, "state": null}
 ```
 The client handles the null case by rendering the "New Game" UI. There is no 404 for this path — a missing
 session is a normal state, not an error.
@@ -287,7 +287,7 @@ before the response is returned (the initial state reflects this first move).
 
 **Response 200:**
 ```json
-{"session_id": "uuid", "state": { ...initial game state... }}
+{"id": "uuid", "state": { ...initial game state... }}
 ```
 
 ### `POST /api/game/dots-and-boxes/move`
@@ -306,7 +306,7 @@ No `session_id` in request.
 
 **Response 409:** No active session.
 
-### `GET /api/game/dots-and-boxes/events/{session_id}`
+### `GET /api/game/dots-and-boxes/events/{id}`
 
 Persistent SSE stream. Authenticated user must own the session.
 
@@ -328,7 +328,7 @@ a session is marked abandoned.
 **Cleanup mechanism**: A GCP Cloud Scheduler job fires periodically (e.g., every hour) and calls an
 internal, non-public endpoint (`POST /internal/cleanup-sessions`). This endpoint queries all `in_progress`
 sessions where `last_move_at < now() - session_timeout_hours` and marks them abandoned via
-`end_game_session()`. The endpoint requires an internal-only auth header (not the user session cookie).
+`end_game()`. The endpoint requires an internal-only auth header (not the user session cookie).
 
 Sessions closed this way emit the `game.sessions.completed` metric with outcome `abandoned`, consistent
 with the observability spec.
@@ -338,8 +338,8 @@ with the observability spec.
 Follows the conventions in `features/observability/spec.md`.
 
 **`games.py` (request layer):**
-- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{session_id}`: set `game.id` and
-  `game.session_id` as attributes on the auto-instrumented HTTP span via `span.set_attribute`.
+- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{id}`: set `game.id` as an attribute
+  on the auto-instrumented HTTP span via `span.set_attribute`.
 - No new spans at this layer.
 
 **`games.py` — AI move processing:**
@@ -351,14 +351,14 @@ Follows the conventions in `features/observability/spec.md`.
 - Existing child spans for `record_move` and `end_session` already cover DB writes. No changes required.
 
 **SSE connection lifecycle:**
-- SSE open: `span.set_attribute("game.id", ...), span.set_attribute("game.session_id", ...)`
-- SSE close (normal): `logger.info("dab_sse_closed", extra={"session_id": session_id})`
-- SSE close (error / unexpected): `logger.exception("dab_sse_error", extra={"session_id": session_id})` +
+- SSE open: `span.set_attribute("game.id", ...)`
+- SSE close (normal): `logger.info("dab_sse_closed", extra={"game_id": game_id})`
+- SSE close (error / unexpected): `logger.exception("dab_sse_error", extra={"game_id": game_id})` +
   `span.record_exception(e)` + `span.set_status(ERROR)`
 - Per-message spans: not required (too noisy).
 
 **Invalid move logging:**
-- `POST /move` returning 422: `logger.warning("dab_invalid_move", extra={"session_id": session_id, "move": move})`
+- `POST /move` returning 422: `logger.warning("dab_invalid_move", extra={"game_id": game_id, "move": move})`
 
 **No instrumentation inside `game_engine/` files.** All manual instrumentation lives at the router and
 persistence layers only.
@@ -495,11 +495,15 @@ All screen sizes and orientations supported without layout breakage.
 
 ## Data Persistence
 
-Every valid move (player and AI) is recorded via `persistence_service.record_move()`. The `player`
-argument must be `"human"` for player moves and `"ai"` for AI moves — consistent with TTT and the
-existing DB data. `engine_eval` is stored as `null` (the heuristic strategy does not produce a numeric
-score). Terminal state triggers `persistence_service.end_game_session()`. No changes to the persistence
-service API are required.
+Every valid move (player and AI) is recorded via `persistence_service.record_move()`. The
+`move_notation` argument must be the edge string for the move (e.g. `"h12"` for the horizontal edge
+at row 1, col 2). Terminal state triggers `persistence_service.end_game()`. See the
+game-data-persistence spec for the full function signatures.
+
+**Open question — notation conversion location**: The move request arrives as
+`{orientation, row, col}` or similar. This must be converted to an `"h{r}{c}"` / `"v{r}{c}"` string
+before calling `record_move`. Decide during implementation: does this conversion live as a method on
+`DotsAndBoxesEngine` (preferred), or inline in the router?
 
 ## Test Cases
 
@@ -535,7 +539,7 @@ service API are required.
 
 | Test name | Scenario |
 |---|---|
-| `test_dab_resume_no_active_session` | GET /resume returns {session_id: null, state: null} |
+| `test_dab_resume_no_active_session` | GET /resume returns {id: null, state: null} |
 | `test_dab_resume_active_session_returns_state` | GET /resume returns current board state |
 | `test_dab_resume_unauthenticated_returns_401` | GET /resume without auth |
 | `test_dab_newgame_player_first` | POST /newgame player_starts=true → empty board, current_turn="player" |

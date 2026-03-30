@@ -28,9 +28,9 @@ Transport is resolved: SSE, not WebSocket.
   (B/b), AI is Red and goes first. Internally stored and passed as `player_starts: bool`, matching the
   convention used by Tic-Tac-Toe and Connect 4. The `player_symbol` and `ai_symbol` fields in the state
   reflect whichever assignment is active.
-- **Session ID ownership**: The client never stores `session_id` across page loads. It is received from
-  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no
-  `session_id`; the server derives the active session from the authenticated user + game type.
+- **Game ID ownership**: The client never stores the game `id` across page loads. It is received from
+  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no `id`;
+  the server derives the active game from the authenticated user + game type.
 - **Multi-jump (interactive)**: Player submits each individual jump step as a separate POST. The server
   sets `must_capture` to indicate the piece that must continue jumping. The SSE stream emits a move event
   after each step. AI multi-jump chains are handled internally and emitted step-by-step with a 400ms delay
@@ -59,7 +59,7 @@ initial_state(player_starts: bool) → GameState
 **`AIStrategy` (abstract base)**
 ```
 generate_move(state) → tuple[Move, Optional[float]]
-    # Move may be invalid; no guarantee. float is engine_eval or None if strategy has no score.
+    # Move may be invalid; no guarantee. float is reserved for future use; not stored.
 ```
 
 **`MoveProcessor` (shared, game-agnostic)**
@@ -223,12 +223,12 @@ Always called on page load. Returns the active session for the authenticated use
 
 **Response 200 — active session:**
 ```json
-{"session_id": "uuid", "state": { "...game state..." }}
+{"id": "uuid", "state": { "...game state..." }}
 ```
 
 **Response 200 — no active session:**
 ```json
-{"session_id": null, "state": null}
+{"id": null, "state": null}
 ```
 
 A missing session is a normal state, not an error. No 404 for this path.
@@ -270,7 +270,7 @@ server-side from the authenticated user + game type. No `session_id` in the requ
 
 **Response 409:** No active session.
 
-### `GET /api/game/checkers/events/{session_id}`
+### `GET /api/game/checkers/events/{id}`
 
 Persistent SSE stream. The authenticated user must own the session.
 
@@ -296,8 +296,8 @@ consistent with the observability spec.
 Follows the conventions in `features/observability/spec.md`.
 
 **`games.py` (request layer):**
-- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{session_id}`: set `game.id` and
-  `game.session_id` as attributes on the auto-instrumented HTTP span via `span.set_attribute`.
+- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{id}`: set `game.id` as an attribute
+  on the auto-instrumented HTTP span via `span.set_attribute`.
 - No new spans at this layer.
 
 **`games.py` — AI move processing:**
@@ -309,13 +309,13 @@ Follows the conventions in `features/observability/spec.md`.
 - Existing child spans for `record_move` and `end_session` already cover DB writes. No changes required.
 
 **SSE connection lifecycle:**
-- SSE open: `span.set_attribute("game.id", ...), span.set_attribute("game.session_id", ...)`
-- SSE close (normal): `logger.info("checkers_sse_closed", extra={"session_id": session_id})`
-- SSE close (error / unexpected): `logger.exception("checkers_sse_error", extra={"session_id": session_id})` +
+- SSE open: `span.set_attribute("game.id", ...)`
+- SSE close (normal): `logger.info("checkers_sse_closed", extra={"game_id": game_id})`
+- SSE close (error / unexpected): `logger.exception("checkers_sse_error", extra={"game_id": game_id})` +
   `span.record_exception(e)` + `span.set_status(ERROR)`
 
 **Invalid move logging:**
-- `POST /move` returning 422: `logger.warning("checkers_invalid_move", extra={"session_id": session_id, "move": move})`
+- `POST /move` returning 422: `logger.warning("checkers_invalid_move", extra={"game_id": game_id, "move": move})`
 
 **No instrumentation inside `game_engine/` files.** All manual instrumentation lives at the router and
 persistence layers only.
@@ -436,10 +436,15 @@ See `features/player-card/spec.md` for the full component spec.
 ## Data Persistence
 
 Every valid move (player and AI, including each step of a multi-jump chain) is recorded via
-`persistence_service.record_move()`. The `player` argument must be `"human"` for player moves and
-`"ai"` for AI moves — consistent with TTT and the existing DB data. `engine_eval` is stored as `null`
-(the AI uses a random capture heuristic; no numeric score is computed). Terminal state triggers
-`persistence_service.end_game_session()`. No changes to the persistence service API are required.
+`persistence_service.record_move()`. The `move_notation` argument must be the algebraic coordinate
+string for the move (e.g. `"b6d4"` for a jump from b6 to d4; multi-jump steps recorded individually).
+Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence spec for the
+full function signatures.
+
+**Open question — notation conversion location**: The move request arrives as
+`{from_pos, to_pos}` (board position indices). This must be converted to an algebraic coordinate
+string before calling `record_move`. Decide during implementation: does this conversion live as a
+method on `CheckersEngine` (preferred — engine owns the format), or inline in the router?
 
 ## Test Cases
 
@@ -479,8 +484,8 @@ Every valid move (player and AI, including each step of a multi-jump chain) is r
 
 | Test name | Scenario |
 |---|---|
-| `test_checkers_resume_no_active_session` | GET /resume returns `{session_id: null, state: null}` |
-| `test_checkers_resume_active_session_returns_state` | GET /resume returns current board state and session_id |
+| `test_checkers_resume_no_active_session` | GET /resume returns `{id: null, state: null}` |
+| `test_checkers_resume_active_session_returns_state` | GET /resume returns current board state and id |
 | `test_checkers_resume_unauthenticated_returns_401` | GET /resume without auth cookie |
 | `test_checkers_newgame_player_first` | POST /newgame player_starts=true → state has current_turn="player", Red pieces at rows 5-7 |
 | `test_checkers_newgame_ai_first` | POST /newgame player_starts=false → state reflects AI's first move, current_turn="player" |

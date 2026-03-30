@@ -1,6 +1,6 @@
 # Game Statistics Spec
 
-**Status: ready** (best done after at least one game is implemented)
+**Status: draft — open questions require a planning session before implementation begins**
 
 ## Background
 
@@ -21,12 +21,13 @@ Implement statistics calculation and exposure for:
 
 ## Known Requirements
 
-- Depends on game-data-persistence: stats are derived from game session and outcome records; this feature
-  cannot be fully implemented until persistence is in place
+- Depends on game-data-persistence: stats are derived from `{game_type}_games` records (outcome booleans,
+  `created_at`, `last_move_at`, `move_list` length); this feature cannot be fully implemented until
+  persistence is in place
 - The existing `/api/game/{game_id}/stats` endpoint should be updated rather than replaced
 - A new `/api/stats/me` or `/api/profile/stats` endpoint is likely needed for cross-game aggregates
 - Stats must be scoped to authenticated users; unauthenticated requests return empty/default values
-- Stats queries must use parameterized statements (psycopg2 cursor.execute)
+- Stats queries use SQLAlchemy async (AsyncSession) — consistent with the persistence layer
 - Mobile + desktop responsive presentation wherever stats are displayed
 
 ## Consumers (who uses this data)
@@ -41,7 +42,7 @@ Implement statistics calculation and exposure for:
 - What is the staleness tolerance? (Real-time vs. eventually consistent is fine for most stats)
 - What counts as a "completed" game for stats purposes? (Abandoned/forfeited games — include or exclude?)
 - Streak definition: consecutive wins, or wins without a loss (draws don't break streak)?
-- When the ML model is in place, should stats differentiate by AI difficulty level?
+- When the ML model is in place, should stats surface anything about the AI's training state to players?
 - Global leaderboard: is this in scope now or deferred? What are the privacy implications of public rankings?
 - Should stats be exposed publicly (viewable on another user's profile) or private to the owner?
 

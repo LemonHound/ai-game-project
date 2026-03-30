@@ -16,9 +16,9 @@ The React page at `src/frontend/src/pages/games/PongPage.tsx` is currently a stu
 - **Server-authoritative**: Server owns ball position, both paddle positions, velocity, and score at all times.
   The client renders whatever state the server sends. No client-side physics simulation.
 - **Transport**: WebSocket exclusively (see `features/websocket/spec.md`). No REST for game loop traffic.
-- **No difficulty selection**: There is no difficulty setting exposed to the player anywhere on the site. The
-  `difficulty` field on `game_sessions` records the AI's training quality level at the time the session was
-  created (see `features/game-training-data/spec.md`). This is opaque to the player.
+- **No difficulty selection**: There is no difficulty setting exposed to the player anywhere on the site.
+  The `games` table retains its `difficulty` column as a static display label for the game's human difficulty
+  (e.g. "Medium"). This is unrelated to AI training state and is opaque to the player.
 - **AI implementation (v1)**: Simple reactive heuristic. Each tick: if the ball's center Y is above the top
   edge of the AI paddle, the AI moves up; if below the bottom edge, the AI moves down; otherwise stationary.
   This logic is isolated in a replaceable function — an RL policy network is a future drop-in upgrade with no
@@ -115,7 +115,7 @@ Top and bottom walls reflect `vy` (flip sign). No angle change.
 During each rally, the server accumulates a list of sampled state snapshots in memory, one every 3 ticks
 (~50ms). Each snapshot: `{ball_x, ball_y, ball_vx, ball_vy, player_y, ai_y, ai_action, tick_index}`.
 
-On point scored, `flush_rally(session_id, rally_index, winner, duration_ms, buffer)` is called. The stub
+On point scored, `flush_rally(game_id, rally_index, winner, duration_ms, buffer)` is called. The stub
 implementation discards the buffer and returns immediately. The function signature is final.
 
 On disconnect mid-rally, the buffer is discarded without calling `flush_rally`.
