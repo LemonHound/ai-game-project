@@ -1,3 +1,4 @@
+"""OpenTelemetry setup for tracing and metrics, targeting GCP or console exporters."""
 import logging
 import os
 

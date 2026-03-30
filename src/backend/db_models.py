@@ -1,3 +1,4 @@
+"""SQLModel table definitions for all game record types."""
 from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -12,6 +13,8 @@ def _utcnow() -> datetime:
 
 
 class GameRecord(SQLModel):
+    """Base model with shared fields for all game record types."""
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: int
     created_at: datetime = Field(default_factory=_utcnow)
@@ -26,6 +29,8 @@ class GameRecord(SQLModel):
 
 
 class TicTacToeGame(GameRecord, table=True):
+    """Database record for a Tic-Tac-Toe game session."""
+
     __tablename__ = "tic_tac_toe_games"
     board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
     move_list: list[str] = Field(
@@ -46,6 +51,8 @@ class TicTacToeGame(GameRecord, table=True):
 
 
 class ChessGame(GameRecord, table=True):
+    """Database record for a Chess game session."""
+
     __tablename__ = "chess_games"
     board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
     move_list: list[str] = Field(
@@ -69,6 +76,8 @@ class ChessGame(GameRecord, table=True):
 
 
 class CheckersGame(GameRecord, table=True):
+    """Database record for a Checkers game session."""
+
     __tablename__ = "checkers_games"
     board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
     move_list: list[str] = Field(
@@ -89,6 +98,8 @@ class CheckersGame(GameRecord, table=True):
 
 
 class Connect4Game(GameRecord, table=True):
+    """Database record for a Connect 4 game session."""
+
     __tablename__ = "connect4_games"
     board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
     move_list: list[str] = Field(
@@ -109,6 +120,8 @@ class Connect4Game(GameRecord, table=True):
 
 
 class DotsAndBoxesGame(GameRecord, table=True):
+    """Database record for a Dots and Boxes game session."""
+
     __tablename__ = "dots_and_boxes_games"
     board_state: Any = Field(sa_column=Column("board_state", JSONB, nullable=False))
     move_list: list[str] = Field(

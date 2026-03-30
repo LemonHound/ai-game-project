@@ -1,3 +1,4 @@
+"""Main entry point for the game-ai backend application."""
 import logging
 import os
 from contextlib import asynccontextmanager

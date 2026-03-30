@@ -1,3 +1,4 @@
+"""Service layer for user registration, login, session management, and Google OAuth."""
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict

@@ -1,3 +1,4 @@
+"""Pure game logic for Tic-Tac-Toe."""
 import random
 from typing import Any, Dict, List, Optional
 

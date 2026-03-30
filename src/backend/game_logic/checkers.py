@@ -1,3 +1,4 @@
+"""Pure game logic for Checkers, including jump chains and king promotion."""
 import random
 from typing import Any, Dict, List, Optional
 

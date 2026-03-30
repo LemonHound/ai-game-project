@@ -1,3 +1,4 @@
+"""Database engine initialisation, session factory, and dependency helpers."""
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -60,7 +61,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def db_dependency() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency that yields an AsyncSession per request.
+    """Yield a database session as a dependency for each incoming request.
 
     Used via Depends(db_dependency) in route handlers. The session is automatically
     closed when the request completes.

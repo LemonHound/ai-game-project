@@ -1,3 +1,4 @@
+"""Connect 4 game engine with heuristic AI strategy."""
 import random
 from typing import Optional
 

@@ -1,3 +1,4 @@
+"""Authentication routes for registration, login, logout, and Google OAuth."""
 import logging
 import os
 from datetime import datetime
@@ -25,6 +26,8 @@ csrf_tokens: dict = {}
 
 
 class RegisterRequest(BaseModel):
+    """Request body for the /register endpoint."""
+
     username: str
     email: EmailStr
     password: str
@@ -32,12 +35,16 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    """Request body for the /login endpoint."""
+
     email: EmailStr
     password: str
     rememberMe: Optional[bool] = False
 
 
 class LogoutRequest(BaseModel):
+    """Request body for the /logout endpoint."""
+
     sessionId: Optional[str] = None
 
 
@@ -295,6 +302,8 @@ async def auth_health():
 
 
 class GoogleAuthRequest(BaseModel):
+    """Request body carrying a Google ID token for OAuth sign-in."""
+
     token: str
 
 

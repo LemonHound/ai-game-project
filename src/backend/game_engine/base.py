@@ -1,3 +1,4 @@
+"""Abstract base classes and shared streaming infrastructure for all game engines."""
 import asyncio
 import logging
 import random
@@ -12,6 +13,8 @@ Move = Any
 
 
 class GameEngine(ABC):
+    """Abstract interface that every game engine must implement."""
+
     @abstractmethod
     def validate_move(self, state: GameState, move: Move) -> bool:
         """Returns True if the move is legal in the given state, False otherwise.
@@ -86,6 +89,8 @@ class GameEngine(ABC):
 
 
 class AIStrategy(ABC):
+    """Abstract interface for AI move-generation strategies."""
+
     @abstractmethod
     def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
         """Returns (move, engine_eval). Move may be invalid; no guarantee of validity.
@@ -106,6 +111,8 @@ class AIStrategy(ABC):
 
 
 class MoveProcessor:
+    """Validates and applies player and AI moves using a GameEngine and AIStrategy."""
+
     def process_player_move(
         self, engine: GameEngine, state: GameState, move: Move
     ) -> GameState:
@@ -174,11 +181,15 @@ _STATUS_SLOW = ["Taking a moment...", "Almost there..."]
 
 
 class StatusEvent:
+    """Typed event emitted by a game engine during an AI turn."""
+
     def __init__(self, type: str, **data: Any) -> None:
+        """Initialize a StatusEvent with a type and optional payload fields."""
         self.type = type
         self.data = data
 
     def to_sse(self) -> str:
+        """Serialize this event to an SSE-formatted string."""
         import json
 
         if self.type == "heartbeat":
@@ -193,8 +204,7 @@ class StatusEvent:
 
 
 class StatusBroadcaster:
-    """
-    Rate-limits SSE events to a human-readable cadence.
+    """Rate-limits SSE events to a human-readable cadence.
 
     - min_interval: 2.5s between sends to client
     - First status held ~0.5s to prevent flash on near-instant AI responses
@@ -207,14 +217,17 @@ class StatusBroadcaster:
     HEARTBEAT_INTERVAL = 30.0
 
     def __init__(self) -> None:
+        """Initialize the broadcaster with an empty queue and open state."""
         self._queue: asyncio.Queue[StatusEvent] = asyncio.Queue()
         self._closed = False
 
     def emit(self, event: StatusEvent) -> None:
+        """Enqueue an event for delivery to the client stream."""
         if not self._closed:
             self._queue.put_nowait(event)
 
     async def stream(self) -> AsyncGenerator[str, None]:
+        """Yield rate-limited SSE strings until a terminal event is emitted."""
         last_sent = time.monotonic()
         pending: Optional[StatusEvent] = None
         start = time.monotonic()
@@ -272,4 +285,5 @@ class StatusBroadcaster:
                     pending = None
 
     def close(self) -> None:
+        """Mark the broadcaster as closed so no further events are enqueued or streamed."""
         self._closed = True

@@ -1,3 +1,4 @@
+"""Chess game engine wrapping the chess game logic with minimax AI."""
 import copy
 from typing import Optional
 
@@ -399,6 +400,7 @@ class ChessEngine(GameEngine):
         return [{"toRow": tr, "toCol": tc} for tr, tc in valid]
 
     def outcome_to_persistence(self, state: GameState) -> Optional[str]:
+        """Return the persistence outcome string for the given terminal state, or None."""
         terminal, outcome = self.is_terminal(state)
         if not terminal:
             return None

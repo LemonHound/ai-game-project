@@ -1,3 +1,4 @@
+"""Dots and Boxes game engine with greedy chain-capture AI strategy."""
 from typing import Optional
 
 from game_engine.base import AIStrategy, GameEngine, GameState, Move

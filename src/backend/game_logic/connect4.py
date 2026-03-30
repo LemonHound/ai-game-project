@@ -1,3 +1,4 @@
+"""Pure game logic for Connect 4."""
 import random
 from typing import Any, Dict, List, Optional, Tuple
 

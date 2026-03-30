@@ -1,3 +1,4 @@
+"""Game routes handling session creation, moves, streaming, and game lifecycle."""
 import asyncio
 import copy
 import json
@@ -1397,6 +1398,7 @@ async def cleanup_sessions(
 
 @router.get("/games_list")
 async def get_games(category: Optional[str] = None, status: Optional[str] = None):
+    """Return a list of all games, optionally filtered by category and/or status."""
     async with get_session() as session:
         query = (
             "SELECT id, name, description, icon, difficulty, players, status, category, tags"
@@ -1431,6 +1433,7 @@ async def get_games(category: Optional[str] = None, status: Optional[str] = None
 
 @router.get("/game/{game_id}/info")
 async def get_game_info(game_id: str):
+    """Return metadata for a single game by its ID."""
     async with get_session() as session:
         result = await session.execute(
             text(
@@ -1461,6 +1464,7 @@ async def get_game_info(game_id: str):
 
 @router.get("/game/{game_id}/stats")
 async def get_game_stats(game_id: str):
+    """Return aggregate statistics for the given game type (stub)."""
     return {"gamesPlayed": 0, "winRate": 0.0, "bestStreak": 0, "aiLevel": 3}
 
 
@@ -1476,6 +1480,7 @@ async def end_game(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Mark an active game session as abandoned if it has not already ended."""
     if game_id not in GAME_ID_TO_TYPE:
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
 

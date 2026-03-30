@@ -1,3 +1,4 @@
+"""Pure game logic for Chess, including move generation and validation."""
 import random
 from typing import Any, Dict, List, Optional, Tuple
 

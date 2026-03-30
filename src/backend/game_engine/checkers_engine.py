@@ -1,3 +1,4 @@
+"""Checkers game engine with minimax AI strategy."""
 import copy
 from typing import Optional
 

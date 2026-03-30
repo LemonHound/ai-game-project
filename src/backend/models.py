@@ -1,3 +1,4 @@
+"""Pydantic response and request models shared across the backend."""
 from pydantic import BaseModel
 from typing import Optional, List, Any, Dict
 from datetime import datetime

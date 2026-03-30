@@ -1,3 +1,4 @@
+"""Persistence service for reading and writing game records to the database."""
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional

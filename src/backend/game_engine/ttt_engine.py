@@ -1,3 +1,4 @@
+"""Tic-Tac-Toe game engine with minimax AI strategy."""
 from typing import Optional
 
 from game_engine.base import AIStrategy, GameEngine, GameState, Move

@@ -1,3 +1,4 @@
+"""Pure game logic for Dots and Boxes."""
 import copy
 import random
 from typing import Any, Dict, List, Optional
