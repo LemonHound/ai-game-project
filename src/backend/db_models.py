@@ -51,6 +51,9 @@ class ChessGame(GameRecord, table=True):
     move_list: list[str] = Field(
         sa_column=Column("move_list", ARRAY(String), nullable=False, server_default="{}")
     )
+    move_list_algebraic: list[str] = Field(
+        sa_column=Column("move_list_algebraic", ARRAY(String), nullable=False, server_default="{}")
+    )
     __table_args__ = (
         CheckConstraint(
             "(is_draw::int + player_won::int + ai_won::int) <= 1",

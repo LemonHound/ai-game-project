@@ -1004,6 +1004,23 @@ async def dab_events(
 # ============================================
 
 
+_CHESS_FILES = "abcdefgh"
+
+
+def _chess_uci(last_move: dict) -> str:
+    fr = last_move.get("fromRow")
+    fc = last_move.get("fromCol")
+    tr = last_move.get("toRow")
+    tc = last_move.get("toCol")
+    if any(v is None for v in (fr, fc, tr, tc)):
+        return ""
+    uci = f"{_CHESS_FILES[fc]}{8 - fr}{_CHESS_FILES[tc]}{8 - tr}"
+    promo = last_move.get("promotion")
+    if promo:
+        uci += promo[-1].lower()
+    return uci
+
+
 def _chess_state_payload(state: dict, player: Optional[str] = None) -> dict:
     terminal, outcome = _chess_engine.is_terminal(copy.deepcopy(state))
     winner = None
@@ -1077,8 +1094,10 @@ async def chess_newgame(
 
     if not request.player_starts:
         ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, _chess_strategy, state)
-        notation = (ai_state.get("last_move") or {}).get("notation", "")
-        await persistence_service.record_move(db, game.id, "chess", notation, ai_state)
+        lm = ai_state.get("last_move") or {}
+        await persistence_service.record_move(
+            db, game.id, "chess", _chess_uci(lm), ai_state, lm.get("notation", "")
+        )
         state = ai_state
 
     return {"id": str(game.id), "state": state}
@@ -1160,8 +1179,10 @@ async def chess_events(
                     return
 
                 player_state = _chess_engine.apply_move(state, msg)
-                player_notation = (player_state.get("last_move") or {}).get("notation", "")
-                await persistence_service.record_move(db, sid, "chess", player_notation, player_state)
+                player_lm = player_state.get("last_move") or {}
+                await persistence_service.record_move(
+                    db, sid, "chess", _chess_uci(player_lm), player_state, player_lm.get("notation", "")
+                )
 
                 is_terminal, outcome = _chess_engine.is_terminal(player_state)
                 if is_terminal:
@@ -1180,8 +1201,10 @@ async def chess_events(
                     ai_span.set_attribute("compute_duration_ms", compute_ms)
                     _ai_duration.record(compute_ms, {"game.id": "chess"})
 
-                ai_notation = (ai_state.get("last_move") or {}).get("notation", "")
-                await persistence_service.record_move(db, sid, "chess", ai_notation, ai_state)
+                ai_lm = ai_state.get("last_move") or {}
+                await persistence_service.record_move(
+                    db, sid, "chess", _chess_uci(ai_lm), ai_state, ai_lm.get("notation", "")
+                )
 
                 is_terminal, outcome = _chess_engine.is_terminal(ai_state)
                 if is_terminal:
