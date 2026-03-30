@@ -9,163 +9,180 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src/backend"))
 
 import persistence_service
-from db_models import GameSession
+from db_models import TicTacToeGame
 
 
-def _make_session(user_id: int, game_type: str, **kwargs) -> GameSession:
-    return GameSession(
+def _make_game(user_id: int, game_type: str = "tic_tac_toe", **kwargs) -> TicTacToeGame:
+    return TicTacToeGame(
         id=uuid4(),
         user_id=user_id,
-        game_type=game_type,
-        difficulty=kwargs.get("difficulty", "medium"),
+        board_state=kwargs.get("board_state", {"board": [None] * 9}),
+        move_list=kwargs.get("move_list", []),
         game_ended=kwargs.get("game_ended", False),
         game_abandoned=kwargs.get("game_abandoned", False),
         is_draw=kwargs.get("is_draw", False),
         player_won=kwargs.get("player_won", False),
         ai_won=kwargs.get("ai_won", False),
-        started_at=kwargs.get("started_at", datetime.now(timezone.utc)),
-        last_move_at=kwargs.get("last_move_at", datetime.now(timezone.utc)),
+        created_at=kwargs.get("created_at", datetime.now(timezone.utc).replace(tzinfo=None)),
+        last_move_at=kwargs.get("last_move_at", datetime.now(timezone.utc).replace(tzinfo=None)),
     )
 
 
 @pytest.mark.asyncio
-async def test_get_or_create_game_session_creates_new():
+async def test_create_game_sets_initial_state():
     db = AsyncMock()
-    result_mock = MagicMock()
-    result_mock.scalar_one_or_none.return_value = None
-    db.execute = AsyncMock(return_value=result_mock)
     db.add = MagicMock()
     db.commit = AsyncMock()
 
-    refreshed = _make_session(1, "tic_tac_toe")
+    initial_state = {"board": [None] * 9, "current_turn": "player"}
+    refreshed = _make_game(1, board_state=initial_state)
     db.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", refreshed.id) or None)
 
-    session = await persistence_service.get_or_create_game_session(db, 1, "tic_tac_toe", "medium")
+    record = await persistence_service.create_game(db, 1, "tic_tac_toe", initial_state)
 
     db.add.assert_called_once()
     db.commit.assert_called()
-    assert session.user_id == 1
-    assert session.game_type == "tic_tac_toe"
-    assert session.game_ended is False
+    added = db.add.call_args[0][0]
+    assert added.user_id == 1
+    assert added.board_state == initial_state
+    assert added.move_list == []
 
 
 @pytest.mark.asyncio
-async def test_get_or_create_game_session_returns_existing():
-    existing = _make_session(2, "chess")
+async def test_get_active_game_returns_existing():
+    existing = _make_game(2)
     db = AsyncMock()
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = existing
     db.execute = AsyncMock(return_value=result_mock)
 
-    returned = await persistence_service.get_or_create_game_session(db, 2, "chess")
+    returned = await persistence_service.get_active_game(db, 2, "tic_tac_toe")
 
     assert returned is existing
-    db.add.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_get_or_create_game_session_expires_stale():
-    stale_last_move = datetime.now(timezone.utc) - timedelta(days=31)
-    stale = _make_session(3, "checkers", last_move_at=stale_last_move)
+async def test_get_active_game_returns_none_when_absent():
     db = AsyncMock()
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=result_mock)
 
-    call_count = 0
-    results = []
+    returned = await persistence_service.get_active_game(db, 99, "tic_tac_toe")
 
-    stale_result = MagicMock()
-    stale_result.scalar_one_or_none.return_value = stale
+    assert returned is None
 
-    new_result = MagicMock()
-    new_result.scalar_one_or_none.return_value = None
 
-    def execute_side_effect(*args, **kwargs):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:
-            return stale_result
-        return new_result
+@pytest.mark.asyncio
+async def test_get_active_game_expires_stale():
+    stale_last_move = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=31)
+    stale = _make_game(3, last_move_at=stale_last_move)
 
-    db.execute = AsyncMock(side_effect=execute_side_effect)
-    db.add = MagicMock()
+    db = AsyncMock()
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = stale
+    db.execute = AsyncMock(return_value=result_mock)
     db.commit = AsyncMock()
-    db.refresh = AsyncMock()
 
-    await persistence_service.get_or_create_game_session(db, 3, "checkers")
+    returned = await persistence_service.get_active_game(db, 3, "tic_tac_toe")
 
-    assert stale.game_ended is True
-    assert stale.game_abandoned is True
-    assert db.add.call_count >= 1
+    assert returned is None
+    db.execute.assert_called()
+    db.commit.assert_called()
 
 
 @pytest.mark.asyncio
-async def test_record_move_inserts_row():
-    session_id = uuid4()
+async def test_record_move_appends_notation():
+    game_id = uuid4()
     db = AsyncMock()
-
-    count_result = MagicMock()
-    count_result.scalar.return_value = 2
-    db.execute = AsyncMock(return_value=count_result)
-    db.add = MagicMock()
+    db.execute = AsyncMock()
     db.commit = AsyncMock()
 
     await persistence_service.record_move(
         db,
-        session_id,
+        game_id,
         "tic_tac_toe",
-        "human",
-        {"position": 4},
-        {"board": [None] * 9, "current_player": "O"},
+        "4",
+        {"board": [None] * 9, "current_turn": "ai"},
     )
 
-    db.add.assert_called_once()
-    added = db.add.call_args[0][0]
-    assert added.session_id == session_id
-    assert added.move_number == 3
-    assert added.player == "human"
-    assert added.move == {"position": 4}
-    db.commit.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_end_game_session_sets_flags():
-    session_id = uuid4()
-    db = AsyncMock()
-    db.execute = AsyncMock()
-    db.commit = AsyncMock()
-
-    await persistence_service.end_game_session(db, session_id, "player_won")
-
     db.execute.assert_called_once()
-    call_kwargs = db.execute.call_args
-    stmt = call_kwargs[0][0]
+    db.commit.assert_called_once()
+    stmt = db.execute.call_args[0][0]
     assert stmt is not None
-    db.commit.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_end_game_session_draw():
-    session_id = uuid4()
+async def test_end_game_sets_flags():
+    game_id = uuid4()
     db = AsyncMock()
     db.execute = AsyncMock()
     db.commit = AsyncMock()
 
-    await persistence_service.end_game_session(db, session_id, "draw")
+    await persistence_service.end_game(db, game_id, "tic_tac_toe", "player_won")
 
     db.execute.assert_called_once()
     db.commit.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_get_active_game_sessions_returns_list():
-    sessions = [_make_session(1, "chess"), _make_session(1, "connect4")]
+async def test_end_game_draw():
+    game_id = uuid4()
     db = AsyncMock()
-    result_mock = MagicMock()
-    scalars_mock = MagicMock()
-    scalars_mock.all.return_value = sessions
-    result_mock.scalars.return_value = scalars_mock
-    db.execute = AsyncMock(return_value=result_mock)
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
 
-    returned = await persistence_service.get_active_game_sessions(db, 1)
+    await persistence_service.end_game(db, game_id, "tic_tac_toe", "draw")
 
-    assert len(returned) == 2
-    assert all(not s.game_ended for s in returned)
+    db.execute.assert_called_once()
+    db.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_close_game_marks_abandoned():
+    game_id = uuid4()
+    db = AsyncMock()
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+
+    await persistence_service.close_game(db, game_id, "tic_tac_toe")
+
+    db.execute.assert_called_once()
+    db.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_all_active_games_returns_list():
+    chess_game = _make_game(1)
+    ttt_game = _make_game(1)
+
+    db = AsyncMock()
+    call_count = 0
+
+    def make_result(record):
+        m = MagicMock()
+        m.scalar_one_or_none.return_value = record
+        return m
+
+    game_types = list(__import__("db_models").GAME_TYPE_TO_MODEL.keys())
+
+    results_by_type = {
+        "chess": chess_game,
+        "tic_tac_toe": ttt_game,
+    }
+
+    def execute_side_effect(*args, **kwargs):
+        nonlocal call_count
+        idx = call_count
+        call_count += 1
+        gt = game_types[idx] if idx < len(game_types) else None
+        return make_result(results_by_type.get(gt))
+
+    db.execute = AsyncMock(side_effect=execute_side_effect)
+
+    active = await persistence_service.get_all_active_games(db, 1)
+
+    assert len(active) == 2
+    game_type_names = {gt for gt, _ in active}
+    assert "chess" in game_type_names
+    assert "tic_tac_toe" in game_type_names

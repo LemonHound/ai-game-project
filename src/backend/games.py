@@ -100,20 +100,6 @@ def _winner_to_outcome(winner: str, game_state: dict) -> str:
     return "ai_won"
 
 
-_GAME_TYPE_TO_ID: dict[str, str] = {v: k for k, v in GAME_ID_TO_TYPE.items()}
-
-
-async def _get_game_difficulty(db: AsyncSession, game_type: str) -> str:
-    game_id = _GAME_TYPE_TO_ID.get(game_type)
-    if not game_id:
-        return "medium"
-    result = await db.execute(
-        text("SELECT difficulty FROM games WHERE id = :id"),
-        {"id": game_id},
-    )
-    row = result.fetchone()
-    return row[0] if row else "medium"
-
 
 # ============================================
 # TIC-TAC-TOE (SSE ARCHITECTURE)
@@ -140,15 +126,12 @@ async def ttt_resume(
     span = trace.get_current_span()
     span.set_attribute("game.id", "tic-tac-toe")
 
-    session = await persistence_service.get_active_session_by_user_game(
-        db, user["id"], "tic_tac_toe"
-    )
-    if not session:
-        return {"session_id": None, "state": None}
+    game = await persistence_service.get_active_game(db, user["id"], "tic_tac_toe")
+    if not game:
+        return {"id": None, "state": None}
 
-    span.set_attribute("game.session_id", str(session.id))
-    state = await persistence_service.get_latest_board_state(db, session.id, "tic_tac_toe")
-    return {"session_id": str(session.id), "state": state}
+    span.set_attribute("game.id", str(game.id))
+    return {"id": str(game.id), "state": game.board_state}
 
 
 @router.post("/game/tic-tac-toe/newgame")
@@ -160,35 +143,30 @@ async def ttt_newgame(
     span = trace.get_current_span()
     span.set_attribute("game.id", "tic-tac-toe")
 
-    existing = await persistence_service.get_active_session_by_user_game(
-        db, user["id"], "tic_tac_toe"
-    )
+    existing = await persistence_service.get_active_game(db, user["id"], "tic_tac_toe")
     if existing:
         q = _ttt_move_queues.pop(existing.id, None)
         if q:
             q.put_nowait({"__close__": True})
-        await persistence_service.close_session(db, existing.id)
-
-    difficulty = await _get_game_difficulty(db, "tic_tac_toe")
-    session = await persistence_service.create_game_session(db, user["id"], "tic_tac_toe", difficulty)
-    span.set_attribute("game.session_id", str(session.id))
+        await persistence_service.close_game(db, existing.id, "tic_tac_toe")
 
     state = _ttt_engine.initial_state(request.player_starts)
+    game = await persistence_service.create_game(db, user["id"], "tic_tac_toe", state)
+    span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
         ai_state, engine_eval = _ttt_processor.process_ai_turn(
             _ttt_engine, _ttt_strategy, state
         )
+        ai_position = next(
+            (i for i in range(9) if ai_state["board"][i] != state["board"][i]), None
+        )
         await persistence_service.record_move(
-            db, session.id, "tic_tac_toe", "ai", None, ai_state, engine_eval
+            db, game.id, "tic_tac_toe", str(ai_position) if ai_position is not None else "", ai_state
         )
         state = ai_state
-    else:
-        await persistence_service.record_move(
-            db, session.id, "tic_tac_toe", "setup", None, state
-        )
 
-    return {"session_id": str(session.id), "state": state}
+    return {"id": str(game.id), "state": state}
 
 
 @router.post("/game/tic-tac-toe/move")
@@ -200,22 +178,16 @@ async def ttt_move(
     span = trace.get_current_span()
     span.set_attribute("game.id", "tic-tac-toe")
 
-    session = await persistence_service.get_active_session_by_user_game(
-        db, user["id"], "tic_tac_toe"
-    )
-    if not session:
+    game = await persistence_service.get_active_game(db, user["id"], "tic_tac_toe")
+    if not game:
         raise HTTPException(status_code=409, detail="No active session")
 
-    span.set_attribute("game.session_id", str(session.id))
+    span.set_attribute("game.id", str(game.id))
 
-    state = await persistence_service.get_latest_board_state(db, session.id, "tic_tac_toe")
-    if not state:
-        raise HTTPException(status_code=409, detail="No board state found")
-
-    if not _ttt_engine.validate_move(state, request.position):
+    if not _ttt_engine.validate_move(game.board_state, request.position):
         raise HTTPException(status_code=422, detail="Invalid move")
 
-    q = _ttt_move_queues.get(session.id)
+    q = _ttt_move_queues.get(game.id)
     if q:
         await q.put({"position": request.position})
 
@@ -233,17 +205,16 @@ async def ttt_events(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID")
 
-    game_session = await persistence_service.get_game_session_state(db, sid)
-    if not game_session:
+    game_record = await persistence_service.get_game(db, sid, "tic_tac_toe")
+    if not game_record:
         raise HTTPException(status_code=404, detail="Session not found")
-    if game_session.user_id != user["id"]:
+    if game_record.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
-    if game_session.game_ended:
+    if game_record.game_ended:
         raise HTTPException(status_code=410, detail="Session already closed")
 
     span = trace.get_current_span()
-    span.set_attribute("game.id", "tic-tac-toe")
-    span.set_attribute("game.session_id", session_id)
+    span.set_attribute("game.id", session_id)
 
     q: asyncio.Queue = asyncio.Queue()
     _ttt_move_queues[sid] = q
@@ -252,7 +223,7 @@ async def ttt_events(
 
     async def process_moves():
         try:
-            state = await persistence_service.get_latest_board_state(db, sid, "tic_tac_toe")
+            state = game_record.board_state
             while True:
                 try:
                     msg = await asyncio.wait_for(q.get(), timeout=StatusBroadcaster.HEARTBEAT_INTERVAL + 1)
@@ -267,14 +238,14 @@ async def ttt_events(
                 position = msg["position"]
                 player_state = _ttt_engine.apply_move(state, position)
                 await persistence_service.record_move(
-                    db, sid, "tic_tac_toe", "human", position, player_state
+                    db, sid, "tic_tac_toe", str(position), player_state
                 )
 
                 is_terminal, outcome = _ttt_engine.is_terminal(player_state)
                 if is_terminal:
                     persistence_outcome = _ttt_engine.outcome_to_persistence(player_state)
-                    await persistence_service.end_game_session(
-                        db, sid, persistence_outcome or "draw", "tic_tac_toe"
+                    await persistence_service.end_game(
+                        db, sid, "tic_tac_toe", persistence_outcome or "draw"
                     )
                     broadcaster.emit(StatusEvent("move", payload=_ttt_state_payload(player_state, position)))
                     broadcaster.close()
@@ -283,8 +254,7 @@ async def ttt_events(
                 broadcaster.emit(StatusEvent("status", message="Thinking..."))
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
-                    ai_span.set_attribute("game.id", "tic-tac-toe")
-                    ai_span.set_attribute("game.session_id", session_id)
+                    ai_span.set_attribute("game.id", session_id)
                     t0 = time.monotonic()
                     ai_state, engine_eval = _ttt_processor.process_ai_turn(
                         _ttt_engine, _ttt_strategy, player_state
@@ -298,14 +268,14 @@ async def ttt_events(
                     None,
                 )
                 await persistence_service.record_move(
-                    db, sid, "tic_tac_toe", "ai", ai_position, ai_state, engine_eval
+                    db, sid, "tic_tac_toe", str(ai_position) if ai_position is not None else "", ai_state
                 )
 
                 is_terminal, outcome = _ttt_engine.is_terminal(ai_state)
                 if is_terminal:
                     persistence_outcome = _ttt_engine.outcome_to_persistence(ai_state)
-                    await persistence_service.end_game_session(
-                        db, sid, persistence_outcome or "draw", "tic_tac_toe"
+                    await persistence_service.end_game(
+                        db, sid, "tic_tac_toe", persistence_outcome or "draw"
                     )
 
                 broadcaster.emit(StatusEvent("move", payload=_ttt_state_payload(ai_state, ai_position)))
@@ -316,14 +286,14 @@ async def ttt_events(
                     return
 
         except Exception as exc:
-            logger.exception("ttt_sse_error", extra={"session_id": session_id})
+            logger.exception("ttt_sse_error", extra={"game_id": session_id})
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR)
             broadcaster.emit(StatusEvent("error", code="internal_error", message="An error occurred"))
             broadcaster.close()
         finally:
             _ttt_move_queues.pop(sid, None)
-            logger.info("ttt_sse_closed", extra={"session_id": session_id})
+            logger.info("ttt_sse_closed", extra={"game_id": session_id})
 
     asyncio.create_task(process_moves())
 
@@ -381,15 +351,12 @@ async def c4_resume(
     span = trace.get_current_span()
     span.set_attribute("game.id", "connect4")
 
-    session = await persistence_service.get_active_session_by_user_game(
-        db, user["id"], "connect4"
-    )
-    if not session:
-        return {"session_id": None, "state": None}
+    game = await persistence_service.get_active_game(db, user["id"], "connect4")
+    if not game:
+        return {"id": None, "state": None}
 
-    span.set_attribute("game.session_id", str(session.id))
-    state = await persistence_service.get_latest_board_state(db, session.id, "connect4")
-    return {"session_id": str(session.id), "state": state}
+    span.set_attribute("game.id", str(game.id))
+    return {"id": str(game.id), "state": game.board_state}
 
 
 @router.post("/game/connect4/newgame")
@@ -401,20 +368,16 @@ async def c4_newgame(
     span = trace.get_current_span()
     span.set_attribute("game.id", "connect4")
 
-    existing = await persistence_service.get_active_session_by_user_game(
-        db, user["id"], "connect4"
-    )
+    existing = await persistence_service.get_active_game(db, user["id"], "connect4")
     if existing:
         q = _c4_move_queues.pop(existing.id, None)
         if q:
             q.put_nowait({"__close__": True})
-        await persistence_service.close_session(db, existing.id)
-
-    difficulty = await _get_game_difficulty(db, "connect4")
-    session = await persistence_service.create_game_session(db, user["id"], "connect4", difficulty)
-    span.set_attribute("game.session_id", str(session.id))
+        await persistence_service.close_game(db, existing.id, "connect4")
 
     state = _c4_engine.initial_state(request.player_starts)
+    game = await persistence_service.create_game(db, user["id"], "connect4", state)
+    span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
         ai_state, engine_eval = _c4_processor.process_ai_turn(
@@ -422,16 +385,14 @@ async def c4_newgame(
         )
         is_terminal, outcome = _c4_engine.is_terminal(ai_state)
         ai_state = {**ai_state, "game_active": not is_terminal}
+        ai_last = ai_state.get("last_move") or {}
+        ai_col = ai_last.get("col", "")
         await persistence_service.record_move(
-            db, session.id, "connect4", "ai", ai_state.get("last_move"), ai_state, engine_eval
+            db, game.id, "connect4", str(ai_col), ai_state
         )
         state = ai_state
-    else:
-        await persistence_service.record_move(
-            db, session.id, "connect4", "setup", None, state
-        )
 
-    return {"session_id": str(session.id), "state": state}
+    return {"id": str(game.id), "state": state}
 
 
 @router.post("/game/connect4/move")
@@ -443,24 +404,18 @@ async def c4_move(
     span = trace.get_current_span()
     span.set_attribute("game.id", "connect4")
 
-    session = await persistence_service.get_active_session_by_user_game(
-        db, user["id"], "connect4"
-    )
-    if not session:
+    game = await persistence_service.get_active_game(db, user["id"], "connect4")
+    if not game:
         raise HTTPException(status_code=409, detail="No active session")
 
-    span.set_attribute("game.session_id", str(session.id))
-
-    state = await persistence_service.get_latest_board_state(db, session.id, "connect4")
-    if not state:
-        raise HTTPException(status_code=409, detail="No board state found")
+    span.set_attribute("game.id", str(game.id))
 
     move = {"col": request.col}
-    if not _c4_engine.validate_move(state, move):
-        logger.warning("c4_invalid_move", extra={"session_id": str(session.id), "move": move})
+    if not _c4_engine.validate_move(game.board_state, move):
+        logger.warning("c4_invalid_move", extra={"game_id": str(game.id), "move": move})
         raise HTTPException(status_code=422, detail="Invalid move")
 
-    q = _c4_move_queues.get(session.id)
+    q = _c4_move_queues.get(game.id)
     if q:
         await q.put({"col": request.col})
 
@@ -478,17 +433,16 @@ async def c4_events(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID")
 
-    game_session = await persistence_service.get_game_session_state(db, sid)
-    if not game_session:
+    game_record = await persistence_service.get_game(db, sid, "connect4")
+    if not game_record:
         raise HTTPException(status_code=404, detail="Session not found")
-    if game_session.user_id != user["id"]:
+    if game_record.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
-    if game_session.game_ended:
+    if game_record.game_ended:
         raise HTTPException(status_code=410, detail="Session already closed")
 
     span = trace.get_current_span()
-    span.set_attribute("game.id", "connect4")
-    span.set_attribute("game.session_id", session_id)
+    span.set_attribute("game.id", session_id)
 
     q: asyncio.Queue = asyncio.Queue()
     _c4_move_queues[sid] = q
@@ -497,7 +451,7 @@ async def c4_events(
 
     async def process_moves():
         try:
-            state = await persistence_service.get_latest_board_state(db, sid, "connect4")
+            state = game_record.board_state
             while True:
                 try:
                     msg = await asyncio.wait_for(q.get(), timeout=StatusBroadcaster.HEARTBEAT_INTERVAL + 1)
@@ -518,13 +472,11 @@ async def c4_events(
                 player_state = {**player_state, "game_active": not is_terminal}
 
                 await persistence_service.record_move(
-                    db, sid, "connect4", "human", player_last, player_state
+                    db, sid, "connect4", str(col), player_state
                 )
 
                 if is_terminal:
-                    await persistence_service.end_game_session(
-                        db, sid, outcome or "draw", "connect4"
-                    )
+                    await persistence_service.end_game(db, sid, "connect4", outcome or "draw")
                     broadcaster.emit(
                         StatusEvent(
                             "move",
@@ -537,8 +489,7 @@ async def c4_events(
                 broadcaster.emit(StatusEvent("status", message="Thinking..."))
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
-                    ai_span.set_attribute("game.id", "connect4")
-                    ai_span.set_attribute("game.session_id", session_id)
+                    ai_span.set_attribute("game.id", session_id)
                     t0 = time.monotonic()
                     ai_state, engine_eval = _c4_processor.process_ai_turn(
                         _c4_engine, _c4_strategy, player_state
@@ -555,13 +506,11 @@ async def c4_events(
                 ai_state = {**ai_state, "game_active": not is_terminal}
 
                 await persistence_service.record_move(
-                    db, sid, "connect4", "ai", ai_last, ai_state, engine_eval
+                    db, sid, "connect4", str(ai_col) if ai_col is not None else "", ai_state
                 )
 
                 if is_terminal:
-                    await persistence_service.end_game_session(
-                        db, sid, outcome or "draw", "connect4"
-                    )
+                    await persistence_service.end_game(db, sid, "connect4", outcome or "draw")
 
                 broadcaster.emit(
                     StatusEvent(
@@ -576,14 +525,14 @@ async def c4_events(
                     return
 
         except Exception as exc:
-            logger.exception("c4_sse_error", extra={"session_id": session_id})
+            logger.exception("c4_sse_error", extra={"game_id": session_id})
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR)
             broadcaster.emit(StatusEvent("error", code="internal_error", message="An error occurred"))
             broadcaster.close()
         finally:
             _c4_move_queues.pop(sid, None)
-            logger.info("c4_sse_closed", extra={"session_id": session_id})
+            logger.info("c4_sse_closed", extra={"game_id": session_id})
 
     asyncio.create_task(process_moves())
 
@@ -634,13 +583,12 @@ async def checkers_resume(
     span = trace.get_current_span()
     span.set_attribute("game.id", "checkers")
 
-    session = await persistence_service.get_active_session_by_user_game(db, user["id"], "checkers")
-    if not session:
-        return {"session_id": None, "state": None}
+    game = await persistence_service.get_active_game(db, user["id"], "checkers")
+    if not game:
+        return {"id": None, "state": None}
 
-    span.set_attribute("game.session_id", str(session.id))
-    state = await persistence_service.get_latest_board_state(db, session.id, "checkers")
-    return {"session_id": str(session.id), "state": state}
+    span.set_attribute("game.id", str(game.id))
+    return {"id": str(game.id), "state": game.board_state}
 
 
 @router.post("/game/checkers/newgame")
@@ -652,21 +600,18 @@ async def checkers_newgame(
     span = trace.get_current_span()
     span.set_attribute("game.id", "checkers")
 
-    existing = await persistence_service.get_active_session_by_user_game(db, user["id"], "checkers")
+    existing = await persistence_service.get_active_game(db, user["id"], "checkers")
     if existing:
         q = _checkers_move_queues.pop(existing.id, None)
         if q:
             q.put_nowait({"__close__": True})
-        await persistence_service.close_session(db, existing.id)
-
-    difficulty = await _get_game_difficulty(db, "checkers")
-    session = await persistence_service.create_game_session(db, user["id"], "checkers", difficulty)
-    span.set_attribute("game.session_id", str(session.id))
+        await persistence_service.close_game(db, existing.id, "checkers")
 
     state = _checkers_engine.initial_state(request.player_starts)
-    await persistence_service.record_move(db, session.id, "checkers", "setup", None, state)
+    game = await persistence_service.create_game(db, user["id"], "checkers", state)
+    span.set_attribute("game.id", str(game.id))
 
-    return {"session_id": str(session.id), "state": state}
+    return {"id": str(game.id), "state": state}
 
 
 @router.post("/game/checkers/move")
@@ -678,21 +623,17 @@ async def checkers_move(
     span = trace.get_current_span()
     span.set_attribute("game.id", "checkers")
 
-    session = await persistence_service.get_active_session_by_user_game(db, user["id"], "checkers")
-    if not session:
+    game = await persistence_service.get_active_game(db, user["id"], "checkers")
+    if not game:
         raise HTTPException(status_code=409, detail="No active session")
 
-    span.set_attribute("game.session_id", str(session.id))
-
-    state = await persistence_service.get_latest_board_state(db, session.id, "checkers")
-    if not state:
-        raise HTTPException(status_code=409, detail="No board state found")
+    span.set_attribute("game.id", str(game.id))
 
     move = {"from": request.from_pos, "to": request.to_pos}
-    if not _checkers_engine.validate_move(state, move):
+    if not _checkers_engine.validate_move(game.board_state, move):
         raise HTTPException(status_code=422, detail="Invalid move")
 
-    q = _checkers_move_queues.get(session.id)
+    q = _checkers_move_queues.get(game.id)
     if q:
         await q.put(move)
 
@@ -710,17 +651,16 @@ async def checkers_events(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID")
 
-    game_session = await persistence_service.get_game_session_state(db, sid)
-    if not game_session:
+    game_record = await persistence_service.get_game(db, sid, "checkers")
+    if not game_record:
         raise HTTPException(status_code=404, detail="Session not found")
-    if game_session.user_id != user["id"]:
+    if game_record.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
-    if game_session.game_ended:
+    if game_record.game_ended:
         raise HTTPException(status_code=410, detail="Session already closed")
 
     span = trace.get_current_span()
-    span.set_attribute("game.id", "checkers")
-    span.set_attribute("game.session_id", session_id)
+    span.set_attribute("game.id", session_id)
 
     output_q: asyncio.Queue[Optional[str]] = asyncio.Queue()
     move_q: asyncio.Queue = asyncio.Queue()
@@ -732,8 +672,7 @@ async def checkers_events(
         await asyncio.sleep(2.5)
 
         with tracer.start_as_current_span("game.ai.move") as ai_span:
-            ai_span.set_attribute("game.id", "checkers")
-            ai_span.set_attribute("game.session_id", session_id)
+            ai_span.set_attribute("game.id", session_id)
             t0 = time.monotonic()
 
             while state.get("current_turn") == "ai" and state.get("game_active", True):
@@ -746,7 +685,9 @@ async def checkers_events(
                     ai_move = legal[0]
 
                 state = _checkers_engine.apply_move(ai_state_tmp, ai_move)
-                await persistence_service.record_move(db, sid, "checkers", "ai", state.get("last_move"), state)
+                lm = state.get("last_move") or {}
+                notation = f"{lm.get('from', '')}-{lm.get('to', '')}"
+                await persistence_service.record_move(db, sid, "checkers", notation, state)
 
                 is_terminal, outcome = _checkers_engine.is_terminal(state)
                 output_q.put_nowait(
@@ -754,7 +695,7 @@ async def checkers_events(
                 )
 
                 if is_terminal:
-                    await persistence_service.end_game_session(db, sid, outcome or "draw", "checkers")
+                    await persistence_service.end_game(db, sid, "checkers", outcome or "draw")
                     output_q.put_nowait(None)
                     return state, True
 
@@ -771,7 +712,7 @@ async def checkers_events(
 
     async def process_moves():
         try:
-            state = await persistence_service.get_latest_board_state(db, sid, "checkers")
+            state = game_record.board_state
 
             # Handle case where AI goes first (player chose to go second)
             if state.get("current_turn") == "ai" and state.get("game_active", True):
@@ -792,7 +733,9 @@ async def checkers_events(
 
                 player_move = {"from": msg["from"], "to": msg["to"]}
                 state = _checkers_engine.apply_move(state, player_move)
-                await persistence_service.record_move(db, sid, "checkers", "human", state.get("last_move"), state)
+                lm = state.get("last_move") or {}
+                notation = f"{lm.get('from', '')}-{lm.get('to', '')}"
+                await persistence_service.record_move(db, sid, "checkers", notation, state)
 
                 is_terminal, outcome = _checkers_engine.is_terminal(state)
                 output_q.put_nowait(
@@ -800,7 +743,7 @@ async def checkers_events(
                 )
 
                 if is_terminal:
-                    await persistence_service.end_game_session(db, sid, outcome or "draw", "checkers")
+                    await persistence_service.end_game(db, sid, "checkers", outcome or "draw")
                     output_q.put_nowait(None)
                     return
 
@@ -812,14 +755,14 @@ async def checkers_events(
                     return
 
         except Exception as exc:
-            logger.exception("checkers_sse_error", extra={"session_id": session_id})
+            logger.exception("checkers_sse_error", extra={"game_id": session_id})
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR)
             output_q.put_nowait('data: {"type": "error", "code": "internal_error", "message": "An error occurred"}\n\n')
             output_q.put_nowait(None)
         finally:
             _checkers_move_queues.pop(sid, None)
-            logger.info("checkers_sse_closed", extra={"session_id": session_id})
+            logger.info("checkers_sse_closed", extra={"game_id": session_id})
 
     asyncio.create_task(process_moves())
 
@@ -875,13 +818,12 @@ async def dab_resume(
     span = trace.get_current_span()
     span.set_attribute("game.id", "dots-and-boxes")
 
-    session = await persistence_service.get_active_session_by_user_game(db, user["id"], "dots_and_boxes")
-    if not session:
-        return {"session_id": None, "state": None}
+    game = await persistence_service.get_active_game(db, user["id"], "dots_and_boxes")
+    if not game:
+        return {"id": None, "state": None}
 
-    span.set_attribute("game.session_id", str(session.id))
-    state = await persistence_service.get_latest_board_state(db, session.id, "dots_and_boxes")
-    return {"session_id": str(session.id), "state": state}
+    span.set_attribute("game.id", str(game.id))
+    return {"id": str(game.id), "state": game.board_state}
 
 
 @router.post("/game/dots-and-boxes/newgame")
@@ -893,27 +835,24 @@ async def dab_newgame(
     span = trace.get_current_span()
     span.set_attribute("game.id", "dots-and-boxes")
 
-    existing = await persistence_service.get_active_session_by_user_game(db, user["id"], "dots_and_boxes")
+    existing = await persistence_service.get_active_game(db, user["id"], "dots_and_boxes")
     if existing:
         q = _dab_move_queues.pop(existing.id, None)
         if q:
             q.put_nowait({"__close__": True})
-        await persistence_service.close_session(db, existing.id)
-
-    difficulty = await _get_game_difficulty(db, "dots_and_boxes")
-    session = await persistence_service.create_game_session(db, user["id"], "dots_and_boxes", difficulty)
-    span.set_attribute("game.session_id", str(session.id))
+        await persistence_service.close_game(db, existing.id, "dots_and_boxes")
 
     state = _dab_engine.initial_state(request.player_starts)
+    game = await persistence_service.create_game(db, user["id"], "dots_and_boxes", state)
+    span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
         ai_move, _ = _dab_strategy.generate_move(state)
         state = _dab_engine.apply_move(state, ai_move)
-        await persistence_service.record_move(db, session.id, "dots_and_boxes", "ai", ai_move, state)
-    else:
-        await persistence_service.record_move(db, session.id, "dots_and_boxes", "setup", None, state)
+        notation = f"{str(ai_move.get('type', ''))[:1]}:{ai_move.get('row', '')},{ai_move.get('col', '')}"
+        await persistence_service.record_move(db, game.id, "dots_and_boxes", notation, state)
 
-    return {"session_id": str(session.id), "state": state}
+    return {"id": str(game.id), "state": state}
 
 
 @router.post("/game/dots-and-boxes/move")
@@ -925,21 +864,17 @@ async def dab_move(
     span = trace.get_current_span()
     span.set_attribute("game.id", "dots-and-boxes")
 
-    session = await persistence_service.get_active_session_by_user_game(db, user["id"], "dots_and_boxes")
-    if not session:
+    game = await persistence_service.get_active_game(db, user["id"], "dots_and_boxes")
+    if not game:
         raise HTTPException(status_code=409, detail="No active session")
 
-    span.set_attribute("game.session_id", str(session.id))
-
-    state = await persistence_service.get_latest_board_state(db, session.id, "dots_and_boxes")
-    if not state:
-        raise HTTPException(status_code=409, detail="No board state found")
+    span.set_attribute("game.id", str(game.id))
 
     move = {"type": request.type, "row": request.row, "col": request.col}
-    if not _dab_engine.validate_move(state, move):
+    if not _dab_engine.validate_move(game.board_state, move):
         raise HTTPException(status_code=422, detail="Invalid move")
 
-    q = _dab_move_queues.get(session.id)
+    q = _dab_move_queues.get(game.id)
     if q:
         await q.put(move)
 
@@ -957,17 +892,16 @@ async def dab_events(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID")
 
-    game_session = await persistence_service.get_game_session_state(db, sid)
-    if not game_session:
+    game_record = await persistence_service.get_game(db, sid, "dots_and_boxes")
+    if not game_record:
         raise HTTPException(status_code=404, detail="Session not found")
-    if game_session.user_id != user["id"]:
+    if game_record.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
-    if game_session.game_ended:
+    if game_record.game_ended:
         raise HTTPException(status_code=410, detail="Session already closed")
 
     span = trace.get_current_span()
-    span.set_attribute("game.id", "dots-and-boxes")
-    span.set_attribute("game.session_id", session_id)
+    span.set_attribute("game.id", session_id)
 
     output_q: asyncio.Queue[Optional[str]] = asyncio.Queue()
     move_q: asyncio.Queue = asyncio.Queue()
@@ -975,7 +909,7 @@ async def dab_events(
 
     async def process_moves():
         try:
-            state = await persistence_service.get_latest_board_state(db, sid, "dots_and_boxes")
+            state = game_record.board_state
             while True:
                 try:
                     msg = await asyncio.wait_for(move_q.get(), timeout=31)
@@ -989,7 +923,8 @@ async def dab_events(
 
                 move = {"type": msg["type"], "row": msg["row"], "col": msg["col"]}
                 player_state = _dab_engine.apply_move(state, move)
-                await persistence_service.record_move(db, sid, "dots_and_boxes", "human", move, player_state)
+                notation = f"{str(move.get('type', ''))[:1]}:{move.get('row', '')},{move.get('col', '')}"
+                await persistence_service.record_move(db, sid, "dots_and_boxes", notation, player_state)
 
                 terminal, outcome = _dab_engine.is_terminal(player_state)
                 output_q.put_nowait(
@@ -997,7 +932,7 @@ async def dab_events(
                 )
 
                 if terminal:
-                    await persistence_service.end_game_session(db, sid, outcome or "draw", "dots_and_boxes")
+                    await persistence_service.end_game(db, sid, "dots_and_boxes", outcome or "draw")
                     output_q.put_nowait(None)
                     return
 
@@ -1010,14 +945,14 @@ async def dab_events(
                 await asyncio.sleep(0.5)
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
-                    ai_span.set_attribute("game.id", "dots-and-boxes")
-                    ai_span.set_attribute("game.session_id", session_id)
+                    ai_span.set_attribute("game.id", session_id)
                     t0 = time.monotonic()
 
                     while state.get("current_turn") == "ai" and state.get("game_active", True):
                         ai_move, _ = _dab_strategy.generate_move(state)
                         ai_state = _dab_engine.apply_move(state, ai_move)
-                        await persistence_service.record_move(db, sid, "dots_and_boxes", "ai", ai_move, ai_state)
+                        ai_notation = f"{str(ai_move.get('type', ''))[:1]}:{ai_move.get('row', '')},{ai_move.get('col', '')}"
+                        await persistence_service.record_move(db, sid, "dots_and_boxes", ai_notation, ai_state)
 
                         terminal, outcome = _dab_engine.is_terminal(ai_state)
                         output_q.put_nowait(
@@ -1025,7 +960,7 @@ async def dab_events(
                         )
 
                         if terminal:
-                            await persistence_service.end_game_session(db, sid, outcome or "draw", "dots_and_boxes")
+                            await persistence_service.end_game(db, sid, "dots_and_boxes", outcome or "draw")
                             output_q.put_nowait(None)
                             return
 
@@ -1039,14 +974,14 @@ async def dab_events(
                     _ai_duration.record(compute_ms, {"game.id": "dots-and-boxes"})
 
         except Exception as exc:
-            logger.exception("dab_sse_error", extra={"session_id": session_id})
+            logger.exception("dab_sse_error", extra={"game_id": session_id})
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR)
             output_q.put_nowait('data: {"type": "error", "code": "internal_error", "message": "An error occurred"}\n\n')
             output_q.put_nowait(None)
         finally:
             _dab_move_queues.pop(sid, None)
-            logger.info("dab_sse_closed", extra={"session_id": session_id})
+            logger.info("dab_sse_closed", extra={"game_id": session_id})
 
     asyncio.create_task(process_moves())
 
@@ -1112,13 +1047,12 @@ async def chess_resume(
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
-    session = await persistence_service.get_active_session_by_user_game(db, user["id"], "chess")
-    if not session:
-        return {"session_id": None, "state": None}
+    game = await persistence_service.get_active_game(db, user["id"], "chess")
+    if not game:
+        return {"id": None, "state": None}
 
-    span.set_attribute("game.session_id", str(session.id))
-    state = await persistence_service.get_latest_board_state(db, session.id, "chess")
-    return {"session_id": str(session.id), "state": state}
+    span.set_attribute("game.id", str(game.id))
+    return {"id": str(game.id), "state": game.board_state}
 
 
 @router.post("/game/chess/newgame")
@@ -1130,27 +1064,24 @@ async def chess_newgame(
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
-    existing = await persistence_service.get_active_session_by_user_game(db, user["id"], "chess")
+    existing = await persistence_service.get_active_game(db, user["id"], "chess")
     if existing:
         q = _chess_move_queues.pop(existing.id, None)
         if q:
             q.put_nowait({"__close__": True})
-        await persistence_service.close_session(db, existing.id)
-
-    difficulty = await _get_game_difficulty(db, "chess")
-    session = await persistence_service.create_game_session(db, user["id"], "chess", difficulty)
-    span.set_attribute("game.session_id", str(session.id))
+        await persistence_service.close_game(db, existing.id, "chess")
 
     state = _chess_engine.initial_state(request.player_starts)
+    game = await persistence_service.create_game(db, user["id"], "chess", state)
+    span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
         ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, _chess_strategy, state)
-        await persistence_service.record_move(db, session.id, "chess", "ai", None, ai_state, engine_eval)
+        notation = (ai_state.get("last_move") or {}).get("notation", "")
+        await persistence_service.record_move(db, game.id, "chess", notation, ai_state)
         state = ai_state
-    else:
-        await persistence_service.record_move(db, session.id, "chess", "setup", None, state)
 
-    return {"session_id": str(session.id), "state": state}
+    return {"id": str(game.id), "state": state}
 
 
 @router.post("/game/chess/move")
@@ -1162,15 +1093,11 @@ async def chess_move(
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
-    session = await persistence_service.get_active_session_by_user_game(db, user["id"], "chess")
-    if not session:
+    game = await persistence_service.get_active_game(db, user["id"], "chess")
+    if not game:
         raise HTTPException(status_code=409, detail="No active session")
 
-    span.set_attribute("game.session_id", str(session.id))
-
-    state = await persistence_service.get_latest_board_state(db, session.id, "chess")
-    if not state:
-        raise HTTPException(status_code=409, detail="No board state found")
+    span.set_attribute("game.id", str(game.id))
 
     move_dict = {
         "fromRow": request.fromRow,
@@ -1180,11 +1107,11 @@ async def chess_move(
         "promotionPiece": request.promotionPiece,
     }
 
-    if not _chess_engine.validate_move(state, move_dict):
-        logger.warning("chess_invalid_move", extra={"session_id": str(session.id), "move": move_dict})
+    if not _chess_engine.validate_move(game.board_state, move_dict):
+        logger.warning("chess_invalid_move", extra={"game_id": str(game.id), "move": move_dict})
         raise HTTPException(status_code=422, detail="Invalid move")
 
-    q = _chess_move_queues.get(session.id)
+    q = _chess_move_queues.get(game.id)
     if q:
         await q.put(move_dict)
 
@@ -1202,17 +1129,16 @@ async def chess_events(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID")
 
-    game_session = await persistence_service.get_game_session_state(db, sid)
-    if not game_session:
+    game_record = await persistence_service.get_game(db, sid, "chess")
+    if not game_record:
         raise HTTPException(status_code=404, detail="Session not found")
-    if game_session.user_id != user["id"]:
+    if game_record.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
-    if game_session.game_ended:
+    if game_record.game_ended:
         raise HTTPException(status_code=410, detail="Session already closed")
 
     span = trace.get_current_span()
-    span.set_attribute("game.id", "chess")
-    span.set_attribute("game.session_id", session_id)
+    span.set_attribute("game.id", session_id)
 
     q: asyncio.Queue = asyncio.Queue()
     _chess_move_queues[sid] = q
@@ -1221,7 +1147,7 @@ async def chess_events(
 
     async def process_moves():
         try:
-            state = await persistence_service.get_latest_board_state(db, sid, "chess")
+            state = game_record.board_state
             while True:
                 try:
                     msg = await asyncio.wait_for(q.get(), timeout=StatusBroadcaster.HEARTBEAT_INTERVAL + 1)
@@ -1234,11 +1160,12 @@ async def chess_events(
                     return
 
                 player_state = _chess_engine.apply_move(state, msg)
-                await persistence_service.record_move(db, sid, "chess", "human", msg, player_state)
+                player_notation = (player_state.get("last_move") or {}).get("notation", "")
+                await persistence_service.record_move(db, sid, "chess", player_notation, player_state)
 
                 is_terminal, outcome = _chess_engine.is_terminal(player_state)
                 if is_terminal:
-                    await persistence_service.end_game_session(db, sid, outcome or "draw", "chess")
+                    await persistence_service.end_game(db, sid, "chess", outcome or "draw")
                     broadcaster.emit(StatusEvent("move", payload=_chess_state_payload(player_state, "player")))
                     broadcaster.close()
                     return
@@ -1246,19 +1173,19 @@ async def chess_events(
                 broadcaster.emit(StatusEvent("status", message="Thinking..."))
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
-                    ai_span.set_attribute("game.id", "chess")
-                    ai_span.set_attribute("game.session_id", session_id)
+                    ai_span.set_attribute("game.id", session_id)
                     t0 = time.monotonic()
                     ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, _chess_strategy, player_state)
                     compute_ms = (time.monotonic() - t0) * 1000
                     ai_span.set_attribute("compute_duration_ms", compute_ms)
                     _ai_duration.record(compute_ms, {"game.id": "chess"})
 
-                await persistence_service.record_move(db, sid, "chess", "ai", ai_state.get("last_move"), ai_state, engine_eval)
+                ai_notation = (ai_state.get("last_move") or {}).get("notation", "")
+                await persistence_service.record_move(db, sid, "chess", ai_notation, ai_state)
 
                 is_terminal, outcome = _chess_engine.is_terminal(ai_state)
                 if is_terminal:
-                    await persistence_service.end_game_session(db, sid, outcome or "draw", "chess")
+                    await persistence_service.end_game(db, sid, "chess", outcome or "draw")
 
                 broadcaster.emit(StatusEvent("move", payload=_chess_state_payload(ai_state, "ai")))
                 state = ai_state
@@ -1268,14 +1195,14 @@ async def chess_events(
                     return
 
         except Exception as exc:
-            logger.exception("chess_sse_error", extra={"session_id": session_id})
+            logger.exception("chess_sse_error", extra={"game_id": session_id})
             span.record_exception(exc)
             span.set_status(trace.StatusCode.ERROR)
             broadcaster.emit(StatusEvent("error", code="internal_error", message="An error occurred"))
             broadcaster.close()
         finally:
             _chess_move_queues.pop(sid, None)
-            logger.info("chess_sse_closed", extra={"session_id": session_id})
+            logger.info("chess_sse_closed", extra={"game_id": session_id})
 
     asyncio.create_task(process_moves())
 
@@ -1296,15 +1223,11 @@ async def chess_legal_moves(
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
-    session = await persistence_service.get_active_session_by_user_game(db, user["id"], "chess")
-    if not session:
+    game = await persistence_service.get_active_game(db, user["id"], "chess")
+    if not game:
         raise HTTPException(status_code=409, detail="No active session")
 
-    state = await persistence_service.get_latest_board_state(db, session.id, "chess")
-    if not state:
-        raise HTTPException(status_code=409, detail="No board state found")
-
-    moves = _chess_engine.get_legal_moves_for_square(state, from_row, from_col)
+    moves = _chess_engine.get_legal_moves_for_square(game.board_state, from_row, from_col)
     return {"moves": moves}
 
 
@@ -1336,7 +1259,7 @@ async def cleanup_sessions(
         game_type = GAME_ID_TO_TYPE.get(game_id)
         if not game_type:
             continue
-        count = await persistence_service.cleanup_stale_sessions(db, game_type, timeout_hours)
+        count = await persistence_service.cleanup_stale_games(db, game_type, timeout_hours)
         total += count
 
     return {"cleaned": total}
@@ -1421,7 +1344,7 @@ async def get_game_stats(game_id: str):
 # ============================================
 
 
-_SSE_MIGRATED_GAMES = {"connect4", "checkers", "dots-and-boxes", "chess"}
+_SSE_MIGRATED_GAMES = {"connect4", "checkers", "dots-and-boxes", "chess", "tic-tac-toe"}
 
 
 @router.post("/game/{game_id}/start")
@@ -1436,29 +1359,7 @@ async def start_game(
     if game_id not in GAME_ID_TO_TYPE:
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
 
-    game_type = GAME_ID_TO_TYPE[game_id]
-    engine = _GAME_ENGINES[game_id]
-
-    game_session = await persistence_service.get_or_create_game_session(
-        db, user["id"], game_type, request.difficulty
-    )
-
-    span = trace.get_current_span()
-    span.set_attribute("game.id", game_id)
-    span.set_attribute("game.session_id", str(game_session.id))
-
-    latest = await persistence_service.get_latest_board_state(db, game_session.id, game_type)
-    if latest:
-        return {"session_id": str(game_session.id), "game_state": latest, "is_resumed": True}
-
-    game_state = engine.get_initial_state(
-        difficulty=request.difficulty, player_starts=request.playerStarts
-    )
-    await persistence_service.record_move(
-        db, game_session.id, game_type, "setup", {}, game_state
-    )
-
-    return {"session_id": str(game_session.id), "game_state": game_state, "is_resumed": False}
+    raise HTTPException(status_code=501, detail=f"Game '{game_id}' uses SSE endpoints")
 
 
 @router.post("/game/{game_id}/move")
@@ -1473,74 +1374,7 @@ async def make_move(
     if game_id not in GAME_ID_TO_TYPE:
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
 
-    game_type = GAME_ID_TO_TYPE[game_id]
-    engine = _GAME_ENGINES[game_id]
-
-    try:
-        session_id = UUID(request.gameSessionId)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid session ID format")
-
-    game_session = await persistence_service.get_game_session_state(db, session_id)
-    if not game_session:
-        raise HTTPException(status_code=404, detail="Game session not found")
-    if game_session.user_id != user["id"]:
-        raise HTTPException(status_code=403, detail="Session does not belong to current user")
-    if game_session.game_ended:
-        raise HTTPException(status_code=400, detail="Game session has already ended")
-
-    span = trace.get_current_span()
-    span.set_attribute("game.id", game_id)
-    span.set_attribute("game.session_id", str(session_id))
-
-    game_state = await persistence_service.get_latest_board_state(db, session_id, game_type)
-    if not game_state:
-        raise HTTPException(status_code=404, detail="No board state found for session")
-
-    try:
-        with tracer.start_as_current_span("game.ai.move") as ai_span:
-            ai_span.set_attribute("game.id", game_id)
-            t0 = time.monotonic()
-            result = engine.apply_move(game_state, request.move)
-            compute_ms = (time.monotonic() - t0) * 1000
-            ai_span.set_attribute("compute_duration_ms", compute_ms)
-            _ai_duration.record(compute_ms, {"game.id": game_id})
-    except ValueError as exc:
-        span.set_attribute("error.type", type(exc).__name__)
-        span.set_attribute("error.message", str(exc))
-        return JSONResponse(
-            status_code=400,
-            content={"detail": str(exc), "board_state": game_state},
-        )
-
-    await persistence_service.record_move(
-        db,
-        session_id,
-        game_type,
-        "human",
-        result["player_move"],
-        result["board_after_player"],
-    )
-
-    if not result["game_over_after_player"] and result["board_after_ai"] is not None:
-        ai_move_data = result.get("ai_move") or result.get("ai_moves")
-        await persistence_service.record_move(
-            db,
-            session_id,
-            game_type,
-            "ai",
-            ai_move_data,
-            result["board_after_ai"],
-        )
-
-    if result["game_over"] and result["winner"]:
-        final_state = result["board_after_ai"] or result["board_after_player"]
-        outcome = _winner_to_outcome(result["winner"], final_state)
-        await persistence_service.end_game_session(db, session_id, outcome, game_type)
-    elif result["game_over"]:
-        await persistence_service.end_game_session(db, session_id, "draw", game_type)
-
-    return {"session_id": str(session_id), **result}
+    raise HTTPException(status_code=501, detail=f"Game '{game_id}' uses SSE endpoints")
 
 
 @router.post("/game/{game_id}/ai-first")
@@ -1550,47 +1384,7 @@ async def ai_first_move(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
-    if game_id != "connect4":
-        raise HTTPException(
-            status_code=501, detail=f"AI first move not supported for '{game_id}'"
-        )
-
-    game_type = GAME_ID_TO_TYPE[game_id]
-
-    game_session = await persistence_service.get_or_create_game_session(
-        db, user["id"], game_type, request.difficulty
-    )
-
-    span = trace.get_current_span()
-    span.set_attribute("game.id", game_id)
-    span.set_attribute("game.session_id", str(game_session.id))
-
-    latest = await persistence_service.get_latest_board_state(db, game_session.id, game_type)
-    if latest:
-        game_state = latest
-    else:
-        game_state = connect4_game.get_initial_state(
-            difficulty=request.difficulty, player_starts=False
-        )
-
-    with tracer.start_as_current_span("game.ai.move") as ai_span:
-        ai_span.set_attribute("game.id", game_id)
-        t0 = time.monotonic()
-        result = connect4_game.apply_ai_first_move(game_state)
-        compute_ms = (time.monotonic() - t0) * 1000
-        ai_span.set_attribute("compute_duration_ms", compute_ms)
-        _ai_duration.record(compute_ms, {"game.id": game_id})
-
-    await persistence_service.record_move(
-        db,
-        game_session.id,
-        game_type,
-        "ai",
-        result["ai_move"],
-        result["board_after_ai"],
-    )
-
-    return {"session_id": str(game_session.id), **result}
+    raise HTTPException(status_code=501, detail="AI first move uses SSE newgame endpoint")
 
 
 @router.post("/game/{game_id}/end")
@@ -1606,19 +1400,19 @@ async def end_game(
     game_type = GAME_ID_TO_TYPE[game_id]
 
     try:
-        session_id = UUID(request.gameSessionId)
+        game_id_uuid = UUID(request.gameSessionId)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 
-    trace.get_current_span().set_attribute("game.id", game_id)
+    trace.get_current_span().set_attribute("game.id", str(game_id_uuid))
 
-    game_session = await persistence_service.get_game_session_state(db, session_id)
-    if not game_session:
+    game = await persistence_service.get_game(db, game_id_uuid, game_type)
+    if not game:
         raise HTTPException(status_code=404, detail="Game session not found")
-    if game_session.user_id != user["id"]:
+    if game.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
-    if not game_session.game_ended:
-        await persistence_service.end_game_session(db, session_id, "abandoned", game_type)
+    if not game.game_ended:
+        await persistence_service.end_game(db, game_id_uuid, game_type, "abandoned")
 
     return {"success": True}
 
@@ -1640,17 +1434,13 @@ async def get_game_session(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 
-    game_session = await persistence_service.get_game_session_state(db, sid)
-    if not game_session:
+    game = await persistence_service.get_game(db, sid, game_type)
+    if not game:
         raise HTTPException(status_code=404, detail="Session not found")
-    if game_session.user_id != user["id"]:
+    if game.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
 
-    board_state = await persistence_service.get_latest_board_state(db, sid, game_type)
-    if not board_state:
-        raise HTTPException(status_code=404, detail="No board state found for session")
-
-    return {"session_id": session_id, "game_type": game_type, "board_state": board_state}
+    return {"board_state": game.board_state}
 
 
 @router.get("/games/sessions/active")
@@ -1658,16 +1448,15 @@ async def get_active_sessions(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
-    sessions = await persistence_service.get_active_game_sessions(db, user["id"])
+    active = await persistence_service.get_all_active_games(db, user["id"])
     return {
         "sessions": [
             {
-                "session_id": str(s.id),
-                "game_type": s.game_type,
-                "difficulty": s.difficulty,
-                "started_at": s.started_at,
-                "last_move_at": s.last_move_at,
+                "id": str(record.id),
+                "game_type": game_type,
+                "created_at": record.created_at,
+                "last_move_at": record.last_move_at,
             }
-            for s in sessions
+            for game_type, record in active
         ]
     }

@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, Column, Index, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import CheckConstraint, Column, Index, String, text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlmodel import Field, SQLModel
 
 
@@ -11,106 +11,108 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-class GameSession(SQLModel, table=True):
-    __tablename__ = "game_sessions"
-    __table_args__ = (
-        CheckConstraint(
-            "(is_draw::int + player_won::int + ai_won::int) <= 1",
-            name="game_sessions_outcome_check",
-        ),
-        Index(
-            "uq_active_session_per_user_game",
-            "user_id",
-            "game_type",
-            unique=True,
-            postgresql_where=text("NOT game_ended"),
-        ),
-    )
-
+class GameRecord(SQLModel):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     user_id: int
-    game_type: str = Field(max_length=50)
-    difficulty: str = Field(max_length=20, default="medium")
+    created_at: datetime = Field(default_factory=_utcnow)
+    last_move_at: datetime = Field(default_factory=_utcnow)
+    board_state: Any = Field(sa_column=Column(JSONB, nullable=False))
+    move_list: list[str] = Field(
+        sa_column=Column(ARRAY(String), nullable=False, server_default="{}")
+    )
     game_ended: bool = Field(default=False)
     game_abandoned: bool = Field(default=False)
     is_draw: bool = Field(default=False)
     player_won: bool = Field(default=False)
     ai_won: bool = Field(default=False)
-    started_at: datetime = Field(default_factory=_utcnow)
-    last_move_at: datetime = Field(default_factory=_utcnow)
 
 
-class TicTacToeMove(SQLModel, table=True):
-    __tablename__ = "tic_tac_toe_moves"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    session_id: UUID = Field(foreign_key="game_sessions.id", nullable=False)
-    move_number: int
-    player: str = Field(max_length=10)
-    move: Any = Field(sa_column=Column(JSONB, nullable=False))
-    board_state_after: Any = Field(sa_column=Column(JSONB, nullable=False))
-    engine_eval: Optional[float] = Field(default=None)
-    created_at: datetime = Field(default_factory=_utcnow)
-
-
-class ChessMove(SQLModel, table=True):
-    __tablename__ = "chess_moves"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    session_id: UUID = Field(foreign_key="game_sessions.id", nullable=False)
-    move_number: int
-    player: str = Field(max_length=10)
-    move: Any = Field(sa_column=Column(JSONB, nullable=False))
-    board_state_after: Any = Field(sa_column=Column(JSONB, nullable=False))
-    engine_eval: Optional[float] = Field(default=None)
-    created_at: datetime = Field(default_factory=_utcnow)
+class TicTacToeGame(GameRecord, table=True):
+    __tablename__ = "tic_tac_toe_games"
+    __table_args__ = (
+        CheckConstraint(
+            "(is_draw::int + player_won::int + ai_won::int) <= 1",
+            name="tic_tac_toe_games_outcome_check",
+        ),
+        Index(
+            "uq_active_ttt_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("NOT game_ended"),
+        ),
+    )
 
 
-class CheckersMove(SQLModel, table=True):
-    __tablename__ = "checkers_moves"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    session_id: UUID = Field(foreign_key="game_sessions.id", nullable=False)
-    move_number: int
-    player: str = Field(max_length=10)
-    move: Any = Field(sa_column=Column(JSONB, nullable=False))
-    board_state_after: Any = Field(sa_column=Column(JSONB, nullable=False))
-    engine_eval: Optional[float] = Field(default=None)
-    created_at: datetime = Field(default_factory=_utcnow)
-
-
-class Connect4Move(SQLModel, table=True):
-    __tablename__ = "connect4_moves"
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    session_id: UUID = Field(foreign_key="game_sessions.id", nullable=False)
-    move_number: int
-    player: str = Field(max_length=10)
-    move: Any = Field(sa_column=Column(JSONB, nullable=False))
-    board_state_after: Any = Field(sa_column=Column(JSONB, nullable=False))
-    engine_eval: Optional[float] = Field(default=None)
-    created_at: datetime = Field(default_factory=_utcnow)
+class ChessGame(GameRecord, table=True):
+    __tablename__ = "chess_games"
+    __table_args__ = (
+        CheckConstraint(
+            "(is_draw::int + player_won::int + ai_won::int) <= 1",
+            name="chess_games_outcome_check",
+        ),
+        Index(
+            "uq_active_chess_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("NOT game_ended"),
+        ),
+    )
 
 
-class DotsAndBoxesMove(SQLModel, table=True):
-    __tablename__ = "dots_and_boxes_moves"
+class CheckersGame(GameRecord, table=True):
+    __tablename__ = "checkers_games"
+    __table_args__ = (
+        CheckConstraint(
+            "(is_draw::int + player_won::int + ai_won::int) <= 1",
+            name="checkers_games_outcome_check",
+        ),
+        Index(
+            "uq_active_checkers_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("NOT game_ended"),
+        ),
+    )
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    session_id: UUID = Field(foreign_key="game_sessions.id", nullable=False)
-    move_number: int
-    player: str = Field(max_length=10)
-    move: Any = Field(sa_column=Column(JSONB, nullable=False))
-    board_state_after: Any = Field(sa_column=Column(JSONB, nullable=False))
-    engine_eval: Optional[float] = Field(default=None)
-    created_at: datetime = Field(default_factory=_utcnow)
+
+class Connect4Game(GameRecord, table=True):
+    __tablename__ = "connect4_games"
+    __table_args__ = (
+        CheckConstraint(
+            "(is_draw::int + player_won::int + ai_won::int) <= 1",
+            name="connect4_games_outcome_check",
+        ),
+        Index(
+            "uq_active_connect4_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("NOT game_ended"),
+        ),
+    )
 
 
-GAME_TYPE_TO_MOVE_MODEL: dict[str, type[SQLModel]] = {
-    "tic_tac_toe": TicTacToeMove,
-    "chess": ChessMove,
-    "checkers": CheckersMove,
-    "connect4": Connect4Move,
-    "dots_and_boxes": DotsAndBoxesMove,
+class DotsAndBoxesGame(GameRecord, table=True):
+    __tablename__ = "dots_and_boxes_games"
+    __table_args__ = (
+        CheckConstraint(
+            "(is_draw::int + player_won::int + ai_won::int) <= 1",
+            name="dots_and_boxes_games_outcome_check",
+        ),
+        Index(
+            "uq_active_dab_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("NOT game_ended"),
+        ),
+    )
+
+
+GAME_TYPE_TO_MODEL: dict[str, type[GameRecord]] = {
+    "tic_tac_toe": TicTacToeGame,
+    "chess": ChessGame,
+    "checkers": CheckersGame,
+    "connect4": Connect4Game,
+    "dots_and_boxes": DotsAndBoxesGame,
 }
 
 GAME_ID_TO_TYPE: dict[str, str] = {

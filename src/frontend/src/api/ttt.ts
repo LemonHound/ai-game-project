@@ -12,12 +12,12 @@ export interface TttGameState {
 }
 
 export interface TttResumeResponse {
-    session_id: string | null;
+    id: string | null;
     state: TttGameState | null;
 }
 
 export interface TttNewGameResponse {
-    session_id: string;
+    id: string;
     state: TttGameState;
 }
 

@@ -21,12 +21,12 @@ export interface DaBGameState {
 }
 
 export interface DaBResumeResponse {
-    session_id: string | null;
+    id: string | null;
     state: DaBGameState | null;
 }
 
 export interface DaBNewGameResponse {
-    session_id: string;
+    id: string;
     state: DaBGameState;
 }
 

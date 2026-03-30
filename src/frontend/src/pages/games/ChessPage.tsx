@@ -171,8 +171,8 @@ export default function ChessPage() {
     const loadSession = useCallback(async () => {
         if (!user) return;
         try {
-            const { session_id, state } = await chessResume();
-            if (session_id && state) {
+            const { id, state } = await chessResume();
+            if (id && state) {
                 setHint();
                 if (!state.game_active) {
                     setBoard(state.board);
@@ -189,12 +189,12 @@ export default function ChessPage() {
                             toCol: state.last_move.toCol,
                         });
                     }
-                    setSessionId(session_id);
+                    setSessionId(id);
                     setBoardLocked(true);
                     setPhase('terminal');
                 } else {
                     setPlayerColor(state.player_color);
-                    setPendingResume({ sessionId: session_id, state });
+                    setPendingResume({ sessionId: id, state });
                     setBoardLocked(true);
                     setPhase('resumeprompt');
                 }
@@ -282,8 +282,8 @@ export default function ChessPage() {
         setBoardLocked(true);
         setPhase('playing');
         try {
-            const { session_id, state } = await chessNewGame(goFirst);
-            setSessionId(session_id);
+            const { id, state } = await chessNewGame(goFirst);
+            setSessionId(id);
             setBoard(state.board);
             setCurrentPlayer(state.current_player);
             setPlayerColor(state.player_color);
@@ -301,7 +301,7 @@ export default function ChessPage() {
             const isPlayerTurn = state.current_player === state.player_color;
             setBoardLocked(!isPlayerTurn);
             setHint();
-            subscribeSSE(session_id);
+            subscribeSSE(id);
         } catch (err: unknown) {
             const status = (err as { status?: number }).status;
             if (status === 401) setShowAuthModal(true);
