@@ -11,6 +11,12 @@ updates:
       npm-all:
         patterns:
           - "*"
+    ignore:
+      # eslint-plugin-jsdoc peer dep range is "^7||^8||^9"; unblock when it adds v10 support
+      - dependency-name: "eslint"
+        versions: [">=10"]
+      - dependency-name: "@eslint/js"
+        versions: [">=10"]
 
   - package-ecosystem: pip
     directory: /
