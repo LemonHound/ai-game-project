@@ -58,13 +58,12 @@ first. Until DB-backed sessions and write-on-every-move are in place, recovery i
 Game endpoints (`/api/game/*`) error responses follow:
 
 ```json
-{ "detail": "...", "board_state": { ...last board_state_after from move table... } }
+{ "detail": "...", "board_state": { ...board_state from game record... } }
 ```
 
-`board_state` is the full `board_state_after` JSONB from the most recent move row for that session —
-the complete board representation, identical to what is stored at write time. The client is responsible
-for parsing what it needs. `board_state` is `null` if no moves have been made yet (e.g. session creation
-failure).
+`board_state` is the full `board_state` JSONB from the `{game_type}_games` record — the complete board
+representation after the most recent move. The client is responsible for parsing what it needs.
+`board_state` is `null` if no moves have been made yet (e.g. game record just created).
 
 All other `/api/*` endpoints (auth, health, metadata) return the standard FastAPI error shape:
 
@@ -75,7 +74,7 @@ All other `/api/*` endpoints (auth, health, metadata) return the standard FastAP
 ## State Recovery Endpoint
 
 ```
-GET /api/games/{game_type}/session/{session_id}
+GET /api/games/{game_type}/session/{id}
 ```
 
 Returns the current full board state for a session. Used in two cases:
@@ -103,8 +102,8 @@ Client sends move
        └─ Show inline error; user can attempt the move again or navigate away
 
   └─ Client reconnects after disconnect (any cause)
-       ├─ Re-fetch game state via GET /api/games/{game_type}/session/{session_id}
-       ├─ If in-progress session found (< 30 days): offer "continue your last game?" via global
+       ├─ Re-fetch game state via GET /api/games/{game_type}/session/{id}
+       ├─ If in-progress game found (< 30 days): offer "continue your last game?" via global
        │  notification
        └─ Server state overwrites any local state unconditionally
 ```
@@ -148,7 +147,7 @@ failures, connectivity errors surfaced after retry exhaustion, session resume pr
 
 - Applied at the route/page level (not globally, not per-component)
 - Catch rendering errors and show a fallback UI with two options: "Reload page" and "Go home"
-- On catch: call `GET /api/games/{game_type}/session/{session_id}` to re-fetch server state before
+- On catch: call `GET /api/games/{game_type}/session/{id}` to re-fetch server state before
   re-rendering (if a game session is active)
 - Crash loop detection via localStorage, keyed by route path:
   - Increment crash counter on each boundary catch

@@ -54,6 +54,11 @@ observability infrastructure.
 ### Game-Specific Events
 - What game events carry the most signal? (Move quality? Time-to-move? Win/loss by difficulty level?)
 - How does this overlap with the game-data-persistence feature — where is the boundary?
+- The observability spec (`features/observability/`) already defines `game.id` as the primary span
+  attribute and `game.sessions.started` / `game.sessions.completed` counters. Before implementing
+  engagement analytics, review the current observability spec to avoid duplicating instrumentation.
+  Open question: does otel-engagement extend the existing spans and metrics, or introduce a separate
+  analytics layer alongside them?
 
 ### Privacy & Compliance
 - What user identifiers (user_id, session_id, anonymous ID) can be included in spans?

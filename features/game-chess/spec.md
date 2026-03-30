@@ -34,9 +34,9 @@ Chess is the most complex game in the set and is implemented last.
 - **Turn order**: Player selects whether to go first (White) or second (Black) before the game starts.
   Internally this is stored and passed as `player_starts: bool`. If `player_starts` is false, the AI
   (White) takes the first move before `/newgame` returns.
-- **Session ID ownership**: The client never stores `session_id` across page loads. It is received from
-  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no
-  `session_id`; the server derives the active session from the authenticated user + game type.
+- **Game ID ownership**: The client never stores the game `id` across page loads. It is received from
+  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no `id`;
+  the server derives the active game from the authenticated user + game type.
 - **Board orientation**: Always rendered from the player's perspective. White player = row 7 at bottom
   (standard). Black player = row 0 at bottom (flipped).
 - **Pawn promotion**: When the player moves a pawn to the back rank, the client shows a promotion modal
@@ -54,7 +54,6 @@ Chess is the most complex game in the set and is implemented last.
 - **Captured pieces display**: Shown as a row of small piece icons adjacent to each `PlayerCard`.
 - **Move history**: Scrollable list of move pairs. Notation comes from the `notation` field in each SSE
   move event (server-generated long algebraic notation). Client accumulates entries from received events.
-- **`engine_eval`**: Stored as the minimax evaluation score normalized to `[-1, 1]` (centipawn score / 1000, clamped). Positive = AI advantage. Available because the JS evaluation function is ported to Python.
 - **Legacy files deleted**: `src/frontend/public/js/basic-chess-ai.js` and
   `src/frontend/public/js/chess-evaluation.js` are deleted after their logic is ported to `ChessAIStrategy`.
 
@@ -77,7 +76,7 @@ initial_state(player_starts: bool) → GameState
 **`AIStrategy` (abstract base)**
 ```
 generate_move(state) → tuple[Move, Optional[float]]
-    # Move may be invalid; no guarantee. float is engine_eval or None if strategy has no score.
+    # Move may be invalid; no guarantee. float is reserved for future use; not stored.
 ```
 
 **`MoveProcessor` (shared, game-agnostic)**
@@ -252,19 +251,19 @@ authenticated user if one exists.
 
 **Response 200 — active session:**
 ```json
-{"session_id": "uuid", "state": { ...game state... }}
+{"id": "uuid", "state": { ...game state... }}
 ```
 
 **Response 200 — no active session:**
 ```json
-{"session_id": null, "state": null}
+{"id": null, "state": null}
 ```
 The client handles the null case by rendering the "New Game" UI. There is no 404 for this path — a
 missing session is a normal state, not an error.
 
 ### `POST /api/game/chess/newgame`
 
-Called only when the player explicitly chooses to start a new game. Closes any existing active session
+Called only when the player explicitly chooses to start a new game. Closes any existing active game
 for this user + game type, then creates a new one. If `player_starts` is false, the AI (White) takes
 the first move server-side before the response is returned; the initial state in the response reflects
 that move.
@@ -276,13 +275,13 @@ that move.
 
 **Response 200:**
 ```json
-{"session_id": "uuid", "state": { ...initial game state... }}
+{"id": "uuid", "state": { ...initial game state... }}
 ```
 
 ### `POST /api/game/chess/move`
 
-Submits the player's move. Active session is derived server-side from the authenticated user + game
-type. No `session_id` in request.
+Submits the player's move. Active game is derived server-side from the authenticated user + game
+type. No `id` in request.
 
 **Request:**
 ```json
@@ -297,11 +296,11 @@ until the player selects a piece from the promotion modal. `null` for all other 
 **Response 422:** Invalid move (wrong color piece, illegal destination, moves into check, not player's
 turn, game already over, pawn-reaches-back-rank move submitted with `promotionPiece: null`).
 
-**Response 409:** No active session.
+**Response 409:** No active game.
 
-### `GET /api/game/chess/events/{session_id}`
+### `GET /api/game/chess/events/{id}`
 
-Persistent SSE stream. Authenticated user must own the session.
+Persistent SSE stream. Authenticated user must own the game record.
 
 **Response:** `text/event-stream`
 
@@ -339,7 +338,7 @@ marked abandoned.
 **Cleanup mechanism**: A GCP Cloud Scheduler job fires periodically (e.g., every hour) and calls an
 internal, non-public endpoint (`POST /internal/cleanup-sessions`). This endpoint queries all
 `in_progress` sessions where `last_move_at < now() - session_timeout_hours` and marks them abandoned
-via `end_game_session()`. The endpoint requires an internal-only auth header (not the user session
+via `end_game()`. The endpoint requires an internal-only auth header (not the user session
 cookie).
 
 Sessions closed this way emit the `game.sessions.completed` metric with outcome `abandoned`, consistent
@@ -350,9 +349,8 @@ with the observability spec.
 Follows the conventions in `features/observability/spec.md`.
 
 **`games.py` (request layer):**
-- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{session_id}`, `GET /legal-moves`: set
-  `game.id` and `game.session_id` as attributes on the auto-instrumented HTTP span via
-  `span.set_attribute`.
+- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{id}`, `GET /legal-moves`: set
+  `game.id` as an attribute on the auto-instrumented HTTP span via `span.set_attribute`.
 - No new spans at this layer.
 
 **`games.py` — AI move processing:**
@@ -360,22 +358,22 @@ Follows the conventions in `features/observability/spec.md`.
   `ai_invalid_move_count`.
 
 **`persistence_service.py`:**
-- Existing child spans for `record_move` and `end_session` already cover DB writes. No changes required.
+- Existing child spans for `record_move` and `end_game` already cover DB writes. No changes required.
 
 **SSE connection lifecycle:**
-- SSE open: `span.set_attribute("game.id", ...)`, `span.set_attribute("game.session_id", ...)`
-- SSE close (normal): `logger.info("chess_sse_closed", extra={"session_id": session_id})`
-- SSE close (error / unexpected): `logger.exception("chess_sse_error", extra={"session_id": session_id})` +
+- SSE open: `span.set_attribute("game.id", ...)`
+- SSE close (normal): `logger.info("chess_sse_closed", extra={"game_id": game_id})`
+- SSE close (error / unexpected): `logger.exception("chess_sse_error", extra={"game_id": game_id})` +
   `span.record_exception(e)` + `span.set_status(ERROR)`
 - Per-message spans: not required (too noisy). The `game.ai.move` child span covers the significant event.
 
 **Invalid move logging:**
-- `POST /move` returning 422: `logger.warning("chess_invalid_move", extra={"session_id": session_id, "move": move})`
+- `POST /move` returning 422: `logger.warning("chess_invalid_move", extra={"game_id": game_id, "move": move})`
 
 **`GET /legal-moves` logging:**
 - This endpoint is called on every piece tap and is high-frequency. It must NOT emit INFO-level log
-  records per call. Span attributes (`game.id`, `game.session_id`) are sufficient for trace-level
-  visibility. Only log at WARNING or higher if the endpoint returns 422.
+  records per call. The span attribute `game.id` is sufficient for trace-level visibility. Only log
+  at WARNING or higher if the endpoint returns 422.
 
 **No instrumentation inside `game_engine/` files.** All manual instrumentation lives at the router and
 persistence layers only.
@@ -560,11 +558,16 @@ in real time from SSE move events.
 
 ## Data Persistence
 
-Every valid move (player and AI) is recorded via `persistence_service.record_move()`. The `player`
-argument must be `"human"` for player moves and `"ai"` for AI moves — consistent with TTT and the
-existing DB data. `engine_eval` is stored as the minimax score normalized to `[-1, 1]` (centipawn score
-/ 1000, clamped; positive = AI advantage). Terminal state triggers
-`persistence_service.end_game_session()`. No changes to the persistence service API are required.
+Every valid move (player and AI) is recorded via `persistence_service.record_move()`. The
+`move_notation` argument must be the UCI string for the move (e.g. `"e2e4"`, `"e1g1"` for kingside
+castling, `"e7e8q"` for promotion to queen). `board_state_after` is the full game state dict after
+`apply_move`. Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence
+spec for the full function signatures.
+
+**Open question — notation conversion location**: The move request arrives as
+`{fromRow, fromCol, toRow, toCol, promotionPiece}`. This must be converted to a UCI string before
+calling `record_move`. Decide during implementation: does this conversion live as a method on
+`ChessEngine` (preferred — engine owns the format), or inline in the router?
 
 ## Legacy Cleanup
 
@@ -618,8 +621,8 @@ endpoints also use the old bundled architecture and must return `501` for `chess
 
 | Test name | Scenario |
 |---|---|
-| `test_chess_resume_no_active_session` | GET /resume returns {session_id: null, state: null} |
-| `test_chess_resume_active_session_returns_state` | GET /resume returns current board state and session_id |
+| `test_chess_resume_no_active_session` | GET /resume returns {id: null, state: null} |
+| `test_chess_resume_active_session_returns_state` | GET /resume returns current board state and id |
 | `test_chess_resume_unauthenticated_returns_401` | GET /resume without auth |
 | `test_chess_newgame_player_white` | POST /newgame player_starts=true → board in initial state, current_player=white |
 | `test_chess_newgame_player_black_ai_moves_first` | POST /newgame player_starts=false → state reflects AI's first white move |
@@ -638,7 +641,7 @@ endpoints also use the old bundled architecture and must return `501` for `chess
 | `test_chess_sse_heartbeat_within_interval` | SSE sends heartbeat within 35s of idle |
 | `test_chess_sse_unauthorized_session_returns_403` | GET /events/{id} for another user's session |
 | `test_chess_sse_stream_closes_on_terminal_state` | SSE stream closes after game-over move event |
-| `test_chess_sse_move_triggers_record_move` | SSE move event results in DB record_move call with engine_eval=null |
+| `test_chess_sse_move_triggers_record_move` | SSE move event results in DB record_move call with correct UCI notation |
 | `test_chess_cleanup_marks_stale_sessions_abandoned` | Cleanup endpoint marks chess sessions past 24h timeout as abandoned |
 
 ### E2E

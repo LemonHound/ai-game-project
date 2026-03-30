@@ -39,11 +39,11 @@ Auto-instrumentation captures the request. Manual spans add structured attribute
 filterable and groupable in Cloud Trace. No instrumentation inside game engine files (`game_logic/*.py`).
 
 Span ownership is split by concern:
-- **`games.py` (request layer):** sets `game.id`, `game.session_id` attributes on the auto-instrumented
-  HTTP span — enough to filter by game or session without duplicating spans. AI move computation gets a
-  child span (`game.ai.move`) with `game.id` and `compute_duration_ms`.
+- **`games.py` (request layer):** sets `game.id` attribute on the auto-instrumented HTTP span —
+  enough to filter by game without duplicating spans. AI move computation gets a child span
+  (`game.ai.move`) with `game.id` and `compute_duration_ms`.
 - **`persistence_service.py` (DB layer):** adds child spans for DB write operations (`record_move`,
-  `end_session`) — duration and error status for each write, independent of the HTTP span lifecycle.
+  `end_game`) — duration and error status for each write, independent of the HTTP span lifecycle.
 - **`auth.py`:** already implemented — login, register, Google OAuth spans with `auth.method`,
   `auth.user_id` attributes.
 - **Error events:** caught exceptions in API handlers set `error.type` and `error.message` on the
@@ -89,8 +89,8 @@ Logging filters like `jsonPayload.message="c4_sse_error"` work reliably:
 | SSE stream closed (error / exception) | ERROR | `{game}_sse_error` |
 | Player move rejected (422) | WARNING | `{game}_invalid_move` |
 
-`extra={"session_id": session_id}` is included on all three so each log record carries the session
-context needed to correlate with the `game.session_id` span attribute.
+`extra={"game_id": game_id}` is included on all three so each log record carries the game context
+needed to correlate with the `game.id` span attribute.
 
 ### `src/backend/app.py`
 Already implemented. FastAPIInstrumentor and Psycopg2Instrumentor applied at startup. No changes required.
@@ -128,8 +128,8 @@ credentials required.
 |------|------|----------------|
 | Unit | `unit/test_telemetry.py` | `setup_telemetry()` returns valid provider in dev mode without GCP creds |
 | API integration | `api/telemetry.spec.ts` | Request to any `/api/*` endpoint produces a trace span with correct attributes (console exporter in test env) |
-| API integration | `api/telemetry.spec.ts` | Game endpoint span includes `game.id` and `game.session_id` attributes |
+| API integration | `api/telemetry.spec.ts` | Game endpoint span includes `game.id` attribute |
 | API integration | `api/telemetry.spec.ts` | Auth endpoint span includes `auth.method` attribute |
-| API integration | `api/telemetry.spec.ts` | `record_move` call produces a child DB span with correct duration and session context |
+| API integration | `api/telemetry.spec.ts` | `record_move` call produces a child DB span with correct duration and game context |
 | Manual | Cloud Trace dashboard | After first production deploy, verify traces appear and are filterable by game_id |
 | Manual | Cloud Logging → Cloud Trace | Click a log line from a game endpoint; verify the "View in Cloud Trace" link resolves to the correct span |

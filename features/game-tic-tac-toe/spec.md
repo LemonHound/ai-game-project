@@ -25,9 +25,9 @@ section of the react-migration Phase 3 spec and resolves the transport open ques
 - **Turn order**: Player selects whether to go first or second before the game starts. Internally this is
   stored and passed as `player_starts: bool`, matching the DB boolean convention. If `player_starts` is
   false, the AI takes the first move before `/newgame` returns.
-- **Session ID ownership**: The client never stores `session_id` across page loads. It is received from
-  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no
-  `session_id`; the server derives the active session from the authenticated user + game type.
+- **Game ID ownership**: The client never stores the game `id` across page loads. It is received from
+  `/resume` or `/newgame` and used only to subscribe to the SSE stream. Move requests carry no `id`;
+  the server derives the active game from the authenticated user + game type.
 
 ## Architecture
 
@@ -117,12 +117,12 @@ authenticated user if one exists.
 
 **Response 200 — active session:**
 ```json
-{"session_id": "uuid", "state": { ...game state... }}
+{"id": "uuid", "state": { ...game state... }}
 ```
 
 **Response 200 — no active session:**
 ```json
-{"session_id": null, "state": null}
+{"id": null, "state": null}
 ```
 The client handles the null case by rendering the "New Game" UI. There is no 404 for this path — a missing
 session is a normal state, not an error.
@@ -140,7 +140,7 @@ before the response is returned (the initial state reflects this).
 
 **Response 200:**
 ```json
-{"session_id": "uuid", "state": { ...initial game state... }}
+{"id": "uuid", "state": { ...initial game state... }}
 ```
 
 ### `POST /api/game/tic-tac-toe/move`
@@ -159,7 +159,7 @@ No session_id in request.
 
 **Response 409:** No active session.
 
-### `GET /api/game/tic-tac-toe/events/{session_id}`
+### `GET /api/game/tic-tac-toe/events/{id}`
 
 Persistent SSE stream. Authenticated user must own the session.
 
@@ -181,7 +181,7 @@ Each game defines its own timeout. TTT: 24 hours. This value is the maximum idle
 **Cleanup mechanism**: A GCP Cloud Scheduler job fires periodically (e.g., every hour) and calls an
 internal, non-public endpoint (e.g., `POST /internal/cleanup-sessions`). This endpoint queries all
 `in_progress` sessions where `last_move_at < now() - session_timeout_hours` and marks them abandoned via
-`end_game_session()`. The endpoint requires an internal-only auth header (not the user session cookie).
+`end_game()`. The endpoint requires an internal-only auth header (not the user session cookie).
 
 Sessions closed this way emit the `game.sessions.completed` metric with outcome `abandoned`, consistent
 with the observability spec.
@@ -191,8 +191,8 @@ with the observability spec.
 Follows the conventions in `features/observability/spec.md`.
 
 **`games.py` (request layer):**
-- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{session_id}`: set `game.id` and
-  `game.session_id` as attributes on the auto-instrumented HTTP span via `span.set_attribute`.
+- `POST /newgame`, `POST /move`, `GET /resume`, `GET /events/{id}`: set `game.id` as an attribute
+  on the auto-instrumented HTTP span via `span.set_attribute`.
 - No new spans at this layer.
 
 **`games.py` — AI move processing:**
@@ -203,7 +203,7 @@ Follows the conventions in `features/observability/spec.md`.
 - Existing child spans for `record_move` and `end_session` already cover DB writes. No changes required.
 
 **SSE connection lifecycle:**
-- SSE open: `span.set_attribute("game.id", ...), span.set_attribute("game.session_id", ...)`
+- SSE open: `span.set_attribute("game.id", ...)`
 - SSE close (normal): log at INFO level, no span event needed.
 - SSE close (error / unexpected): `span.record_exception(e)` + `span.set_status(ERROR)`.
 - Per-message spans: not required (too noisy). The `game.ai.move` child span covers the significant event.
@@ -300,10 +300,15 @@ See `features/player-card/spec.md` for the full component spec.
 
 ## Data Persistence
 
-Every valid move (player and AI) is recorded via `persistence_service.record_move()`. `engine_eval` is
-stored as the minimax score divided by 10 (TTT minimax returns ±10 or 0; dividing by 10 maps to ±1 or 0,
-within the [-1, 1] range required by the schema). Terminal state triggers
-`persistence_service.end_game_session()`. No changes to the persistence service API are required.
+Every valid move (player and AI) is recorded via `persistence_service.record_move()`. The
+`move_notation` argument must be the cell string for the move (e.g. `"r1c2"` for row 1, col 2).
+Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence spec for the
+full function signatures.
+
+**Open question — notation conversion location**: The move request arrives as `{row: int, col: int}`.
+This must be converted to an `"r{row}c{col}"` string before calling `record_move`. Decide during
+implementation: does this conversion live as a method on `TicTacToeEngine` (preferred), or inline in
+the router?
 
 ## Test Cases
 
@@ -323,13 +328,13 @@ within the [-1, 1] range required by the schema). Terminal state triggers
 | `test_status_broadcaster_enforces_min_interval` | broadcaster holds events to min_interval |
 | `test_status_broadcaster_closes_on_terminal_event` | stream terminates after terminal event |
 | `test_status_broadcaster_emits_heartbeat` | heartbeat event emitted at configured interval |
-| `test_engine_eval_normalization` | minimax score / 10 maps correctly to [-1, 1] |
+| `test_minimax_returns_valid_move` | minimax returns a legal move for any non-terminal board state |
 
 ### API Integration
 
 | Test name | Scenario |
 |---|---|
-| `test_resume_no_active_session` | GET /resume returns {session_id: null, state: null} |
+| `test_resume_no_active_session` | GET /resume returns {id: null, state: null} |
 | `test_resume_active_session_returns_state` | GET /resume returns current board state |
 | `test_resume_unauthenticated_returns_401` | GET /resume without auth |
 | `test_newgame_player_first` | POST /newgame player_starts=true → empty board, player's turn |
