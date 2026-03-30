@@ -1,28 +1,26 @@
 # Documentation
 
-**Status: draft**
+**Status: needs implementation**
 
 ## Background
 
-As external collaborators (starting with the ML/AI engineer) begin integrating with this codebase, the lack
-of inline documentation creates friction. This spec defines a consistent documentation standard across the
-Python backend — covering DB models, the persistence layer, game engine abstractions, and API endpoints —
-and a set of change guides for common development operations.
+As external collaborators (starting with ML/AI engineers) begin integrating with this codebase, the lack
+of inline documentation and contributor guides creates friction. This spec defines:
 
-The documentation strategy has two parts:
-
-1. **Inline docstrings** on all public functions, classes, and endpoints that external collaborators
-   or future contributors would need to understand without reading the implementation.
-2. **Change guides** that describe the steps for common modifications (adding a column, adding a new game,
-   adding an endpoint) so that contributors do not need to reverse-engineer the architecture.
-
-Frontend (TypeScript) documentation is out of scope for v1. Brian's AI integration guide is the primary
-near-term consumer of this work.
+1. **Inline docstrings** on all public functions, classes, and endpoints across both the Python backend
+   and TypeScript frontend — enforced by lint in CI.
+2. **Change guides** in a `CONTRIBUTING.md` written for a non-technical data science audience, covering
+   common operations (DB changes, adding AI files, running locally).
+3. **README overhaul** — simplified to goal-action pairs, removing outdated content, adding a GCP
+   access stub.
+4. **Pre-submit checks** — a local git pre-commit hook that runs Prettier and docstring lint before
+   each commit.
 
 ## Docstring Style
 
-Use **Google-style docstrings** for all Python. This is consistent with the existing codebase conventions
-and is rendered correctly by most Python tooling.
+### Python — Google-style docstrings
+
+Use Google-style docstrings for all public functions, classes, and modules in `src/backend/`.
 
 ```python
 def record_move(
@@ -32,18 +30,14 @@ def record_move(
     """Appends a move to the game record and updates the live board state.
 
     Called after every validated player or AI move. Updates move_list (append),
-    board_state (overwrite), and last_move_at on the game record. Does not insert
-    a new row.
+    board_state (overwrite), and last_move_at on the game record.
 
     Args:
         session: Active SQLAlchemy AsyncSession.
         game_id: UUID of the game record (same as session identifier).
         game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
-        move_notation: Move in the standard notation for this game type (see game-training-data spec).
-            Chess: UCI string (e.g. "e2e4"). TTT: "r{row}c{col}". Connect4: "c{col}".
-            Checkers: algebraic from+to (e.g. "b6d4"). Dots & Boxes: "h{r}{c}" or "v{r}{c}".
-        board_state_after: Full board state dict after the move is applied. This overwrites the
-            stored board_state on the game record.
+        move_notation: Move in the standard notation for this game type.
+        board_state_after: Full board state dict after the move is applied.
 
     Raises:
         KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
@@ -51,151 +45,209 @@ def record_move(
     """
 ```
 
-Rules:
-- **Always document**: persistence service functions, game engine abstract methods and their
-  implementations, API endpoint functions, and any function called by external collaborators.
-- **Skip**: private helpers (prefixed `_`), trivial one-liners where the signature is self-documenting,
-  test functions.
-- **Args section**: include type, name, and a one-sentence description for each parameter. For `session`
-  (AsyncSession), a single line is sufficient.
-- **Returns section**: include if the return type or its contents are non-obvious. Omit for `-> None`.
-- **Raises section**: include only exceptions that callers are expected to handle or that indicate misuse.
-  Do not document internal SQLAlchemy exceptions unless they propagate to the caller.
-- **Do not restate the type annotation** in the docstring body — the type is already in the signature.
+### TypeScript — JSDoc
 
-## Scope: What Gets Docstrings
+Use JSDoc on all exported functions, classes, hooks, and components in `src/frontend/src/`.
 
-### `persistence_service.py`
+```typescript
+/**
+ * Fetches the active game session for the current user.
+ *
+ * @param gameType - The game type identifier (e.g. "chess", "tic_tac_toe").
+ * @returns The active game session, or null if none exists.
+ * @throws {ApiError} If the request fails with a non-404 status.
+ */
+export async function getActiveGame(gameType: string): Promise<GameSession | null> {
+```
 
-All public functions. These are the primary integration point for game routers and will be Brian's first
-point of contact when wiring up the AI.
+### What gets documented
 
-Priority functions for the AI integration guide:
-- `get_active_game` — how to check for/resume an existing session
-- `create_game` — how to start a new session (requires initial board state from the engine)
-- `record_move` — what to call after every move (player or AI); notation format is critical
-- `end_game` — when and how to close a session; valid outcome strings
+**Always document:**
+- All public functions and methods (Python and TypeScript/TSX)
+- All exported React components and custom hooks
+- All class definitions
+- Module-level file summary (one line is sufficient for most files)
 
-### `game_engine/base.py`
+**Skip:**
+- Private helpers (`_` prefix in Python; unexported in TypeScript)
+- Trivial one-liners where the signature is fully self-documenting
+- Test functions
+- Generated or migration files
 
-All abstract base class methods. Brian's AI will call `GameEngine` and `AIStrategy` — the docstrings
-here are effectively an API contract.
+## Lint Enforcement
 
-Priority:
-- `GameEngine.validate_move` — what constitutes a valid move dict; returns bool
-- `GameEngine.apply_move` — what state fields are mutated; returns new state (does not mutate in place)
-- `GameEngine.initial_state` — what the state dict contains; `player_starts` parameter
-- `GameEngine.get_legal_moves` — return format (list of move dicts); used by the AI fallback path
-- `AIStrategy.generate_move` — return contract: `(move_dict, Optional[float])` where float is ignored;
-  move may be invalid (MoveProcessor handles retry)
+### Python — pydocstyle
 
-### `game_engine/chess_engine.py`
+Add `pydocstyle` to `requirements.txt`. Configure via `setup.cfg` at the repo root:
 
-`ChessEngine` and `ChessAIStrategy` implementations. Document the chess-specific state shape (board array
-format, field names) and which fields Brian's AI should read vs. ignore.
+```ini
+[pydocstyle]
+convention = google
+match = (?!test_|_).*\.py
+match_dir = (?!tests|migrations|__pycache__).*
+```
 
-### API Endpoints (game routers)
+Enforces Google-style docstring presence on all non-test, non-private Python files. Individual rules
+can be disabled via `add-ignore` (e.g., `D107` for `__init__` if needed). Entire directories can be
+excluded via `match_dir` — if a contributor's folder needs looser rules, it is a one-line change.
 
-Each endpoint function should have a one-line summary and a note on auth requirement, request shape, and
-response codes. FastAPI auto-generates OpenAPI docs from type annotations, so docstrings here complement
-rather than duplicate that output.
+Add to CI `code-quality` job:
+```yaml
+- run: pip install -r requirements.txt
+- run: pydocstyle src/backend/
+```
 
-## Change Guides
+### TypeScript — eslint-plugin-jsdoc
 
-These are documented in-spec for reference. They will be transcribed into a `CONTRIBUTING.md` or similar
-file in a later pass (out of scope for v1 — the spec itself serves as the reference until then).
+Add `eslint-plugin-jsdoc` to devDependencies. ESLint config (`eslint.config.js` at repo root, flat
+config format to match `@eslint/js` already installed):
 
-### Adding a Column to a Game Table
+```js
+import js from '@eslint/js';
+import jsdoc from 'eslint-plugin-jsdoc';
 
-1. Add the field to `GameRecord` in `db_models.py` (if it should apply to all games) or to the specific
-   game model class (if game-specific).
-2. Add a default value — new columns on existing rows will be `NULL` unless a server default is specified.
-3. Run: `alembic revision --autogenerate -m "add {column_name} to {table}"`
-4. Review the generated migration in `scripts/migrations/versions/`. Verify the `upgrade()` and
-   `downgrade()` functions are correct.
-5. Run: `alembic upgrade head`
-6. Update any affected persistence service functions and game router handlers.
+export default [
+  js.configs.recommended,
+  {
+    plugins: { jsdoc },
+    rules: {
+      'jsdoc/require-jsdoc': ['error', {
+        require: {
+          FunctionDeclaration: true,
+          MethodDefinition: true,
+          ClassDeclaration: true,
+          ArrowFunctionExpression: false,
+          FunctionExpression: false,
+        }
+      }],
+      'jsdoc/require-param': 'warn',
+      'jsdoc/require-returns': 'warn',
+    }
+  }
+];
+```
 
-### Adding a New Game Type
+`require-jsdoc` at `error` level blocks CI on missing docstrings. `require-param` and `require-returns`
+at `warn` — visible in output but do not fail the build during the backfill period. Upgrade both to
+`error` once the backfill is complete.
 
-1. Implement `{game}_engine.py` in `src/backend/game_engine/`, subclassing `GameEngine` and `AIStrategy`.
-2. Implement game logic in `src/backend/game_logic/{game}.py` if not already present.
-3. Add a `{Game}Game(GameRecord, table=True)` model in `db_models.py` with the appropriate `__tablename__`,
-   check constraint, and partial unique index.
-4. Add the new type to `GAME_TYPE_TO_MODEL` in `db_models.py`.
-5. Add a game router in `src/backend/` following the chess/TTT pattern (resume, newgame, move, events,
-   legal-moves endpoints).
-6. Register the router in `app.py`.
-7. Add the move notation format for the new game type to the game-training-data spec.
-8. Run: `alembic revision --autogenerate -m "add {game}_games table"` and apply.
-9. Add the game entry to the `games` table (static reference data) via a migration seed.
+Add lint scripts to root `package.json`:
+```json
+"lint": "eslint src/frontend/src/",
+"lint:check": "eslint src/frontend/src/ --max-warnings=0"
+```
 
-### Adding a New API Endpoint
+CI uses `lint:check` (zero warnings). During the backfill PR, CI uses `lint` to allow warnings while
+the full coverage is being added.
 
-1. Add the route function to the appropriate game router file.
-2. Define request and response models in `models.py` (Pydantic `BaseModel` classes) if the endpoint has
-   a non-trivial request/response body.
-3. Add authentication dependency (`get_current_user`) to the route signature.
-4. Add OTel span via `with tracer.start_as_current_span(...)` for non-trivial handlers.
-5. Add test cases (API integration tier in the game's Playwright spec file).
+Add to CI `code-quality` job after `format:check`:
+```yaml
+- run: npm run lint:check
+```
 
-### Adding a DB Migration (manual, without model change)
+## Pre-Submit Hook
 
-For seed data or index changes that Alembic cannot autogenerate:
-1. Run: `alembic revision -m "description"` (no `--autogenerate`)
-2. Write the `upgrade()` and `downgrade()` SQL manually using `op.execute()`.
-3. Apply with `alembic upgrade head`.
+A git pre-commit hook that runs before every local commit. One-time setup per machine.
 
-## AI Integration Guide (Brian)
+**What it runs (in order):**
+1. `npm run format` — Prettier auto-formats staged TS/JS/CSS/HTML files (write mode — auto-fixes,
+   does not error)
+2. `npm run lint` — ESLint + jsdoc on TypeScript
+3. `pydocstyle src/backend/` — docstring presence on Python
 
-This section is a primer for the ML engineer integrating an AI model with the chess backend. A full,
-dedicated guide will be written as a follow-up once the chess spec implementation is complete.
+Prettier runs in write mode locally so formatting is fixed automatically before the commit lands.
+CI still runs `format:check` as a safety net.
 
-### Hooking Into the Game Loop
+**Setup** (one-time, documented in CONTRIBUTING.md):
+```bash
+cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
 
-The chess game router processes moves via two paths:
+The hook script lives at `scripts/pre-commit` and is checked into the repo. Running the command
+above activates it for that machine.
 
-**Player move path** (`POST /api/game/chess/move`):
-1. Validates the player's move via `ChessEngine.validate_move(state, move)`
-2. Applies it via `ChessEngine.apply_move(state, move)` → new state
-3. Persists via `record_move(game_id, "chess", uci_notation, new_state)`
-4. Checks terminal condition via `ChessEngine.is_terminal(new_state)`
-5. Calls `generate_move` on the `AIStrategy` instance for the AI's response turn
+## Backfill
 
-**AI response path** (inside the same request, after player move):
-1. `ChessAIStrategy.generate_move(state)` is called with the current state (after player's move)
-2. Returns `(move_dict, Optional[float])` — the float is the engine eval, currently unused
-3. `MoveProcessor.process_ai_turn` retries up to 5 times if the move is invalid; falls back to a random
-   legal move
-4. The AI move is applied, persisted, and broadcast over SSE
+All existing public methods in `src/backend/` and `src/frontend/src/` need docstrings added as a
+one-time pass before lint is enforced in CI.
 
-**To replace or extend `ChessAIStrategy`:**
-- Subclass `AIStrategy` from `game_engine/base.py`
-- Implement `generate_move(state: dict) -> tuple[dict, Optional[float]]`
-- `state` is the full game state dict (see GameState Shape in the chess spec)
-- Return a move dict: `{"fromRow": int, "fromCol": int, "toRow": int, "toCol": int, "promotionPiece": str | None}`
-- The move does not need to be guaranteed valid — `MoveProcessor` handles retry and fallback
-- Wire the new strategy into the chess router by replacing the `ChessAIStrategy()` instantiation
+**Backend files:**
+- `app.py`, `auth.py`, `auth_service.py`, `database.py`, `games.py`, `models.py`, `telemetry.py`
+- `game_logic/` — all game AI files
+- `game_engine/` — base ABC and all engine implementations
 
-### Reading Board State
+**Frontend files:**
+- `api/` — all query/mutation hooks
+- `components/` — all exported components
+- `hooks/` — all custom hooks
+- `pages/` and `pages/games/` — all page components
+- `store/` — all store definitions and actions
+- `types/` — file-level summaries where the types are non-obvious
 
-The `board_state` stored in `chess_games` is the same dict that `ChessEngine.apply_move` produces. Key
-fields for AI consumption:
-- `board`: 8×8 array, row 0 = black back rank, row 7 = white back rank. Uppercase = white pieces, lowercase
-  = black. `null` = empty.
-- `current_player`: `"white"` | `"black"` — whose turn it is
-- `player_color`: `"white"` | `"black"` — which color the human player is
-- `castling_rights`, `en_passant_target`, `king_positions`: standard chess state fields
+The backfill pass is also an opportunity to flag inconsistencies, unused exports, or dead code.
+Any findings should be noted in the PR description.
 
-### Reading Move History
+## CONTRIBUTING.md
 
-The `move_list` column on `chess_games` contains UCI strings in move order. White always moves first.
-This array can be fed directly to any UCI-compatible chess engine or used to replay the game.
+A new file at the repo root. Written for a data science audience — goal-action pairs with minimal
+explanation. Not split by role; assumes no frontend development experience.
+
+**Sections:**
+1. **Getting started** — prerequisites (Docker Desktop only; no Node or Python install needed),
+   single command to start the full stack locally
+2. **Running locally** — `docker compose up` starts backend + DB with seed data at `localhost:8000`;
+   `docker compose build app` needed only after pulling frontend changes
+3. **Pre-submit setup** — one-time hook install command, what the hook does, how to interpret failures
+4. **Adding AI logic for a game** — folder structure, naming convention, which class to subclass,
+   which method to implement, how to wire the new strategy into the game router
+5. **Reading game state and move history** — what `board_state` and `move_list` contain; field
+   reference per game type
+6. **Modifying the database** — when and why, step-by-step Alembic commands
+7. **Adding logging or telemetry** — one-liner examples using the existing logger and tracer
+8. **Writing docstrings** — short before/after example for Python and TypeScript
+9. **Checking your work** — how to run pre-submit checks manually; what each failure means
+
+## README Overhaul
+
+The README is the first thing a contributor sees on GitHub. It should be short, accurate, and
+actionable. All detailed how-to content moves to CONTRIBUTING.md.
+
+**Remove or move to CONTRIBUTING.md:**
+- Detailed prerequisites section
+- Expanded local dev workflow descriptions
+- Workflows-by-role section
+- Outdated test command list
+
+**Keep and update:**
+- Stack table
+- Quick start (3 commands max: clone, install, up)
+- Test credentials table
+- Project structure tree (update to reflect current layout including `game_engine/`)
+- Deployment section (accurate, keep brief)
+- Prominent link to CONTRIBUTING.md — GitHub automatically surfaces `CONTRIBUTING.md` at the repo
+  root in two places: a banner shown when opening issues or PRs, and the community profile sidebar.
+  The README should also link to it directly so it is findable from the homepage without opening
+  an issue.
+
+**Add:**
+- GCP access section — stub only. Placeholder for Cloud Run logs, Cloud SQL console, Cloud Trace
+  links. Content to be filled in before Brian's first GCP access is needed.
+
+## AI Integration Guide
+
+The integration guide stub in the previous version of this spec is preserved. A full dedicated guide
+will be written as a follow-up once the chess spec implementation is complete (Phase 5). The
+CONTRIBUTING.md "adding AI logic" section covers the structural wiring; the full guide covers the
+game state shape, move notation format, and retry/fallback behavior in detail.
 
 ## Test Cases
 
 | Tier | Name | What it checks |
 |------|------|----------------|
-| Manual | Docstring coverage review | All public persistence_service functions have Google-style docstrings with Args/Raises sections |
-| Manual | Base ABC docstring review | All abstract methods in `game_engine/base.py` have docstrings describing the contract |
-| Manual | Change guide walkthrough | Following "adding a column" guide produces a working Alembic migration on a local DB |
+| CI (lint) | pydocstyle — backend coverage | All public Python functions in `src/backend/` have Google-style docstrings; CI fails if missing |
+| CI (lint) | eslint-plugin-jsdoc — frontend coverage | All exported TypeScript functions and components have JSDoc; CI fails if missing |
+| CI (format) | Prettier check | All source files pass Prettier format check (already in CI; unchanged) |
+| Manual | Backfill review | All existing methods have accurate docstrings covering params, return value, and purpose |
+| Manual | CONTRIBUTING.md walkthrough | A contributor can start the local environment and play a game using only CONTRIBUTING.md |
+| Manual | AI wiring guide | Following the "adding AI logic" section produces a working AI move in a game router |
+| Manual | GCP stub present | GCP access section exists in README; filled in before first GCP access is needed |
