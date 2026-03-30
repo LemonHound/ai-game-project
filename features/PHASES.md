@@ -28,29 +28,34 @@ These are done or in-progress and unblock everything else.
 
 ---
 
-## Phase 1 — Core Persistence (CRITICAL PATH)
+## Phase 1 — Core Persistence + Documentation Foundation
 
-**Must be fully implemented and deployed before any game work begins.**
+**Must be fully complete before game implementation begins.**
 
 | Spec | Status | Blocked by |
 |------|--------|------------|
-| game-data-persistence | needs implementation | — |
+| game-data-persistence | done | — |
+| documentation | needs implementation | — |
 
-This is the single hardest blocker. It replaces all existing DB tables, changes every game router's
-persistence calls, and migrates `db_models.py` and `persistence_service.py` entirely. No game spec
-implementation is valid until this is done and CI passes.
+`game-data-persistence` replaced all existing DB tables and migrated `db_models.py` and
+`persistence_service.py`. It is complete and deployed.
+
+`documentation` is the remaining Phase 1 blocker: inline docstrings (backfill + lint enforcement),
+CONTRIBUTING.md, README overhaul, and pre-submit hook. No contributor onboarding is valid until this
+is done. Game implementation in Phase 2+ can proceed in parallel — documentation does not block
+those phases, but it should be completed as soon as possible.
 
 ---
 
-## Phase 2 — Infrastructure Updates (Parallel, after Phase 1)
+## Phase 2 — Infrastructure Updates + About Page (Parallel, after Phase 1)
 
-These can run in parallel with each other. Both update cross-cutting concerns to align with the new
-persistence model.
+These can run in parallel with each other.
 
 | Spec | Status | Blocked by |
 |------|--------|------------|
 | error-handling | done (needs minor update) | game-data-persistence |
 | observability | in-progress | game-data-persistence |
+| about | needs implementation | — (no dependencies) |
 
 ---
 
@@ -114,13 +119,11 @@ AI integration is stable.** All other phases take priority.
 ## Phase 7 — Training Data Activation (after Phase 5)
 
 The training data model is defined but inert until real games are producing `move_list` data. Brian
-begins AI training work once sufficient chess game records exist. Documentation is needed before the
-AI integration can be handed off.
+begins AI training work once sufficient chess game records exist.
 
 | Spec | Status | Blocked by |
 |------|--------|------------|
 | game-training-data | needs implementation | game-data-persistence, game-chess |
-| documentation | draft | game-chess (needs working codebase to document) |
 
 ---
 
