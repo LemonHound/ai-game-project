@@ -106,6 +106,9 @@ function getValidDestinations(board: string[], pos: number, pieceSymbol: string,
     return destinations;
 }
 
+/**
+ * Renders the full Checkers game page, managing game state, SSE moves, and session persistence.
+ */
 export default function CheckersPage() {
     const { user, isLoading: authLoading } = useAuth();
 

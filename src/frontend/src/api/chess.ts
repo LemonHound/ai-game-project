@@ -67,10 +67,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return response.json() as Promise<T>;
 }
 
+/**
+ * Check for an existing in-progress Chess session for the current user.
+ *
+ * @returns Resume response with session id and state, or null values if no active session.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function chessResume(): Promise<ChessResumeResponse> {
     return request<ChessResumeResponse>('/api/game/chess/resume');
 }
 
+/**
+ * Start a new Chess game, closing any prior active session.
+ *
+ * @param playerStarts - If true, player plays white and moves first.
+ * @returns New game session id and initial board state.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function chessNewGame(playerStarts: boolean): Promise<ChessNewGameResponse> {
     return request<ChessNewGameResponse>('/api/game/chess/newgame', {
         method: 'POST',
@@ -78,6 +91,16 @@ export async function chessNewGame(playerStarts: boolean): Promise<ChessNewGameR
     });
 }
 
+/**
+ * Submit a Chess player move; the AI response arrives via the SSE stream.
+ *
+ * @param fromRow - Source row (0–7, 0 = rank 8).
+ * @param fromCol - Source column (0–7, 0 = file a).
+ * @param toRow - Destination row.
+ * @param toCol - Destination column.
+ * @param promotionPiece - Piece letter for pawn promotion (e.g. "Q"). Null if not a promotion.
+ * @throws {GameApiError} If the move is invalid or the request fails.
+ */
 export async function chessMove(
     fromRow: number,
     fromCol: number,
@@ -97,6 +120,13 @@ export async function chessMove(
     }
 }
 
+/**
+ * Open an SSE connection for a Chess game session and wire up event handlers.
+ *
+ * @param sessionId - Active game session UUID.
+ * @param handlers - Callbacks for status, move, player_move, error, and heartbeat events.
+ * @returns The EventSource instance; caller is responsible for closing it.
+ */
 export function chessSubscribeSSE(
     sessionId: string,
     handlers: {
@@ -136,6 +166,14 @@ export function chessSubscribeSSE(
     return es;
 }
 
+/**
+ * Fetch the legal destination squares for a piece at the given position.
+ *
+ * @param fromRow - Source row (0–7).
+ * @param fromCol - Source column (0–7).
+ * @returns Array of destination squares as {toRow, toCol} objects.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function chessLegalMoves(fromRow: number, fromCol: number): Promise<{ toRow: number; toCol: number }[]> {
     const data = await request<{ moves: { toRow: number; toCol: number }[] }>(
         `/api/game/chess/legal-moves?from_row=${fromRow}&from_col=${fromCol}`

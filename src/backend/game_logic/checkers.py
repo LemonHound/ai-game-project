@@ -3,10 +3,24 @@ from typing import Any, Dict, List, Optional
 
 
 class CheckersGame:
+    """Checkers game logic with mandatory captures, king promotion, and chain captures."""
 
     def get_initial_state(
         self, difficulty: str = "medium", player_starts: bool = True
     ) -> Dict[str, Any]:
+        """Return the starting board state for a new Checkers game.
+
+        Board is a 64-element flat list. R/r = red (player), B/b = black (AI),
+        lowercase = king, _ = empty. Only dark squares are used.
+
+        Args:
+            difficulty: AI difficulty level — "easy" or "medium".
+            player_starts: If True, red (player) moves first.
+
+        Returns:
+            dict with keys: board, current_player, player_symbol, ai_symbol,
+            game_over, winner, must_capture, difficulty, player_starts.
+        """
         board = ["_"] * 64
         for pos in [40, 42, 44, 46, 49, 51, 53, 55, 56, 58, 60, 62]:
             board[pos] = "R"
@@ -27,6 +41,22 @@ class CheckersGame:
     def apply_move(
         self, game_state: Dict[str, Any], move: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """Apply a player move (single or chain capture), then generate the AI response.
+
+        Move format: `{"from": int, "to": int}` for a single step, or
+        `{"chain": [{"from": int, "to": int}, ...]}` for a capture chain.
+
+        Args:
+            game_state: Current game state dict.
+            move: Player move dict — single step or chain.
+
+        Returns:
+            dict with keys: player_move, board_after_player, game_over_after_player,
+            ai_move, board_after_ai, game_over, winner.
+
+        Raises:
+            ValueError: If the game is over or the move is invalid.
+        """
         import copy
 
         gs = copy.deepcopy(game_state)

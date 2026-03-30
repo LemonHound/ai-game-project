@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom';
 
+/**
+ * Renders a 404 not found page with a link back to the home route.
+ */
 export default function NotFoundPage() {
     return (
         <div className='container mx-auto flex flex-col items-center px-4 py-20 text-center'>

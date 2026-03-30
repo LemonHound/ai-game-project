@@ -10,6 +10,10 @@ interface State {
     crashCount: number;
 }
 
+/**
+ * React error boundary that catches rendering errors and displays a recovery UI.
+ * Tracks crash count in localStorage per route; warns about crash loops after 3 crashes.
+ */
 export default class ErrorBoundary extends React.Component<Props, State> {
     private routeKey: string;
 

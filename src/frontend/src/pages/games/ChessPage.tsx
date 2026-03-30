@@ -68,6 +68,9 @@ function emptyBoard(): (string | null)[][] {
         .map(() => Array(8).fill(null));
 }
 
+/**
+ * Renders the full Chess game page, managing game state, legal moves, SSE updates, and session persistence.
+ */
 export default function ChessPage() {
     const { user, isLoading: authLoading } = useAuth();
 

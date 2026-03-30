@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
+/**
+ * User profile page displaying account details (display name, email, auth provider).
+ * Redirects to unauthenticated state when no user session is present.
+ */
 export default function ProfilePage() {
     const { user, isLoading } = useAuth();
 

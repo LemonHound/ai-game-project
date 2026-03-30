@@ -45,10 +45,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return response.json() as Promise<T>;
 }
 
+/**
+ * Check for an existing in-progress Checkers session for the current user.
+ *
+ * @returns Resume response with session id and state, or null values if no active session.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function checkersResume(): Promise<CheckersResumeResponse> {
     return request<CheckersResumeResponse>('/api/game/checkers/resume');
 }
 
+/**
+ * Start a new Checkers game, closing any prior active session.
+ *
+ * @param playerStarts - If true, player (red) moves first.
+ * @returns New game session id and initial board state.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function checkersNewGame(playerStarts: boolean): Promise<CheckersNewGameResponse> {
     return request<CheckersNewGameResponse>('/api/game/checkers/newgame', {
         method: 'POST',
@@ -56,6 +69,13 @@ export async function checkersNewGame(playerStarts: boolean): Promise<CheckersNe
     });
 }
 
+/**
+ * Submit a Checkers player move; the AI response arrives via the SSE stream.
+ *
+ * @param from - Source board index (0–63, flat array).
+ * @param to - Destination board index.
+ * @throws {GameApiError} If the move is invalid or the request fails.
+ */
 export async function checkersMove(from: number, to: number): Promise<void> {
     const response = await fetch('/api/game/checkers/move', {
         method: 'POST',
@@ -69,6 +89,13 @@ export async function checkersMove(from: number, to: number): Promise<void> {
     }
 }
 
+/**
+ * Open an SSE connection for a Checkers game session and wire up event handlers.
+ *
+ * @param sessionId - Active game session UUID.
+ * @param handlers - Callbacks for status, move, error, and heartbeat events.
+ * @returns The EventSource instance; caller is responsible for closing it.
+ */
 export function checkersSubscribeSSE(
     sessionId: string,
     handlers: {

@@ -32,6 +32,9 @@ function clearHint() {
 
 type Phase = 'loading' | 'newgame' | 'resumeprompt' | 'playing' | 'terminal';
 
+/**
+ * Renders the full Dots and Boxes game page, managing game state, SSE moves, and session persistence.
+ */
 export default function DotsAndBoxesPage() {
     const { user, isLoading: authLoading } = useAuth();
 

@@ -7,6 +7,9 @@ interface Props {
     onClose: () => void;
 }
 
+/**
+ * Renders a modal dialog with login and registration tabs for user authentication.
+ */
 export default function AuthModal({ open, initialTab, onClose }: Props) {
     const [tab, setTab] = useState(initialTab);
     const dialogRef = useRef<HTMLDialogElement>(null);

@@ -5,6 +5,9 @@ interface GameStartOverlayProps {
     optionB: { label: string; onClick: () => void };
 }
 
+/**
+ * Renders an overlay with resume and new game options shown before a game starts.
+ */
 export default function GameStartOverlay({ canResume, onResume, optionA, optionB }: GameStartOverlayProps) {
     return (
         <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>

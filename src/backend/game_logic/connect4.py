@@ -3,12 +3,24 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 class Connect4Game:
+    """Connect 4 game logic for a 6×7 board with column-drop gravity."""
+
     ROWS = 6
     COLS = 7
 
     def get_initial_state(
         self, difficulty: str = "medium", player_starts: bool = True
     ) -> Dict[str, Any]:
+        """Return the starting board state for a new Connect 4 game.
+
+        Args:
+            difficulty: AI difficulty level — "easy" or "medium".
+            player_starts: If True, player moves first; otherwise AI moves first.
+
+        Returns:
+            dict with keys: board (6×7 nested list), current_player, game_active,
+            move_count, difficulty.
+        """
         return {
             "board": [[None] * self.COLS for _ in range(self.ROWS)],
             "current_player": "player" if player_starts else "ai",
@@ -20,6 +32,20 @@ class Connect4Game:
     def apply_move(
         self, game_state: Dict[str, Any], move: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """Apply a player column drop, then generate and apply the AI response.
+
+        Args:
+            game_state: Current game state dict from get_initial_state or a prior apply_move.
+            move: dict with key "col" (int, 0–6) indicating the column to drop into.
+
+        Returns:
+            dict with keys: player_move, board_after_player, game_over_after_player,
+            ai_move, board_after_ai, game_over, winner.
+
+        Raises:
+            ValueError: If the game is not active, it is not the player's turn,
+                or the chosen column is full.
+        """
         col = move.get("col") if isinstance(move, dict) else move
         board = [row[:] for row in game_state["board"]]
         difficulty = game_state["difficulty"]
@@ -97,6 +123,17 @@ class Connect4Game:
     def apply_ai_first_move(
         self, game_state: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """Generate and apply the AI's opening move when AI starts the game.
+
+        Args:
+            game_state: Initial game state with move_count == 0.
+
+        Returns:
+            dict with keys: ai_move, board_after_ai, game_over, winner.
+
+        Raises:
+            ValueError: If move_count > 0 (game has already started).
+        """
         board = [row[:] for row in game_state["board"]]
         difficulty = game_state["difficulty"]
 

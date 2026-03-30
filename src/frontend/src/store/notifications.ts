@@ -17,6 +17,12 @@ interface NotificationStore {
     dismiss: (id: string) => void;
 }
 
+/**
+ * Zustand store for managing in-app notification toasts.
+ *
+ * Provides `push` to add a notification (deduplicates by level+title+description)
+ * and `dismiss` to remove one by id.
+ */
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
     notifications: [],
     push: n => {

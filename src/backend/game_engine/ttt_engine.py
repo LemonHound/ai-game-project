@@ -44,7 +44,18 @@ def _minimax(
 
 
 class TicTacToeEngine(GameEngine):
+    """GameEngine implementation for Tic-Tac-Toe."""
+
     def initial_state(self, player_starts: bool) -> GameState:
+        """Return the starting state dict for a new Tic-Tac-Toe game.
+
+        Args:
+            player_starts: If True, player (X) moves first; otherwise AI (O) moves first.
+
+        Returns:
+            GameState with board, current_turn, player_symbol, ai_symbol,
+            player_starts, status, winner, winning_positions.
+        """
         return {
             "board": [None] * 9,
             "current_turn": "player" if player_starts else "ai",
@@ -57,6 +68,15 @@ class TicTacToeEngine(GameEngine):
         }
 
     def validate_move(self, state: GameState, move: Move) -> bool:
+        """Return True if move (board index 0–8) is legal in the current state.
+
+        Args:
+            state: Current game state.
+            move: Integer board position (0–8).
+
+        Returns:
+            True if the position is unoccupied and the game is still in progress.
+        """
         if state.get("status") != "in_progress":
             return False
         if not isinstance(move, int):
@@ -84,10 +104,26 @@ class TicTacToeEngine(GameEngine):
         }
 
     def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
+        """Check whether the game has ended.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            (True, winner_symbol_or_"draw") if game ended, (False, None) otherwise.
+        """
         terminal, outcome, _ = self._check_terminal(state["board"])
         return terminal, outcome
 
     def get_legal_moves(self, state: GameState) -> list[Move]:
+        """Return all unoccupied board positions as a list of integers.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            List of integer indices (0–8) that are currently empty.
+        """
         return [i for i, cell in enumerate(state["board"]) if cell is None]
 
     def _check_terminal(
@@ -101,6 +137,14 @@ class TicTacToeEngine(GameEngine):
         return False, None, None
 
     def outcome_to_persistence(self, state: GameState) -> Optional[str]:
+        """Map game outcome to a persistence service outcome string.
+
+        Args:
+            state: Terminal game state.
+
+        Returns:
+            "player_won", "ai_won", "draw", or None if the game is still in progress.
+        """
         winner = state.get("winner")
         if winner is None:
             return None
@@ -112,7 +156,17 @@ class TicTacToeEngine(GameEngine):
 
 
 class TicTacToeAIStrategy(AIStrategy):
+    """Perfect-play minimax AI for Tic-Tac-Toe."""
+
     def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
+        """Select the best move using minimax search.
+
+        Args:
+            state: Current game state where it is the AI's turn.
+
+        Returns:
+            Tuple of (best_move_index, minimax_score as float).
+        """
         board = state["board"][:]
         ai_symbol = state["ai_symbol"]
         player_symbol = state["player_symbol"]

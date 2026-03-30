@@ -6,7 +6,21 @@ from game_logic.checkers import checkers_game
 
 
 class CheckersEngine(GameEngine):
+    """GameEngine implementation for Checkers with mandatory captures and chain moves."""
+
     def initial_state(self, player_starts: bool) -> GameState:
+        """Return the starting state dict for a new Checkers game.
+
+        Board is a 64-element flat list. R/r = red (player), B/b = black (AI),
+        lowercase = king, _ = empty.
+
+        Args:
+            player_starts: If True, player (red) moves first.
+
+        Returns:
+            GameState with board, current_turn, game_active, player_starts,
+            player_symbol, ai_symbol, must_capture, last_move, legal_pieces.
+        """
         board = ["_"] * 64
         for pos in [40, 42, 44, 46, 49, 51, 53, 55, 56, 58, 60, 62]:
             board[pos] = "R"
@@ -29,6 +43,15 @@ class CheckersEngine(GameEngine):
         return state
 
     def validate_move(self, state: GameState, move: Move) -> bool:
+        """Return True if the move is legal, accounting for mandatory capture rules.
+
+        Args:
+            state: Current game state.
+            move: Dict with keys "from" (int) and "to" (int) — flat board indices.
+
+        Returns:
+            True if the move is a valid step or capture for the current player.
+        """
         if not state.get("game_active", False):
             return False
         from_pos = move.get("from")
@@ -48,6 +71,18 @@ class CheckersEngine(GameEngine):
         return checkers_game._is_valid_move(legacy, from_pos, to_pos)
 
     def apply_move(self, state: GameState, move: Move) -> GameState:
+        """Execute a single step or capture and return the updated state.
+
+        If the move results in a multi-capture opportunity, sets must_capture to
+        force the next move from the same piece.
+
+        Args:
+            state: Current game state.
+            move: Dict with keys "from" and "to" (flat board indices).
+
+        Returns:
+            New GameState with updated board, last_move, must_capture, and legal_pieces.
+        """
         from_pos = move["from"]
         to_pos = move["to"]
         new_board = state["board"][:]
@@ -96,6 +131,14 @@ class CheckersEngine(GameEngine):
         return new_state
 
     def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
+        """Check whether the game has ended (no pieces or no legal moves).
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            (True, "player_won"|"ai_won") if terminal, (False, None) otherwise.
+        """
         if not state.get("game_active", True):
             return True, None
         board = state["board"]
@@ -136,6 +179,17 @@ class CheckersEngine(GameEngine):
         return False, None
 
     def get_legal_moves(self, state: GameState) -> list[Move]:
+        """Return all legal moves for the current player.
+
+        Captures are mandatory: if any capture is available, only capture moves
+        are returned. Respects must_capture for chain capture continuation.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            List of dicts `{"from": int, "to": int}`.
+        """
         current_turn = state.get("current_turn")
         if current_turn == "player":
             symbol = state["player_symbol"]
@@ -199,7 +253,17 @@ class CheckersEngine(GameEngine):
 
 
 class CheckersAIStrategy(AIStrategy):
+    """Random-capture AI strategy for Checkers using the legacy game logic chain generator."""
+
     def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
+        """Select an AI move (first step of a potential chain) using random capture priority.
+
+        Args:
+            state: Current game state where it is the AI's turn.
+
+        Returns:
+            Tuple of ({"from": int, "to": int}, None) — no eval score is returned.
+        """
         legacy = {
             "board": state["board"][:],
             "current_player": state["ai_symbol"],

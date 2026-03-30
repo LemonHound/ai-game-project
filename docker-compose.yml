@@ -9,7 +9,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/setup-database.sql:/docker-entrypoint-initdb.d/01-setup.sql
 
   # Backend: Python files are volume-mounted so changes hot-reload without a rebuild.
   # Run `docker-compose build app` after changing requirements.txt or frontend files.

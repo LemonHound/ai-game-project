@@ -20,6 +20,12 @@ def _build_url() -> str:
 
 
 def init_db() -> None:
+    """Initialize the async SQLAlchemy engine and session factory.
+
+    Reads connection parameters from environment variables (DB_HOST, DB_PORT, DB_NAME,
+    DB_USER, DB_PASSWORD). Instruments the engine with OpenTelemetry SQLAlchemy
+    instrumentation. Called once during application lifespan startup.
+    """
     global _engine, _session_factory
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
@@ -29,6 +35,11 @@ def init_db() -> None:
 
 
 async def close_db() -> None:
+    """Dispose the async SQLAlchemy engine and release all pooled connections.
+
+    Called during application lifespan shutdown. Safe to call if init_db was never
+    successfully completed (no-op when _engine is None).
+    """
     global _engine
     if _engine:
         await _engine.dispose()
@@ -37,10 +48,25 @@ async def close_db() -> None:
 
 @asynccontextmanager
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Yield an AsyncSession as a context manager for use outside of FastAPI routes.
+
+    Used by AuthService and other non-route callers that need a DB session directly.
+
+    Yields:
+        AsyncSession: An active SQLAlchemy async session.
+    """
     async with _session_factory() as session:
         yield session
 
 
 async def db_dependency() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency that yields an AsyncSession per request.
+
+    Used via Depends(db_dependency) in route handlers. The session is automatically
+    closed when the request completes.
+
+    Yields:
+        AsyncSession: An active SQLAlchemy async session.
+    """
     async with _session_factory() as session:
         yield session

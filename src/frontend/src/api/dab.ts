@@ -54,10 +54,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return response.json() as Promise<T>;
 }
 
+/**
+ * Check for an existing in-progress Dots and Boxes session for the current user.
+ *
+ * @returns Resume response with session id and state, or null values if no active session.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function dabResume(): Promise<DaBResumeResponse> {
     return request<DaBResumeResponse>('/api/game/dots-and-boxes/resume');
 }
 
+/**
+ * Start a new Dots and Boxes game, closing any prior active session.
+ *
+ * @param playerStarts - If true, player draws the first line.
+ * @returns New game session id and initial board state.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function dabNewGame(playerStarts: boolean): Promise<DaBNewGameResponse> {
     return request<DaBNewGameResponse>('/api/game/dots-and-boxes/newgame', {
         method: 'POST',
@@ -65,6 +78,14 @@ export async function dabNewGame(playerStarts: boolean): Promise<DaBNewGameRespo
     });
 }
 
+/**
+ * Submit a Dots and Boxes line draw; the AI response arrives via the SSE stream.
+ *
+ * @param type - Edge orientation: "horizontal" or "vertical".
+ * @param row - Row index of the edge.
+ * @param col - Column index of the edge.
+ * @throws {GameApiError} If the edge is already drawn or the request fails.
+ */
 export async function dabMove(type: 'horizontal' | 'vertical', row: number, col: number): Promise<void> {
     const response = await fetch('/api/game/dots-and-boxes/move', {
         method: 'POST',
@@ -78,6 +99,13 @@ export async function dabMove(type: 'horizontal' | 'vertical', row: number, col:
     }
 }
 
+/**
+ * Open an SSE connection for a Dots and Boxes game session and wire up event handlers.
+ *
+ * @param sessionId - Active game session UUID.
+ * @param handlers - Callbacks for status, move, error, and heartbeat events.
+ * @returns The EventSource instance; caller is responsible for closing it.
+ */
 export function dabSubscribeSSE(
     sessionId: string,
     handlers: {

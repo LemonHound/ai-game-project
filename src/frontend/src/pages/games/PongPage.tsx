@@ -1,3 +1,6 @@
+/**
+ * Renders the Pong game page (placeholder for Phase 3 implementation).
+ */
 export default function PongPage() {
     return (
         <div className='container mx-auto px-4 py-10'>

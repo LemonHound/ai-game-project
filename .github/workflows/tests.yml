@@ -21,9 +21,19 @@ jobs:
           node-version: 20
           cache: npm
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
       - run: npm ci
 
+      - run: pip install pydocstyle
+
       - run: npm run format:check
+
+      - run: npm run lint:check
+
+      - run: pydocstyle src/backend/
 
       - run: npm audit --audit-level=high
 

@@ -2,6 +2,9 @@ import { useAuth } from '../hooks/useAuth';
 
 const THEMES = ['dark', 'light', 'cupcake', 'cyberpunk', 'synthwave'];
 
+/**
+ * Renders the Settings page with theme selection and account info.
+ */
 export default function SettingsPage() {
     const { user } = useAuth();
 
