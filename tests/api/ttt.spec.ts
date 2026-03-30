@@ -30,7 +30,7 @@ test.describe("ttt — resume", () => {
     });
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
-    expect(body).toHaveProperty("session_id");
+    expect(body).toHaveProperty("id");
     expect(body).toHaveProperty("state");
   });
 
@@ -44,8 +44,8 @@ test.describe("ttt — resume", () => {
       headers: { Cookie: cookies },
     });
     expect(res.ok()).toBeTruthy();
-    const { session_id, state } = await res.json();
-    expect(session_id).toBeTruthy();
+    const { id, state } = await res.json();
+    expect(id).toBeTruthy();
     expect(state).not.toBeNull();
     expect(state.board).toHaveLength(9);
     expect(state.status).toBe("in_progress");
@@ -65,8 +65,8 @@ test.describe("ttt — newgame", () => {
       headers: { Cookie: cookies },
     });
     expect(res.ok()).toBeTruthy();
-    const { session_id, state } = await res.json();
-    expect(session_id).toBeTruthy();
+    const { id, state } = await res.json();
+    expect(id).toBeTruthy();
     expect(state.board.every((c: unknown) => c === null)).toBe(true);
     expect(state.current_turn).toBe("player");
     expect(state.player_symbol).toBe("X");
@@ -92,14 +92,14 @@ test.describe("ttt — newgame", () => {
       data: { player_starts: true },
       headers: { Cookie: cookies },
     });
-    const { session_id: sid1 } = await res1.json();
+    const { id: sid1 } = await res1.json();
 
     const res2 = await request.post(`${BASE}/game/tic-tac-toe/newgame`, {
       data: { player_starts: true },
       headers: { Cookie: cookies },
     });
     expect(res2.ok()).toBeTruthy();
-    const { session_id: sid2 } = await res2.json();
+    const { id: sid2 } = await res2.json();
     expect(sid2).not.toBe(sid1);
   });
 });
@@ -185,10 +185,10 @@ test.describe("ttt — SSE events", () => {
       data: { player_starts: true },
       headers: { Cookie: cookies1 },
     });
-    const { session_id } = await newRes.json();
+    const { id } = await newRes.json();
 
     const cookies2 = await loginAs(request, "player1@example.com", "test123");
-    const eventsRes = await request.get(`${BASE}/game/tic-tac-toe/events/${session_id}`, {
+    const eventsRes = await request.get(`${BASE}/game/tic-tac-toe/events/${id}`, {
       headers: { Cookie: cookies2 },
     });
     expect(eventsRes.status()).toBe(403);
