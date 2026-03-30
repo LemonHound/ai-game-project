@@ -1,8 +1,11 @@
+"""Pure game logic for Tic-Tac-Toe."""
 import random
 from typing import Any, Dict, List, Optional
 
 
 class TicTacToe:
+    """Tic-Tac-Toe game logic with difficulty-based AI (easy/medium/hard minimax)."""
+
     WINNING_LINES = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8],
         [0, 3, 6], [1, 4, 7], [2, 5, 8],
@@ -12,6 +15,16 @@ class TicTacToe:
     def get_initial_state(
         self, difficulty: str = "medium", player_starts: bool = True
     ) -> Dict[str, Any]:
+        """Return the starting board state for a new Tic-Tac-Toe game.
+
+        Args:
+            difficulty: AI difficulty level — "easy", "medium", or "hard".
+            player_starts: If True, player (X) moves first; otherwise AI (O) moves first.
+
+        Returns:
+            dict with keys: board (9-element list), current_player, player_symbol,
+            ai_symbol, game_over, winner, difficulty, player_starts.
+        """
         return {
             "board": [None] * 9,
             "current_player": "X" if player_starts else "O",
@@ -24,6 +37,20 @@ class TicTacToe:
         }
 
     def apply_move(self, game_state: Dict[str, Any], position: int) -> Dict[str, Any]:
+        """Apply a player move, then generate and apply the AI response.
+
+        Args:
+            game_state: Current game state dict from get_initial_state or a prior apply_move.
+            position: Board index (0–8) for the player's move.
+
+        Returns:
+            dict with keys: player_move, board_after_player, game_over_after_player,
+            ai_move, board_after_ai, game_over, winner.
+
+        Raises:
+            ValueError: If the game is already over, position is out of range, or
+                the position is already taken.
+        """
         board = game_state["board"][:]
         difficulty = game_state["difficulty"]
 

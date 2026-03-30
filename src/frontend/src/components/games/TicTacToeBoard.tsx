@@ -7,6 +7,9 @@ interface TicTacToeBoardProps {
     hidePieces?: boolean;
 }
 
+/**
+ * Renders the interactive 3x3 Tic-Tac-Toe board with winning and last-move highlights.
+ */
 export default function TicTacToeBoard({
     board,
     winningPositions,

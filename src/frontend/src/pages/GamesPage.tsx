@@ -81,6 +81,10 @@ const PLACEHOLDER_GAMES: Game[] = [
     },
 ];
 
+/**
+ * Games listing page showing all available games as clickable cards.
+ * Falls back to PLACEHOLDER_GAMES if the API returns an empty list.
+ */
 export default function GamesPage() {
     const { data: apiGames, isLoading } = useQuery({
         queryKey: ['games'],

@@ -27,6 +27,9 @@ const AI_FILL = 'rgba(239, 68, 68, 0.35)';
 
 const LAST_LINE_COLOR = '#FBBF24';
 
+/**
+ * Renders the interactive Dots and Boxes board with line drawing and claimed-box highlights.
+ */
 export default function DotsAndBoxesBoard({
     gridSize,
     horizontalLines,

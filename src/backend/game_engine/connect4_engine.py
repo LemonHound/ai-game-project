@@ -1,3 +1,4 @@
+"""Connect 4 game engine with heuristic AI strategy."""
 import random
 from typing import Optional
 
@@ -73,7 +74,18 @@ def _get_winning_cells(board: list, row: int, col: int, player: str) -> Optional
 
 
 class Connect4Engine(GameEngine):
+    """GameEngine implementation for Connect 4 on a 6×7 board."""
+
     def initial_state(self, player_starts: bool) -> GameState:
+        """Return the starting state dict for a new Connect 4 game.
+
+        Args:
+            player_starts: If True, player moves first.
+
+        Returns:
+            GameState with board, current_turn, game_active, move_count,
+            player_starts, last_move.
+        """
         return {
             "board": [[None] * COLS for _ in range(ROWS)],
             "current_turn": "player" if player_starts else "ai",
@@ -84,6 +96,16 @@ class Connect4Engine(GameEngine):
         }
 
     def validate_move(self, state: GameState, move: Move) -> bool:
+        """Return True if the column drop is legal.
+
+        Args:
+            state: Current game state.
+            move: Dict with key "col" (int 0–6).
+
+        Returns:
+            True if the game is active, move is a dict with a valid col, and the top
+            cell of that column is empty.
+        """
         if not state.get("game_active", False):
             return False
         if not isinstance(move, dict):
@@ -94,6 +116,15 @@ class Connect4Engine(GameEngine):
         return state["board"][0][col] is None
 
     def apply_move(self, state: GameState, move: Move) -> GameState:
+        """Drop a piece into the specified column and return the updated state.
+
+        Args:
+            state: Current game state.
+            move: Dict with key "col" indicating the column to drop into.
+
+        Returns:
+            New GameState with updated board, current_turn, move_count, and last_move.
+        """
         col = move["col"]
         board = [row[:] for row in state["board"]]
         current_turn = state["current_turn"]
@@ -110,6 +141,14 @@ class Connect4Engine(GameEngine):
         }
 
     def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
+        """Check whether the game has ended after the last move.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            (True, "player_won"|"ai_won"|"draw") if terminal, (False, None) otherwise.
+        """
         last_move = state.get("last_move")
         if not last_move:
             return False, None
@@ -125,9 +164,25 @@ class Connect4Engine(GameEngine):
         return False, None
 
     def get_legal_moves(self, state: GameState) -> list[Move]:
+        """Return all columns that are not yet full.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            List of dicts `{"col": int}` for each non-full column.
+        """
         return [{"col": c} for c in range(COLS) if state["board"][0][c] is None]
 
     def get_winning_cells(self, state: GameState) -> Optional[list]:
+        """Return the four winning cells as (row, col) tuples, or None if no winner.
+
+        Args:
+            state: Current game state after the winning move.
+
+        Returns:
+            List of four (row, col) tuples, or None if no four-in-a-row exists.
+        """
         last_move = state.get("last_move")
         if not last_move:
             return None
@@ -137,12 +192,30 @@ class Connect4Engine(GameEngine):
         return _get_winning_cells(state["board"], row, col, player)
 
     def outcome_to_persistence(self, state: GameState) -> Optional[str]:
+        """Map game outcome to a persistence service outcome string.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            "player_won", "ai_won", "draw", or None if still in progress.
+        """
         _, outcome = self.is_terminal(state)
         return outcome
 
 
 class Connect4AIStrategy(AIStrategy):
+    """Greedy AI for Connect 4: wins if possible, blocks if necessary, prefers center."""
+
     def generate_move(self, state: GameState) -> tuple[Move, None]:
+        """Select a column to drop into using a greedy heuristic.
+
+        Args:
+            state: Current game state where it is the AI's turn.
+
+        Returns:
+            Tuple of ({"col": int}, None) — no eval score is returned.
+        """
         board = [row[:] for row in state["board"]]
         col = _get_ai_move(board)
         return {"col": col}, None

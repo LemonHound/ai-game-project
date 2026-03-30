@@ -1,3 +1,4 @@
+"""Authentication routes for registration, login, logout, and Google OAuth."""
 import logging
 import os
 from datetime import datetime
@@ -25,6 +26,8 @@ csrf_tokens: dict = {}
 
 
 class RegisterRequest(BaseModel):
+    """Request body for the /register endpoint."""
+
     username: str
     email: EmailStr
     password: str
@@ -32,12 +35,16 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    """Request body for the /login endpoint."""
+
     email: EmailStr
     password: str
     rememberMe: Optional[bool] = False
 
 
 class LogoutRequest(BaseModel):
+    """Request body for the /logout endpoint."""
+
     sessionId: Optional[str] = None
 
 
@@ -46,6 +53,13 @@ def _is_production() -> bool:
 
 
 def set_session_cookie(response: Response, session_id: str, max_age: int = 7 * 24 * 60 * 60):
+    """Set the httpOnly session cookie on a response.
+
+    Args:
+        response: The FastAPI Response object to attach the cookie to.
+        session_id: The session UUID string to store in the cookie.
+        max_age: Cookie lifetime in seconds (default 7 days).
+    """
     response.set_cookie(
         key="sessionId",
         value=session_id,
@@ -58,6 +72,11 @@ def set_session_cookie(response: Response, session_id: str, max_age: int = 7 * 2
 
 
 def delete_session_cookie(response: Response):
+    """Clear the session cookie from a response by deleting and zeroing it.
+
+    Args:
+        response: The FastAPI Response object to clear the cookie on.
+    """
     response.delete_cookie(
         key="sessionId",
         path="/",
@@ -71,6 +90,11 @@ def delete_session_cookie(response: Response):
 
 @router.get("/csrf-token")
 async def get_csrf_token(response: Response):
+    """Generate and return a CSRF token, also setting it as an httpOnly cookie.
+
+    Returns:
+        dict: `{"csrfToken": <token>}`.
+    """
     token = secrets.token_urlsafe(32)
     csrf_tokens[token] = datetime.now()
     response.set_cookie(
@@ -89,6 +113,18 @@ async def get_current_user(
     sessionId: Optional[str] = Cookie(None),
     x_session_id: Optional[str] = None,
 ):
+    """Return the authenticated user's profile, or 401 if the session is invalid.
+
+    Accepts the session from either the sessionId cookie or the X-Session-Id header.
+    Updates last_login on every call.
+
+    Returns:
+        dict: User profile including id, username, email, displayName, profilePicture,
+        authProvider, emailVerified, lastLogin.
+
+    Raises:
+        HTTPException 401: If no session is provided or the session is expired/invalid.
+    """
     session_id = sessionId or x_session_id
     if not session_id:
         raise HTTPException(status_code=401, detail="No session provided")
@@ -114,11 +150,33 @@ async def get_current_user(
 
 @router.get("/stats")
 async def get_user_stats():
+    """Return placeholder user statistics.
+
+    Returns:
+        dict: Zero-value stats stub (gamesPlayed, winRate, aiContributions).
+    """
     return {"gamesPlayed": 0, "winRate": 0, "aiContributions": 0}
 
 
 @router.post("/register")
 async def register(request: RegisterRequest, response: Response):
+    """Register a new local user account and return an authenticated session.
+
+    Validates password length (min 6) and username length (min 3). Returns 409 if
+    the email or username is already taken. Sets a session cookie on success.
+
+    Args:
+        request: RegisterRequest with username, email, password, and optional displayName.
+        response: FastAPI Response used to set the session cookie.
+
+    Returns:
+        dict: `{"message": ..., "user": {id, username, email, displayName, authProvider}}`.
+
+    Raises:
+        HTTPException 400: Invalid password or username length.
+        HTTPException 409: Email or username already registered.
+        HTTPException 500: Unexpected registration failure.
+    """
     if len(request.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
     if len(request.username) < 3:
@@ -164,6 +222,18 @@ async def register(request: RegisterRequest, response: Response):
 
 @router.post("/login")
 async def login(request: LoginRequest, response: Response):
+    """Authenticate a local user by email and password and return a session cookie.
+
+    Args:
+        request: LoginRequest with email, password, and optional rememberMe flag.
+        response: FastAPI Response used to set the session cookie.
+
+    Returns:
+        dict: `{"message": ..., "user": {id, username, email, displayName, profilePicture, authProvider}}`.
+
+    Raises:
+        HTTPException 401: Invalid credentials or account uses a different auth provider.
+    """
     with tracer.start_as_current_span("auth.login") as span:
         span.set_attribute("auth.method", "local")
 
@@ -204,6 +274,11 @@ async def logout(
     sessionId: Optional[str] = Cookie(None),
     x_session_id: Optional[str] = None,
 ):
+    """Delete the user session and clear the session cookie.
+
+    Returns:
+        dict: `{"message": "Logout successful"}`.
+    """
     session_id = sessionId or x_session_id or (request.sessionId if request else None)
     if session_id:
         await auth_service.delete_session(session_id)
@@ -213,6 +288,11 @@ async def logout(
 
 @router.get("/health")
 async def auth_health():
+    """Return auth service health including database connectivity status.
+
+    Returns:
+        dict: Keys `auth` ("OK"), `database` (connectivity string), `timestamp` (ISO-8601).
+    """
     db_status = await auth_service.check_database()
     return {
         "auth": "OK",
@@ -222,11 +302,29 @@ async def auth_health():
 
 
 class GoogleAuthRequest(BaseModel):
+    """Request body carrying a Google ID token for OAuth sign-in."""
+
     token: str
 
 
 @router.post("/google")
 async def google_auth(request: GoogleAuthRequest, response: Response):
+    """Verify a Google ID token and return an authenticated session.
+
+    Verifies the token against GOOGLE_CLIENT_ID. Creates a new user if the email
+    has not been seen before. Sets a 30-day session cookie on success.
+
+    Args:
+        request: GoogleAuthRequest containing the ID token from the Google Sign-In SDK.
+        response: FastAPI Response used to set the session cookie.
+
+    Returns:
+        dict: `{"message": ..., "user": {id, username, email, displayName, profilePicture, authProvider}}`.
+
+    Raises:
+        HTTPException 501: If GOOGLE_CLIENT_ID is not configured.
+        HTTPException 401: If the token verification fails.
+    """
     with tracer.start_as_current_span("auth.google") as span:
         try:
             client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -276,6 +374,17 @@ async def google_auth(request: GoogleAuthRequest, response: Response):
 
 @router.get("/google")
 async def google_login(redirect_to: str = "/"):
+    """Redirect the browser to Google's OAuth2 authorization page.
+
+    Args:
+        redirect_to: URL path to return to after successful authentication.
+
+    Returns:
+        RedirectResponse to the Google OAuth2 consent screen.
+
+    Raises:
+        HTTPException 501: If GOOGLE_CLIENT_ID is not configured.
+    """
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise HTTPException(status_code=501, detail="Google OAuth not configured")
@@ -296,6 +405,20 @@ async def google_login(redirect_to: str = "/"):
 
 @router.get("/google/callback")
 async def google_callback(code: str = None, error: str = None, state: str = "/"):
+    """Handle the OAuth2 authorization code callback from Google.
+
+    Exchanges the authorization code for tokens, fetches the Google user profile,
+    creates or retrieves the local user account, and sets a 30-day session cookie.
+    Redirects to `state` URL on both success and failure.
+
+    Args:
+        code: Authorization code returned by Google.
+        error: Error string returned by Google if the user denied access.
+        state: URL path to redirect to after authentication.
+
+    Returns:
+        RedirectResponse to `state` with `?login=success` or `?error=google_auth_failed`.
+    """
     with tracer.start_as_current_span("auth.google_callback"):
         try:
             if error or not code:

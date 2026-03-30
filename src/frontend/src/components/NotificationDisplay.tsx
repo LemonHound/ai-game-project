@@ -13,6 +13,9 @@ const alertClass: Record<NotificationLevel, string> = {
     error: 'alert-error',
 };
 
+/**
+ * Renders a single styled alert notification with an optional dismiss button.
+ */
 export default function NotificationDisplay({ level, title, description, onDismiss }: Props) {
     return (
         <div className={`alert ${alertClass[level]} shadow-lg`}>

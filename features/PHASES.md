@@ -1,6 +1,6 @@
 # Development Phases & Dependency Order
 
-**Last updated: 2026-03-30** *(documentation in-progress 2026-03-30)*
+**Last updated: 2026-03-30** (documentation done 2026-03-30)
 
 This file defines the order in which features should be implemented, based on hard dependencies between
 specs. Update it whenever specs are added, completed, or their dependencies change.
@@ -33,11 +33,11 @@ These are done or in-progress and unblock everything else.
 | Spec | Status | Blocked by |
 |------|--------|------------|
 | game-data-persistence | done | — |
-| documentation | in-progress | — |
+| documentation | done | — |
 
 `game-data-persistence` is complete (PRs #106–108). Three deferred cleanup items remain (SSE param rename, frontend var rename, DB constraint unit tests) — logged in the spec but not blocking Phase 2+.
 
-`documentation`: Python docstrings added to persistence layer, game engine ABCs, chess engine, and all API endpoints. Remaining: TypeScript JSDoc, lint enforcement (pydocstyle + eslint-plugin-jsdoc), CONTRIBUTING.md, and pre-submit hook.
+`documentation` is complete. All Python docstrings and TypeScript JSDoc added. pydocstyle + eslint-plugin-jsdoc enforced in CI. CONTRIBUTING.md, pre-submit hook, and README overhaul done. Dead code removed (models.py, games.py, api/games.ts, docker-compose.yml).
 
 ---
 

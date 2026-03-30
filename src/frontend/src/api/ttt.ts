@@ -34,10 +34,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return response.json() as Promise<T>;
 }
 
+/**
+ * Check for an existing in-progress Tic-Tac-Toe session for the current user.
+ *
+ * @returns Resume response with session id and state, or null values if no active session.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function tttResume(): Promise<TttResumeResponse> {
     return request<TttResumeResponse>('/api/game/tic-tac-toe/resume');
 }
 
+/**
+ * Start a new Tic-Tac-Toe game, closing any prior active session.
+ *
+ * @param playerStarts - If true, player (X) moves first; if false, AI moves first.
+ * @returns New game session id and initial board state.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function tttNewGame(playerStarts: boolean): Promise<TttNewGameResponse> {
     return request<TttNewGameResponse>('/api/game/tic-tac-toe/newgame', {
         method: 'POST',
@@ -45,6 +58,12 @@ export async function tttNewGame(playerStarts: boolean): Promise<TttNewGameRespo
     });
 }
 
+/**
+ * Submit a Tic-Tac-Toe player move; the AI response arrives via the SSE stream.
+ *
+ * @param position - Board index (0–8) to claim.
+ * @throws {GameApiError} If the move is invalid or the request fails.
+ */
 export async function tttMove(position: number): Promise<void> {
     const response = await fetch('/api/game/tic-tac-toe/move', {
         method: 'POST',
@@ -58,6 +77,13 @@ export async function tttMove(position: number): Promise<void> {
     }
 }
 
+/**
+ * Open an SSE connection for a Tic-Tac-Toe game session and wire up event handlers.
+ *
+ * @param sessionId - Active game session UUID returned by tttResume or tttNewGame.
+ * @param handlers - Callbacks for each SSE event type (status, move, error, heartbeat).
+ * @returns The EventSource instance; caller is responsible for closing it.
+ */
 export function tttSubscribeSSE(
     sessionId: string,
     handlers: {

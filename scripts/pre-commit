@@ -1,0 +1,14 @@
+#!/bin/sh
+# Pre-commit hook — runs format, lint, and docstring checks before each commit.
+# Setup: cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+echo "Running Prettier..."
+npm run format
+
+echo "Running ESLint..."
+npm run lint
+
+echo "Running pydocstyle..."
+pydocstyle src/backend/

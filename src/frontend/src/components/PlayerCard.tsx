@@ -41,6 +41,18 @@ function resultBadgeClass(result: 'win' | 'loss' | 'draw'): string {
     return 'badge-warning';
 }
 
+/**
+ * Displays a player or AI avatar, name, optional piece symbol, status/result badge,
+ * and captured piece icons. Used in the game sidebar for both sides of a match.
+ *
+ * @param name - Display name shown on the card.
+ * @param avatarUrl - Optional URL for a profile picture image.
+ * @param isAi - If true, renders a bot icon instead of an avatar initial.
+ * @param symbol - Optional piece symbol badge (e.g. "X", "♟").
+ * @param statusText - If set, shows a loading animation with this text (e.g. "Thinking…").
+ * @param result - End-of-game outcome badge: "win", "loss", or "draw".
+ * @param captureIcons - Optional list of piece image URLs to display as captured pieces.
+ */
 export default function PlayerCard({
     name,
     avatarUrl,

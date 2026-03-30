@@ -1,12 +1,25 @@
+"""Pure game logic for Chess, including move generation and validation."""
 import random
 from typing import Any, Dict, List, Optional, Tuple
 
 
 class ChessGame:
+    """Legacy chess game logic (game_logic layer). Superseded by game_engine/chess_engine.py for SSE-based routes."""
 
     def get_initial_state(
         self, difficulty: str = "medium", player_starts: bool = True
     ) -> Dict[str, Any]:
+        """Return the starting board state for a new chess game.
+
+        Args:
+            difficulty: AI difficulty level — "easy", "medium", or "hard".
+            player_starts: If True, player is white and moves first.
+
+        Returns:
+            dict with keys: board (8×8 nested list, uppercase=white/lowercase=black),
+            current_player, player_color, game_active, king_positions,
+            castling_rights, en_passant_target, captured_pieces, difficulty, player_starts.
+        """
         state = {
             "board": self._create_initial_board(),
             "current_player": "white",
@@ -29,6 +42,23 @@ class ChessGame:
     def apply_move(
         self, game_state: Dict[str, Any], move: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """Apply a player move, then generate and apply the AI response.
+
+        Move format: `{"fromRow": int, "fromCol": int, "toRow": int, "toCol": int,
+        "promotionPiece": str|None}`.
+
+        Args:
+            game_state: Current game state dict.
+            move: Player move dict with fromRow, fromCol, toRow, toCol, and optional promotionPiece.
+
+        Returns:
+            dict with keys: player_move, board_after_player, game_over_after_player,
+            ai_move, board_after_ai, game_over, winner.
+
+        Raises:
+            ValueError: If the game is not active, it is not the player's turn,
+                or the move is invalid.
+        """
         import copy
 
         gs = copy.deepcopy(game_state)

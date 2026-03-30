@@ -1,3 +1,4 @@
+"""OpenTelemetry setup for tracing and metrics, targeting GCP or console exporters."""
 import logging
 import os
 
@@ -10,6 +11,13 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader, Cons
 
 
 def setup_telemetry() -> None:
+    """Configure OpenTelemetry tracing and metrics for the application.
+
+    In production (ENVIRONMENT=production) exports to GCP Cloud Trace and Cloud Monitoring
+    using CloudTraceFormatPropagator for trace context propagation. In all other environments
+    exports to stdout via ConsoleSpanExporter and ConsoleMetricExporter. Also configures
+    the root logging handler at INFO level.
+    """
     resource = Resource.create({
         "service.name": "ai-game-hub",
         "service.version": os.getenv("SERVICE_VERSION", "1.0.0"),

@@ -11,6 +11,9 @@ interface Connect4BoardProps {
     hidePieces?: boolean;
 }
 
+/**
+ * Renders the interactive Connect 4 board with column drop targeting and winning-cell highlights.
+ */
 export default function Connect4Board({
     board,
     playerStarts,

@@ -1,3 +1,4 @@
+"""Game routes handling session creation, moves, streaming, and game lifecycle."""
 import asyncio
 import copy
 import json
@@ -38,7 +39,6 @@ from models import (
     DaBMoveRequest,
     DaBNewGameRequest,
     MoveRequest,
-    StartGameRequest,
     TttMoveRequest,
     TttNewGameRequest,
 )
@@ -72,14 +72,6 @@ _chess_engine = ChessEngine()
 _chess_strategy = ChessAIStrategy()
 _chess_processor = MoveProcessor()
 _chess_move_queues: dict[UUID, asyncio.Queue] = {}
-
-_GAME_ENGINES = {
-    "tic-tac-toe": tic_tac_toe_game,
-    "chess": chess_game,
-    "checkers": checkers_game,
-    "connect4": connect4_game,
-    "dots-and-boxes": dots_and_boxes_game,
-}
 
 
 async def _require_user(sessionId: Optional[str] = Cookie(None)) -> dict:
@@ -1406,6 +1398,7 @@ async def cleanup_sessions(
 
 @router.get("/games_list")
 async def get_games(category: Optional[str] = None, status: Optional[str] = None):
+    """Return a list of all games, optionally filtered by category and/or status."""
     async with get_session() as session:
         query = (
             "SELECT id, name, description, icon, difficulty, players, status, category, tags"
@@ -1440,6 +1433,7 @@ async def get_games(category: Optional[str] = None, status: Optional[str] = None
 
 @router.get("/game/{game_id}/info")
 async def get_game_info(game_id: str):
+    """Return metadata for a single game by its ID."""
     async with get_session() as session:
         result = await session.execute(
             text(
@@ -1470,55 +1464,13 @@ async def get_game_info(game_id: str):
 
 @router.get("/game/{game_id}/stats")
 async def get_game_stats(game_id: str):
+    """Return aggregate statistics for the given game type (stub)."""
     return {"gamesPlayed": 0, "winRate": 0.0, "bestStreak": 0, "aiLevel": 3}
 
 
 # ============================================
 # GAMEPLAY ENDPOINTS
 # ============================================
-
-
-_SSE_MIGRATED_GAMES = {"connect4", "checkers", "dots-and-boxes", "chess", "tic-tac-toe"}
-
-
-@router.post("/game/{game_id}/start")
-async def start_game(
-    game_id: str,
-    request: StartGameRequest,
-    user: dict = Depends(_require_user),
-    db: AsyncSession = Depends(db_dependency),
-):
-    if game_id in _SSE_MIGRATED_GAMES:
-        raise HTTPException(status_code=501, detail=f"Game '{game_id}' uses SSE endpoints")
-    if game_id not in GAME_ID_TO_TYPE:
-        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
-
-    raise HTTPException(status_code=501, detail=f"Game '{game_id}' uses SSE endpoints")
-
-
-@router.post("/game/{game_id}/move")
-async def make_move(
-    game_id: str,
-    request: MoveRequest,
-    user: dict = Depends(_require_user),
-    db: AsyncSession = Depends(db_dependency),
-):
-    if game_id in _SSE_MIGRATED_GAMES:
-        raise HTTPException(status_code=501, detail=f"Game '{game_id}' uses SSE endpoints")
-    if game_id not in GAME_ID_TO_TYPE:
-        raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
-
-    raise HTTPException(status_code=501, detail=f"Game '{game_id}' uses SSE endpoints")
-
-
-@router.post("/game/{game_id}/ai-first")
-async def ai_first_move(
-    game_id: str,
-    request: StartGameRequest,
-    user: dict = Depends(_require_user),
-    db: AsyncSession = Depends(db_dependency),
-):
-    raise HTTPException(status_code=501, detail="AI first move uses SSE newgame endpoint")
 
 
 @router.post("/game/{game_id}/end")
@@ -1528,6 +1480,7 @@ async def end_game(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Mark an active game session as abandoned if it has not already ended."""
     if game_id not in GAME_ID_TO_TYPE:
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
 

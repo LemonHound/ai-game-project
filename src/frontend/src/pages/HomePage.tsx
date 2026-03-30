@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { fetchGames } from '../api/games';
 
+/**
+ * Home page with a hero section linking to the games listing.
+ */
 export default function HomePage() {
     const { data: games = [], isLoading } = useQuery({
         queryKey: ['games'],

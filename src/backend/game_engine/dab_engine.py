@@ -1,3 +1,4 @@
+"""Dots and Boxes game engine with greedy chain-capture AI strategy."""
 from typing import Optional
 
 from game_engine.base import AIStrategy, GameEngine, GameState, Move
@@ -28,7 +29,19 @@ def _to_legacy_state(state: GameState) -> dict:
 
 
 class DaBEngine(GameEngine):
+    """GameEngine implementation for Dots and Boxes on a 4×4 grid."""
+
     def initial_state(self, player_starts: bool) -> GameState:
+        """Return the starting state dict for a new Dots and Boxes game.
+
+        Args:
+            player_starts: If True, player moves first.
+
+        Returns:
+            GameState with grid_size, horizontal_lines, vertical_lines, boxes,
+            current_turn, game_active, player_starts, player_score, ai_score,
+            move_count, last_move.
+        """
         return {
             "grid_size": 4,
             "horizontal_lines": {},
@@ -44,6 +57,16 @@ class DaBEngine(GameEngine):
         }
 
     def validate_move(self, state: GameState, move: Move) -> bool:
+        """Return True if the line draw is legal for the current player.
+
+        Args:
+            state: Current game state.
+            move: Dict with keys "type" ("horizontal"|"vertical"), "row", "col".
+
+        Returns:
+            True if the game is active, it is the player's turn, and the line
+            has not already been drawn.
+        """
         if not state.get("game_active", False):
             return False
         if state.get("current_turn") != "player":
@@ -54,6 +77,18 @@ class DaBEngine(GameEngine):
         return dab_game._is_valid_move(legacy, move.get("type"), move.get("row"), move.get("col"))
 
     def apply_move(self, state: GameState, move: Move) -> GameState:
+        """Draw a line and update scores and turn ownership.
+
+        Completing a box grants an extra turn. The last_move includes newly_claimed_boxes
+        for the frontend highlight animation.
+
+        Args:
+            state: Current game state.
+            move: Dict with keys "type", "row", "col".
+
+        Returns:
+            New GameState with updated lines, boxes, scores, current_turn, and last_move.
+        """
         owner = "player" if state["current_turn"] == "player" else "ai"
         legacy_player_symbol = "X" if owner == "player" else "O"
 
@@ -109,6 +144,15 @@ class DaBEngine(GameEngine):
         }
 
     def is_terminal(self, state: GameState) -> tuple[bool, Optional[str]]:
+        """Check whether all boxes have been claimed.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            (True, "player_won"|"ai_won"|"draw") when all boxes are claimed,
+            (False, None) otherwise.
+        """
         if state["player_score"] + state["ai_score"] == TOTAL_BOXES:
             w = self.get_winner(state)
             outcome = "player_won" if w == "player" else ("ai_won" if w == "ai" else "draw")
@@ -116,6 +160,14 @@ class DaBEngine(GameEngine):
         return False, None
 
     def get_winner(self, state: GameState) -> str:
+        """Return "player", "ai", or "draw" based on current scores.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            "player" if player has more boxes, "ai" if AI has more, "draw" if equal.
+        """
         if state["player_score"] > state["ai_score"]:
             return "player"
         if state["ai_score"] > state["player_score"]:
@@ -123,12 +175,30 @@ class DaBEngine(GameEngine):
         return "draw"
 
     def get_legal_moves(self, state: GameState) -> list[Move]:
+        """Return all undrawn edges as legal moves.
+
+        Args:
+            state: Current game state.
+
+        Returns:
+            List of dicts `{"type": str, "row": int, "col": int}`.
+        """
         legacy = _to_legacy_state(state)
         return dab_game._get_available_moves(legacy)
 
 
 class DaBStrategy(AIStrategy):
+    """Greedy AI for Dots and Boxes: completes boxes first, avoids giving boxes away."""
+
     def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
+        """Select an edge to draw using a greedy box-completion heuristic.
+
+        Args:
+            state: Current game state where it is the AI's turn.
+
+        Returns:
+            Tuple of ({"type": str, "row": int, "col": int}, None).
+        """
         legacy = _to_legacy_state(state)
         legacy["current_player"] = "O"
         move = dab_game._get_ai_move(legacy)

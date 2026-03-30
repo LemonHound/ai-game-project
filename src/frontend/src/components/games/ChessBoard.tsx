@@ -39,6 +39,9 @@ interface DragState {
     piece: string;
 }
 
+/**
+ * Renders the interactive Chess board with piece selection, legal move highlights, and drag-and-drop.
+ */
 export default function ChessBoard({
     board,
     playerColor,

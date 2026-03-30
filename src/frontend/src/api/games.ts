@@ -1,9 +1,18 @@
 import type { Game } from '../types';
 
+/**
+ * Error thrown by game API requests when the server returns a non-OK response.
+ * Carries the HTTP status code and an optional board_state payload from the error body.
+ */
 export class GameApiError extends Error {
     status: number;
     boardState: unknown | null;
 
+    /**
+     * @param detail - Human-readable error message.
+     * @param status - HTTP status code from the server response.
+     * @param boardState - Optional board state from the error body, if present.
+     */
     constructor(detail: string, status: number, boardState: unknown | null = null) {
         super(detail);
         this.name = 'GameApiError';
@@ -25,40 +34,25 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return response.json() as Promise<T>;
 }
 
+/**
+ * Fetch the list of available games, optionally filtered by category.
+ *
+ * @param category - Optional category filter (e.g. "active", "strategy").
+ * @returns Array of Game metadata objects.
+ * @throws {GameApiError} If the request fails.
+ */
 export async function fetchGames(category?: string): Promise<Game[]> {
     const params = category ? `?category=${encodeURIComponent(category)}` : '';
     const data = await request<{ games: Game[] }>(`/api/games_list${params}`);
     return data.games;
 }
 
-export async function startGame(
-    gameId: string,
-    userId: number | null,
-    difficulty: string,
-    playerStarts = true
-): Promise<unknown> {
-    return request(`/api/game/${gameId}/start`, {
-        method: 'POST',
-        body: JSON.stringify({ userId, difficulty, playerStarts }),
-    });
-}
-
-export async function makeMove(
-    gameId: string,
-    gameSessionId: string,
-    move: unknown,
-    userId: number | null
-): Promise<unknown> {
-    return request(`/api/game/${gameId}/move`, {
-        method: 'POST',
-        body: JSON.stringify({ gameSessionId, move, userId }),
-    });
-}
-
-export async function getGameSession(gameId: string, sessionId: string): Promise<unknown> {
-    return request(`/api/game/${gameId}/session/${sessionId}`);
-}
-
+/**
+ * Forfeit the current game session, marking it as abandoned on the server.
+ *
+ * @param gameId - The game type identifier (e.g. "chess", "tic-tac-toe").
+ * @param sessionId - The active game session UUID.
+ */
 export async function forfeitGame(gameId: string, sessionId: string): Promise<void> {
     await fetch(`/api/game/${gameId}/end`, {
         method: 'POST',

@@ -7,6 +7,9 @@ interface NewGameButtonsProps {
     className?: string;
 }
 
+/**
+ * Renders an expandable new game button group with optional resign action.
+ */
 export default function NewGameButtons({ optionA, optionB, onResign, className }: NewGameButtonsProps) {
     const [expanded, setExpanded] = useState(false);
 

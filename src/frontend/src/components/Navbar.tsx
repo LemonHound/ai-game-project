@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, useLogout } from '../hooks/useAuth';
 import AuthModal from './AuthModal';
 
+/**
+ * Site-wide navigation bar with responsive mobile menu, auth state display,
+ * login/register buttons, and a user dropdown menu when authenticated.
+ */
 export default function Navbar() {
     const { user } = useAuth();
     const logout = useLogout();

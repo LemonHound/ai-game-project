@@ -36,6 +36,9 @@ function emptyBoard(): ('player' | 'ai' | null)[][] {
     return Array.from({ length: 6 }, () => Array(7).fill(null));
 }
 
+/**
+ * Renders the full Connect 4 game page, managing game state, SSE moves, and session persistence.
+ */
 export default function Connect4Page() {
     const { user, isLoading: authLoading } = useAuth();
 

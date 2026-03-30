@@ -1,3 +1,6 @@
+/**
+ * Renders the About page describing the AI Game Hub project.
+ */
 export default function AboutPage() {
     return (
         <div className='container mx-auto max-w-3xl px-4 py-10'>

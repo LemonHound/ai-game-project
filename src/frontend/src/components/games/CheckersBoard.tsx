@@ -40,6 +40,9 @@ function PieceDisplay({ code }: { code: string }) {
     );
 }
 
+/**
+ * Renders the interactive Checkers board with piece selection, drag-and-drop, and move highlighting.
+ */
 export default function CheckersBoard({
     board,
     currentTurn,

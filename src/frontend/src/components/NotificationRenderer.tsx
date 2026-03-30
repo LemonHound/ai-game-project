@@ -4,6 +4,9 @@ import NotificationDisplay from './NotificationDisplay';
 
 const MAX_VISIBLE = 3;
 
+/**
+ * Renders up to three active notifications as a fixed overlay, auto-dismissing timed ones.
+ */
 export default function NotificationRenderer() {
     const { notifications, dismiss } = useNotificationStore();
     const visible = notifications.slice(0, MAX_VISIBLE);

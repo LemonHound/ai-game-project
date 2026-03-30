@@ -1,13 +1,30 @@
+"""Pure game logic for Dots and Boxes."""
 import copy
 import random
 from typing import Any, Dict, List, Optional
 
 
 class DotsAndBoxes:
+    """Dots and Boxes game logic for a configurable grid size with greedy AI."""
 
     def get_initial_state(
         self, difficulty: str = "medium", player_starts: bool = True, grid_size: int = 4
     ) -> Dict[str, Any]:
+        """Return the starting board state for a new Dots and Boxes game.
+
+        Lines are stored as dicts keyed by "row,col" strings. Boxes are claimed
+        when all four surrounding lines are drawn.
+
+        Args:
+            difficulty: AI difficulty level — "easy" or "medium".
+            player_starts: If True, player (X) moves first.
+            grid_size: Number of boxes per side (default 4 gives a 4×4 grid).
+
+        Returns:
+            dict with keys: grid_size, horizontal_lines, vertical_lines, boxes,
+            current_player, player_symbol, ai_symbol, player_score, ai_score,
+            game_over, winner, move_count, difficulty, player_starts.
+        """
         return {
             "grid_size": grid_size,
             "horizontal_lines": {},
@@ -28,6 +45,22 @@ class DotsAndBoxes:
     def apply_move(
         self, game_state: Dict[str, Any], move: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """Apply a player line draw, then let the AI take all available scoring moves.
+
+        Move format: `{"type": "horizontal"|"vertical", "row": int, "col": int}`.
+        The AI continues playing while it can complete boxes (extra-turn rule).
+
+        Args:
+            game_state: Current game state dict from get_initial_state or a prior apply_move.
+            move: Player move dict with type, row, and col.
+
+        Returns:
+            dict with keys: player_move, board_after_player, game_over_after_player,
+            ai_moves (list), board_after_ai, game_over, winner.
+
+        Raises:
+            ValueError: If the game is over or the move targets an already-drawn line.
+        """
         gs = copy.deepcopy(game_state)
 
         if gs["game_over"]:

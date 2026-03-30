@@ -31,6 +31,9 @@ function clearHint() {
 
 type Phase = 'loading' | 'newgame' | 'resumeprompt' | 'playing' | 'terminal';
 
+/**
+ * Renders the full Tic-Tac-Toe game page, managing game state, SSE moves, and session persistence.
+ */
 export default function TicTacToePage() {
     const { user, isLoading: authLoading } = useAuth();
 

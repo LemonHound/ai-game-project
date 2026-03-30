@@ -1,3 +1,4 @@
+"""Main entry point for the game-ai backend application."""
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -27,6 +28,18 @@ DIST_DIR = BASE_DIR / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Manage startup and shutdown of OTel and database engine.
+
+    Initializes telemetry and the async database engine on startup, then disposes
+    the engine on shutdown. Errors in either initialization are logged but do not
+    prevent the application from starting.
+
+    Args:
+        app: The FastAPI application instance.
+
+    Yields:
+        None — control returns to FastAPI between startup and shutdown.
+    """
     try:
         setup_telemetry()
     except Exception:
@@ -72,6 +85,18 @@ app.include_router(games_router, prefix="/api", tags=["Games"])
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    """Return JSON error responses with an optional board_state field for game routes.
+
+    Game API routes (`/api/game/`) include a null `board_state` key so that the
+    frontend error handler can read it without a separate null-check.
+
+    Args:
+        request: The incoming HTTP request.
+        exc: The HTTPException raised by a route handler.
+
+    Returns:
+        JSONResponse with `detail` and, for game routes, `board_state: null`.
+    """
     content = {"detail": exc.detail}
     if request.url.path.startswith("/api/game/"):
         content["board_state"] = None
@@ -80,6 +105,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.get("/api/health")
 async def health_check():
+    """Return service liveness status and current timestamp.
+
+    Returns:
+        dict: Keys `status` ("OK"), `timestamp` (ISO-8601 string), `service` name.
+    """
     return {
         "status": "OK",
         "timestamp": datetime.now().isoformat(),
@@ -91,6 +121,18 @@ async def health_check():
 # Catch-all: serve React app for all non-API routes
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
+    """Serve the React SPA index.html for all non-API routes.
+
+    Enables client-side routing: any path not matched by an API router falls through
+    to this handler and returns the built index.html. Returns 503 if the frontend
+    has not been built yet.
+
+    Args:
+        full_path: The unmatched URL path (captured by FastAPI).
+
+    Returns:
+        FileResponse for index.html, or raises HTTPException 503 if not built.
+    """
     index_path = DIST_DIR / "index.html"
     if index_path.exists():
         return FileResponse(str(index_path))

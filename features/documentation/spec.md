@@ -1,6 +1,6 @@
 # Documentation
 
-**Status: in-progress** — Python docstrings complete (persistence service, game engine ABCs, chess engine, all API endpoints). Remaining: TypeScript JSDoc backfill, pydocstyle + eslint-plugin-jsdoc lint enforcement, CONTRIBUTING.md, pre-submit hook.
+**Status: done** — All Python docstrings and TypeScript JSDoc added. pydocstyle + eslint-plugin-jsdoc enforced in CI. CONTRIBUTING.md written. Pre-submit hook created. README overhauled. Dead code removed.
 
 ## Background
 

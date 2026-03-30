@@ -44,6 +44,9 @@ function OAuthResultHandler() {
     return null;
 }
 
+/**
+ * Root application component. Sets up routing, error boundaries, and notification rendering.
+ */
 export default function App() {
     return (
         <BrowserRouter>
