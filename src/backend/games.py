@@ -123,6 +123,10 @@ async def ttt_resume(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns the active TTT session for the current user, or {id: null, state: null}.
+
+    Auth: required. Response: {id: UUID | null, state: TttGameState | null}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "tic-tac-toe")
 
@@ -140,6 +144,12 @@ async def ttt_newgame(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Starts a new TTT session, closing any existing active session first.
+
+    Auth: required. Body: {player_starts: bool}.
+    Response: {id: UUID, state: TttGameState}. If player_starts=false, the AI moves first
+    and state reflects the board after the AI's first move.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "tic-tac-toe")
 
@@ -175,6 +185,12 @@ async def ttt_move(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Enqueues a player move for the active TTT session.
+
+    Auth: required. Body: {position: int (0–8)}. Response: 202 Accepted (no body).
+    State updates are delivered over the SSE stream. Returns 409 if no active session,
+    422 if the move is invalid.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "tic-tac-toe")
 
@@ -200,6 +216,11 @@ async def ttt_events(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """SSE stream for a TTT session. Delivers status, move, error, and heartbeat events.
+
+    Auth: required. Path param: session_id (UUID returned by /resume or /newgame).
+    The client must subscribe immediately after receiving id from /newgame.
+    """
     try:
         sid = UUID(session_id)
     except ValueError:
@@ -348,6 +369,10 @@ async def c4_resume(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns the active Connect4 session for the current user, or {id: null, state: null}.
+
+    Auth: required. Response: {id: UUID | null, state: C4GameState | null}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "connect4")
 
@@ -365,6 +390,11 @@ async def c4_newgame(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Starts a new Connect4 session, closing any existing active session first.
+
+    Auth: required. Body: {player_starts: bool}.
+    Response: {id: UUID, state: C4GameState}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "connect4")
 
@@ -401,6 +431,11 @@ async def c4_move(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Enqueues a player move for the active Connect4 session.
+
+    Auth: required. Body: {col: int (0–6)}. Response: 202 Accepted (no body).
+    Returns 409 if no active session, 422 if the column is full or out of range.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "connect4")
 
@@ -428,6 +463,10 @@ async def c4_events(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """SSE stream for a Connect4 session. Delivers status, move, error, and heartbeat events.
+
+    Auth: required. Path param: session_id (UUID returned by /resume or /newgame).
+    """
     try:
         sid = UUID(session_id)
     except ValueError:
@@ -580,6 +619,10 @@ async def checkers_resume(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns the active Checkers session for the current user, or {id: null, state: null}.
+
+    Auth: required. Response: {id: UUID | null, state: CheckersGameState | null}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "checkers")
 
@@ -597,6 +640,11 @@ async def checkers_newgame(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Starts a new Checkers session, closing any existing active session first.
+
+    Auth: required. Body: {player_starts: bool}.
+    Response: {id: UUID, state: CheckersGameState}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "checkers")
 
@@ -620,6 +668,11 @@ async def checkers_move(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Enqueues a player move for the active Checkers session.
+
+    Auth: required. Body: {from_row, from_col, to_row, to_col: int}.
+    Response: 202 Accepted (no body). Returns 409 if no active session, 422 if invalid.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "checkers")
 
@@ -646,6 +699,10 @@ async def checkers_events(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """SSE stream for a Checkers session. Delivers status, move, error, and heartbeat events.
+
+    Auth: required. Path param: session_id (UUID returned by /resume or /newgame).
+    """
     try:
         sid = UUID(session_id)
     except ValueError:
@@ -815,6 +872,10 @@ async def dab_resume(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns the active Dots and Boxes session for the current user, or {id: null, state: null}.
+
+    Auth: required. Response: {id: UUID | null, state: DaBGameState | null}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "dots-and-boxes")
 
@@ -832,6 +893,11 @@ async def dab_newgame(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Starts a new Dots and Boxes session, closing any existing active session first.
+
+    Auth: required. Body: {player_starts: bool, grid_size: int}.
+    Response: {id: UUID, state: DaBGameState}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "dots-and-boxes")
 
@@ -861,6 +927,11 @@ async def dab_move(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Enqueues a player edge claim for the active Dots and Boxes session.
+
+    Auth: required. Body: {orientation: "h"|"v", row: int, col: int}.
+    Response: 202 Accepted (no body). Returns 409 if no active session, 422 if invalid.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "dots-and-boxes")
 
@@ -887,6 +958,10 @@ async def dab_events(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """SSE stream for a Dots and Boxes session. Delivers status, move, error, and heartbeat events.
+
+    Auth: required. Path param: session_id (UUID returned by /resume or /newgame).
+    """
     try:
         sid = UUID(session_id)
     except ValueError:
@@ -1061,6 +1136,12 @@ async def chess_resume(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns the active Chess session for the current user, or {id: null, state: null}.
+
+    Auth: required. Response: {id: UUID | null, state: ChessGameState | null}.
+    board_state contains the full chess game state including board, castling rights,
+    en passant target, captured pieces, and last move — sufficient to reconstruct the UI.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
@@ -1078,6 +1159,12 @@ async def chess_newgame(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Starts a new Chess session, closing any existing active session first.
+
+    Auth: required. Body: {player_starts: bool}.
+    Response: {id: UUID, state: ChessGameState}. If player_starts=false, the AI (white)
+    makes the first move and state reflects the board after that move.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
@@ -1109,6 +1196,12 @@ async def chess_move(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Enqueues a player chess move for the active Chess session.
+
+    Auth: required. Body: {fromRow, fromCol, toRow, toCol: int, promotionPiece: str | null}.
+    Response: 202 Accepted (no body). State updates (player move + AI response) arrive over SSE.
+    Returns 409 if no active session, 422 if the move is illegal.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
@@ -1143,6 +1236,12 @@ async def chess_events(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """SSE stream for a Chess session. Delivers status, move, error, and heartbeat events.
+
+    Auth: required. Path param: session_id (UUID returned by /resume or /newgame).
+    Move events include full board state, last_move details (UCI + algebraic notation),
+    captured pieces, in_check flag, and terminal status/winner.
+    """
     try:
         sid = UUID(session_id)
     except ValueError:
@@ -1244,6 +1343,12 @@ async def chess_legal_moves(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns the legal destination squares for a piece in the active Chess session.
+
+    Auth: required. Query params: from_row, from_col (int). Used by the frontend to
+    highlight valid drop targets on piece selection.
+    Response: {moves: [{toRow: int, toCol: int}]}.
+    """
     span = trace.get_current_span()
     span.set_attribute("game.id", "chess")
 
@@ -1265,6 +1370,11 @@ async def cleanup_sessions(
     x_internal_key: Optional[str] = Header(None, alias="X-Internal-Key"),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Bulk-abandons stale sessions for all game types. Called by Cloud Scheduler.
+
+    Auth: X-Internal-Key header matching INTERNAL_API_KEY env var (returns 403 otherwise).
+    Response: {results: {game_type: count_abandoned}}.
+    """
     expected = os.getenv("INTERNAL_API_KEY")
     if not expected or x_internal_key != expected:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -1448,6 +1558,13 @@ async def get_game_session(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns the board_state for a specific game session by id.
+
+    Auth: required. Path params: game_id (e.g. "chess"), session_id (UUID).
+    Used for client-side state recovery (React error boundary) and normal game resume.
+    Returns 403 if the session belongs to a different user, 404 if not found.
+    Response: {board_state: GameState dict}.
+    """
     if game_id not in GAME_ID_TO_TYPE:
         raise HTTPException(status_code=501, detail=f"Game '{game_id}' not implemented")
 
@@ -1472,6 +1589,11 @@ async def get_active_sessions(
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Returns all active game sessions for the current user across all game types.
+
+    Auth: required. Used to build the cross-game resume prompt.
+    Response: {sessions: [{game_type, id, last_move_at, board_state}]}.
+    """
     active = await persistence_service.get_all_active_games(db, user["id"])
     return {
         "sessions": [
