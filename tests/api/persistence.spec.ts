@@ -4,7 +4,7 @@ const BASE = 'http://localhost:8000/api';
 
 async function loginTestUser(request: any) {
     const res = await request.post(`${BASE}/auth/login`, {
-        data: { email: 'test@example.com', password: 'test123' },
+        data: { email: 'test@example.com', password: 'password123' },
     });
     expect(res.ok()).toBeTruthy();
     return res;

@@ -18,12 +18,14 @@ docker compose build
 docker compose up
 ```
 
-The backend API is available at `http://localhost:8000`. The frontend is served from the same origin. Log in with the
-test credentials below:
+The backend API is available at `http://localhost:8000`. The frontend is served from the same origin. Log in with any of
+the seeded test accounts:
 
-| Username   | Password      | Notes                  |
-| ---------- | ------------- | ---------------------- |
-| `testuser` | `password123` | Standard local account |
+| Email                 | Password      |
+| --------------------- | ------------- |
+| `test@example.com`    | `password123` |
+| `demo@aigamehub.com`  | `password123` |
+| `player1@example.com` | `password123` |
 
 ---
 
@@ -39,11 +41,12 @@ docker compose build app
 docker compose up
 ```
 
-The database is initialized by Alembic on first start. If you ever need to reset it:
+On every start, the container automatically runs migrations and seeds the test accounts above — no manual steps needed.
+If you ever need to reset to a clean state:
 
 ```bash
 docker compose down -v        # removes the postgres volume
-docker compose up             # recreates tables via alembic upgrade head
+docker compose up             # recreates schema and re-seeds test accounts
 ```
 
 ---
