@@ -62,13 +62,14 @@ Python dependencies are managed with **pip-tools**.
 - `requirements.txt` — auto-generated lockfile. **Never edit manually.** Run `pip-compile` to regenerate it.
 
 To add or remove a Python dependency:
+
 1. Edit `requirements.in`
 2. Run `python -m piptools compile requirements.in --output-file requirements.txt --strip-extras --upgrade`
 3. Commit both files together
 
-Transitive dependencies (e.g. `pydantic-core`) are resolved automatically by pip-compile and must never be
-added to `requirements.in` or edited in `requirements.txt` directly. Dependabot only updates `requirements.in`;
-the `pip-compile.yml` workflow regenerates `requirements.txt` automatically on Dependabot branches.
+Transitive dependencies (e.g. `pydantic-core`) are resolved automatically by pip-compile and must never be added to
+`requirements.in` or edited in `requirements.txt` directly. Dependabot only updates `requirements.in`; the
+`pip-compile.yml` workflow regenerates `requirements.txt` automatically on Dependabot branches.
 
 # General Instructions
 
