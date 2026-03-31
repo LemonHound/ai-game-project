@@ -1,0 +1,39 @@
+# Web framework
+fastapi
+uvicorn
+uvloop ; sys_platform != "win32"
+watchfiles
+
+# Database
+sqlalchemy
+asyncpg
+sqlmodel
+alembic
+
+# Auth & HTTP
+bcrypt
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+httpx
+
+# Data validation
+pydantic
+email-validator
+
+# Observability
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-sqlalchemy
+opentelemetry-exporter-gcp-trace
+opentelemetry-exporter-gcp-monitoring
+opentelemetry-propagator-gcp
+
+# Config
+python-dotenv
+
+# Dev / test
+pydocstyle
+pytest
+pytest-asyncio
