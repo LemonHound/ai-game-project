@@ -54,6 +54,23 @@
   `gcloud run services describe game-ai-website --region=us-central1`. Any failed deploy must be fixed as the first
   priority before new features.
 
+# Dependency Management
+
+Python dependencies are managed with **pip-tools**.
+
+- `requirements.in` — the only file to edit directly. Lists direct dependencies only, no version pins.
+- `requirements.txt` — auto-generated lockfile. **Never edit manually.** Run `pip-compile` to regenerate it.
+
+To add or remove a Python dependency:
+
+1. Edit `requirements.in`
+2. Run `python -m piptools compile requirements.in --output-file requirements.txt --strip-extras --upgrade`
+3. Commit both files together
+
+Transitive dependencies (e.g. `pydantic-core`) are resolved automatically by pip-compile and must never be added to
+`requirements.in` or edited in `requirements.txt` directly. Dependabot only updates `requirements.in`; the
+`pip-compile.yml` workflow regenerates `requirements.txt` automatically on Dependabot branches.
+
 # General Instructions
 
 - You will be told if the conversation is either planning or implementation. If not told, ask.
