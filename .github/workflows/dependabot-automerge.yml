@@ -9,24 +9,36 @@ permissions:
 jobs:
   automerge:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       - uses: dependabot/fetch-metadata@v2
         id: metadata
+        if: github.actor == 'dependabot[bot]'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for patch and minor updates
         if: |
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          github.actor == 'dependabot[bot]' && (
+            steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+            steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          )
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-enable auto-merge after branch update by non-dependabot actor
+        if: github.actor != 'dependabot[bot]'
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Assign major updates for manual review
-        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        if: |
+          github.actor == 'dependabot[bot]' &&
+          steps.metadata.outputs.update-type == 'version-update:semver-major'
         run: gh pr edit "$PR_URL" --add-assignee LemonHound
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
