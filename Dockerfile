@@ -17,8 +17,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY --from=frontend-builder /app/dist/ ./dist/
 COPY alembic.ini ./
-COPY scripts/migrations/ ./scripts/migrations/
+COPY scripts/ ./scripts/
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
 
 WORKDIR /app/src/backend
 
-CMD exec uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
