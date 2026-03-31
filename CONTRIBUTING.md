@@ -18,8 +18,8 @@ docker compose build
 docker compose up
 ```
 
-The backend API is available at `http://localhost:8000`. The frontend is served from the same origin. Log in with any
-of the seeded test accounts:
+The backend API is available at `http://localhost:8000`. The frontend is served from the same origin. Log in with any of
+the seeded test accounts:
 
 | Email                 | Password      |
 | --------------------- | ------------- |
@@ -41,7 +41,8 @@ docker compose build app
 docker compose up
 ```
 
-On every start, the container automatically runs migrations and seeds the test accounts above — no manual steps needed. If you ever need to reset to a clean state:
+On every start, the container automatically runs migrations and seeds the test accounts above — no manual steps needed.
+If you ever need to reset to a clean state:
 
 ```bash
 docker compose down -v        # removes the postgres volume

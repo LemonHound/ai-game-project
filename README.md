@@ -27,11 +27,11 @@ docker compose up
 
 The app is available at `http://localhost:8000`. Log in with any of the seeded test accounts:
 
-| Email                  | Password      |
-| ---------------------- | ------------- |
-| `test@example.com`     | `password123` |
-| `demo@aigamehub.com`   | `password123` |
-| `player1@example.com`  | `password123` |
+| Email                 | Password      |
+| --------------------- | ------------- |
+| `test@example.com`    | `password123` |
+| `demo@aigamehub.com`  | `password123` |
+| `player1@example.com` | `password123` |
 
 ---
 
