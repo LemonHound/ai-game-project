@@ -66,6 +66,7 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--add-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
+      - '--port=8000'
       - '--timeout=3600'
       - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT},WEBSITE_URL=${_WEBSITE_URL},GOOGLE_REDIRECT_URI=${_WEBSITE_URL}/api/auth/google/callback'
       - >-
