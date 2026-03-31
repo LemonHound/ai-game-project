@@ -5,7 +5,7 @@ const BASE = "http://localhost:8000/api";
 async function loginAs(
   request: Parameters<typeof test>[1] extends { request: infer R } ? R : never,
   email = "test@example.com",
-  password = "test123"
+  password = "password123"
 ) {
   const res = await (request as { post: Function }).post(`${BASE}/auth/login`, {
     data: { email, password },
@@ -24,7 +24,7 @@ test.describe("ttt — resume", () => {
     });
     // start a different game type to leave ttt clean on a fresh user would be ideal,
     // but instead we just check the shape — login as player1 who has no ttt session
-    const cookies2 = await loginAs(request, "player1@example.com", "test123");
+    const cookies2 = await loginAs(request, "player1@example.com", "password123");
     const res = await request.get(`${BASE}/game/tic-tac-toe/resume`, {
       headers: { Cookie: cookies2 },
     });
@@ -159,7 +159,7 @@ test.describe("ttt — move", () => {
   });
 
   test("test_move_no_active_session_returns_409", async ({ request }) => {
-    const cookies = await loginAs(request, "demo@aigamehub.com", "test123");
+    const cookies = await loginAs(request, "demo@aigamehub.com", "password123");
     // ensure no active session by starting then immediately aborting
     // we test against a clean demo user with no session
     const res = await request.post(`${BASE}/game/tic-tac-toe/move`, {
@@ -180,14 +180,14 @@ test.describe("ttt — move", () => {
 
 test.describe("ttt — SSE events", () => {
   test("test_sse_unauthorized_session_returns_403", async ({ request }) => {
-    const cookies1 = await loginAs(request, "test@example.com", "test123");
+    const cookies1 = await loginAs(request, "test@example.com", "password123");
     const newRes = await request.post(`${BASE}/game/tic-tac-toe/newgame`, {
       data: { player_starts: true },
       headers: { Cookie: cookies1 },
     });
     const { id } = await newRes.json();
 
-    const cookies2 = await loginAs(request, "player1@example.com", "test123");
+    const cookies2 = await loginAs(request, "player1@example.com", "password123");
     const eventsRes = await request.get(`${BASE}/game/tic-tac-toe/events/${id}`, {
       headers: { Cookie: cookies2 },
     });
