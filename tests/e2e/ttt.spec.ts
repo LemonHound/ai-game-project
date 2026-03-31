@@ -4,7 +4,7 @@ const BASE_API = "http://localhost:8000/api";
 
 async function loginTestUser(page: Page) {
   await page.request.post(`${BASE_API}/auth/login`, {
-    data: { email: "test@example.com", password: "test123" },
+    data: { email: "test@example.com", password: "password123" },
   });
 }
 

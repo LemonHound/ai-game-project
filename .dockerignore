@@ -12,6 +12,5 @@ playwright-report/
 test-results/
 coverage/
 features/
-scripts/seed_test_data.py
 environment.yml
 *.md
