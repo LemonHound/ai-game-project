@@ -31,24 +31,24 @@ Three rules based on context:
 
 | Scenario | Counts as | Affects streak? |
 |----------|-----------|-----------------|
-| Quit while actively playing (close tab, forfeit button, etc.) | Loss | Yes — breaks streak |
-| Abandon a game < 4 hours old | Loss | Yes — breaks streak |
-| Abandon a game >= 4 hours old | Tracked separately ("abandoned") | No — does not break streak |
+| Quit while actively playing (close tab, forfeit button, etc.) | Loss | Yes -- breaks streak |
+| Abandon a game < 4 hours old | Loss | Yes -- breaks streak |
+| Abandon a game >= 4 hours old | Tracked separately ("abandoned") | No -- does not break streak |
 
-Implementation: the `game_abandoned` boolean is already stored. Add an `abandoned_at` timestamp (or
-derive from `last_move_at`) and compare `last_move_at - created_at` to determine the 4-hour threshold.
-"Quit while playing" is distinguished by the frontend sending an explicit forfeit action vs. the game
-timing out on the server side.
+Implementation: the `game_abandoned` boolean is already stored. The 4-hour threshold is determined by
+comparing `NOW() - last_move_at >= 4 hours` (time since last activity, not game duration). "Quit while
+playing" is distinguished by the frontend sending an explicit forfeit action vs. the game timing out on
+the server side.
 
 A "completed game" for stats purposes = `game_ended = true AND NOT (game_abandoned = true AND
-age >= 4 hours)`. Abandoned-old games are excluded from win rate and streak calculations but counted in
-a separate `games_abandoned` field.
+NOW() - last_move_at >= 4 hours)`. Abandoned-old games are excluded from win rate and streak
+calculations but counted in a separate `games_abandoned` field.
 
 ### Stats privacy
 
 **User-controlled toggle.** Players choose whether their stats are public or private.
 
-- Add `stats_public` boolean column to `users` table (default: `false` — private by default).
+- Add `stats_public` boolean column to `users` table (default: `false` -- private by default).
 - Toggle exposed via Settings page.
 - When private: only the owner sees their stats on their profile.
 - When public: any authenticated user can view another player's stats.
@@ -82,34 +82,23 @@ efficient with the existing `idx_{game_type}_games_user_id` index. Add a composi
 ## Known Requirements
 
 - Depends on game-data-persistence (complete): stats are derived from `{game_type}_games` records
-- The existing `/api/game/{game_id}/stats` endpoint should be updated rather than replaced
+- The existing `/api/game/{game_id}/stats` stub endpoint is removed and replaced by the consolidated
+  `/api/stats/me` endpoint
 - Stats must be scoped to authenticated users; unauthenticated requests return empty/default values
-- Stats queries use SQLAlchemy async (AsyncSession) — consistent with the persistence layer
+- Game types without persistence (e.g., Pong) return zeros for all stats fields
+- Stats queries use SQLAlchemy async (AsyncSession) -- consistent with the persistence layer
 - Mobile + desktop responsive presentation wherever stats are displayed
 
 ## API Endpoints
 
-### 1. `GET /api/game/{game_type}/stats` (update existing)
+### 1. `GET /api/stats/me` (new)
 
-Returns per-game stats for the authenticated user. No auth = empty defaults.
+Returns all stats for the authenticated user in a single payload: cross-game aggregates plus full
+per-game breakdowns. The frontend uses this one endpoint for both the profile page (aggregates) and
+individual game pages (per-game stats), avoiding multiple API calls. No auth = empty defaults (zeros).
 
-```json
-{
-  "games_played": 42,
-  "wins": 25,
-  "losses": 12,
-  "draws": 3,
-  "games_abandoned": 2,
-  "win_rate": 0.625,
-  "best_streak": 7,
-  "current_streak": 3,
-  "avg_duration_seconds": 184.5
-}
-```
-
-### 2. `GET /api/stats/me` (new)
-
-Returns cross-game aggregate stats for the authenticated user.
+The `per_game` object includes an entry for every known game type, including those without persistence
+(e.g., Pong). Missing data returns zeros for all fields.
 
 ```json
 {
@@ -124,21 +113,84 @@ Returns cross-game aggregate stats for the authenticated user.
   "most_played_game": "tic_tac_toe",
   "best_win_rate_game": "connect4",
   "per_game": {
-    "tic_tac_toe": { "games_played": 42, "win_rate": 0.6 },
-    "chess": { "games_played": 30, "win_rate": 0.53 },
-    "checkers": { "games_played": 20, "win_rate": 0.65 },
-    "connect4": { "games_played": 25, "win_rate": 0.72 },
-    "dots_and_boxes": { "games_played": 11, "win_rate": 0.45 }
+    "tic_tac_toe": {
+      "games_played": 42,
+      "wins": 25,
+      "losses": 12,
+      "draws": 3,
+      "games_abandoned": 2,
+      "win_rate": 0.625,
+      "best_streak": 7,
+      "current_streak": 3,
+      "avg_duration_seconds": 184.5
+    },
+    "chess": {
+      "games_played": 30,
+      "wins": 16,
+      "losses": 10,
+      "draws": 2,
+      "games_abandoned": 2,
+      "win_rate": 0.571,
+      "best_streak": 4,
+      "current_streak": 0,
+      "avg_duration_seconds": 420.0
+    },
+    "checkers": {
+      "games_played": 20,
+      "wins": 13,
+      "losses": 5,
+      "draws": 1,
+      "games_abandoned": 1,
+      "win_rate": 0.684,
+      "best_streak": 5,
+      "current_streak": 2,
+      "avg_duration_seconds": 310.0
+    },
+    "connect4": {
+      "games_played": 25,
+      "wins": 18,
+      "losses": 7,
+      "draws": 0,
+      "games_abandoned": 0,
+      "win_rate": 0.72,
+      "best_streak": 11,
+      "current_streak": 3,
+      "avg_duration_seconds": 95.0
+    },
+    "dots_and_boxes": {
+      "games_played": 11,
+      "wins": 5,
+      "losses": 4,
+      "draws": 2,
+      "games_abandoned": 0,
+      "win_rate": 0.455,
+      "best_streak": 3,
+      "current_streak": 0,
+      "avg_duration_seconds": 260.0
+    },
+    "pong": {
+      "games_played": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "games_abandoned": 0,
+      "win_rate": 0,
+      "best_streak": 0,
+      "current_streak": 0,
+      "avg_duration_seconds": 0
+    }
   }
 }
 ```
 
-### 3. `GET /api/stats/user/{user_id}` (new)
+The existing stub `GET /api/game/{game_id}/stats` is removed.
+
+### 2. `GET /api/stats/user/{user_id}` (new)
 
 Returns stats for another user. Returns 403 if the target user has `stats_public = false`.
 Same response shape as `/api/stats/me`.
 
-### 4. `GET /api/leaderboard/{board_type}` (new)
+### 3. `GET /api/leaderboard/{board_type}` (new)
 
 Returns a paginated leaderboard. Query params: `game_type` (optional, omit for global), `page`,
 `per_page` (default 10, max 50).
@@ -164,8 +216,8 @@ Returns a paginated leaderboard. Query params: `game_type` (optional, omit for g
 ### Per-game stats panel
 
 Displayed on each game page below the game board (or in a sidebar on desktop). Shows the user's
-stats for that game: games played, win rate, current streak, best streak. Uses the existing
-`/api/game/{game_type}/stats` endpoint.
+stats for that game: games played, win rate, current streak, best streak. The data comes from the
+`per_game` field of the cached `/api/stats/me` response -- no separate API call needed.
 
 ### Profile stats section
 
@@ -180,8 +232,8 @@ Paginated table with rank, display name, and value.
 
 ### Settings toggle
 
-Add a "Public stats" toggle to the Settings page. Uses a new `PATCH /api/auth/settings` field
-or updates the existing user settings endpoint.
+Add a "Public stats" toggle to the Settings page. Create a new `PATCH /api/auth/settings` endpoint
+(no existing settings endpoint exists).
 
 ## Database Changes
 
@@ -205,25 +257,25 @@ CREATE INDEX idx_{game_type}_games_user_completed
 
 | Action | File |
 |--------|------|
-| Create | `src/backend/stats.py` — stats router with all 4 endpoints |
-| Create | `src/frontend/src/api/stats.ts` — API fetch functions |
-| Create | `src/frontend/src/pages/LeaderboardPage.tsx` — leaderboard page |
-| Create | `src/frontend/src/components/GameStatsPanel.tsx` — per-game stats component |
-| Create | `scripts/migrations/versions/NNNN_add_stats_public_column.py` — migration |
-| Modify | `src/backend/app.py` — register stats router |
-| Modify | `src/frontend/src/App.tsx` — add `/leaderboard` route |
-| Modify | `src/backend/games.py` — update existing `/api/game/{game_id}/stats` stub |
-| Modify | `src/frontend/src/pages/ProfilePage.tsx` — add aggregate stats section |
-| Modify | `src/frontend/src/pages/SettingsPage.tsx` — add stats_public toggle |
-| Modify | All game page components — add `<GameStatsPanel>` |
+| Create | `src/backend/stats.py` -- stats router with all 3 endpoints + settings PATCH |
+| Create | `src/frontend/src/api/stats.ts` -- API fetch functions |
+| Create | `src/frontend/src/pages/LeaderboardPage.tsx` -- leaderboard page |
+| Create | `src/frontend/src/components/GameStatsPanel.tsx` -- per-game stats component |
+| Create | `scripts/migrations/versions/NNNN_add_stats_public_column.py` -- migration |
+| Modify | `src/backend/app.py` -- register stats router |
+| Modify | `src/frontend/src/App.tsx` -- add `/leaderboard` route |
+| Modify | `src/backend/games.py` -- remove existing `/api/game/{game_id}/stats` stub |
+| Modify | `src/frontend/src/pages/ProfilePage.tsx` -- add aggregate stats section |
+| Modify | `src/frontend/src/pages/SettingsPage.tsx` -- add stats_public toggle |
+| Modify | All game page components -- add `<GameStatsPanel>` |
 
 ## Test Cases
 
 | Tier | Name | What it checks |
 |------|------|----------------|
-| API integration | `GET /api/game/{type}/stats returns user stats` | Authenticated user gets correct per-game stats; fields present with correct types |
-| API integration | `GET /api/game/{type}/stats returns defaults when unauthenticated` | No auth returns zeros |
-| API integration | `GET /api/stats/me returns cross-game aggregates` | All fields present; per_game breakdown matches individual game stats |
+| API integration | `GET /api/stats/me returns all stats` | Authenticated user gets aggregates + full per_game breakdowns; all fields present with correct types |
+| API integration | `GET /api/stats/me returns zeros when unauthenticated` | No auth returns zeros for all fields |
+| API integration | `GET /api/stats/me includes all game types` | Response per_game object has entries for every known game type, including those without persistence (zeros) |
 | API integration | `GET /api/stats/user/{id} respects privacy toggle` | Returns 403 when target user has stats_public=false; 200 when true |
 | API integration | `GET /api/leaderboard/{type} returns paginated results` | Entries sorted correctly; pagination params work; only public users included |
 | Unit | `streak calculation handles consecutive wins` | Streak of 5 wins returns 5; loss after 5 wins resets to 0 |
