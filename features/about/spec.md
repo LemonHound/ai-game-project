@@ -59,7 +59,25 @@ These should open in a new tab. Add a one-line note above the buttons, e.g.:
 
 No hard sell. The section should be easy to miss if you're not looking for it.
 
-### 4. Tech stack callout (optional, low priority)
+### 4. Meet the Team
+
+Two team member cards displayed side by side (1-col on mobile, 2-col on desktop). Each card shows:
+
+| Field | Description |
+|-------|-------------|
+| Photo | Circular avatar image (placeholder URL until real photos are provided) |
+| Name | Team member's name (bold) |
+| Role | Title / role on the project (subtle text) |
+| Bio | 1–2 sentence personal bio |
+| Links | Icon links to GitHub and LinkedIn profiles (`target="_blank"`) |
+
+Team data is defined as a `TEAM_MEMBERS` constant array in `AboutPage.tsx` with placeholder values
+for two members. Update with real data before launch.
+
+Use DaisyUI `card` and `avatar` components. Keep the section warm and personal — this is a passion
+project, not a corporate team page.
+
+### 5. Tech stack callout (optional, low priority)
 
 A small "built with" section listing the major technologies (FastAPI, React, PostgreSQL, GCP). Can
 be a simple icon row or a brief bullet list. Implement only if it fits the layout without adding
@@ -73,8 +91,8 @@ New endpoint: `GET /api/about/stats`
 - Returns the DB-backed stats (games played, moves analyzed, unique players, AI win rate, training
   moves). Does not return placeholder stats; those are generated client-side.
 - Response should be cached for a short TTL (e.g., 60 seconds) to avoid a DB hit on every page
-  load. A simple in-memory cache using `functools.lru_cache` with a timestamp check is sufficient;
-  no Redis needed.
+  load. Use a module-level dict with a timestamp guard (not `functools.lru_cache`, which is
+  incompatible with async route handlers). No Redis needed.
 - Register the router in `app.py` as `/api/about`.
 
 Response shape:
@@ -128,6 +146,7 @@ LAUNCH_DATE = date(2025, 1, 1)  # update before go-live
 | API integration | `stats values are non-negative` | All numeric fields ≥ 0; ai_win_rate between 0 and 1 |
 | Unit | `useCountUp animates from 0 to target` | Hook returns 0 at start and target value after duration |
 | E2E | About page loads and displays stats | Stats grid renders with non-zero values; donation links are present |
+| E2E | About page shows team section | Two team member cards render with names, roles, and profile links |
 | Manual | Donation links open correctly | Both links open in a new tab to the correct platform |
 | Manual | Count-up animation plays on load | Numbers animate on first render; no jank on typical hardware |
 | Manual | Donation URLs updated before launch | `DONATE_URLS` constants point to real accounts before public launch |
