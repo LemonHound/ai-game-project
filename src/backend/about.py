@@ -78,6 +78,7 @@ async def _query_stats(db: AsyncSession) -> dict:
 
 @router.get("/stats")
 async def get_about_stats(db: AsyncSession = Depends(db_dependency)):
+    """Return aggregated platform statistics, cached for 60 seconds."""
     now = time.time()
     if _cache["data"] is not None and now < _cache["expires"]:
         return _cache["data"]
