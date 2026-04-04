@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+from about import router as about_router
 from auth import router as auth_router
 from db import init_db, close_db
 from games import router as games_router
@@ -79,6 +80,7 @@ if (DIST_DIR / "assets").exists():
 if (DIST_DIR / "images").exists():
     app.mount("/images", StaticFiles(directory=str(DIST_DIR / "images")), name="images")
 
+app.include_router(about_router, prefix="/api/about", tags=["About"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(games_router, prefix="/api", tags=["Games"])
 

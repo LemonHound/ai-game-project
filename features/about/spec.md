@@ -1,6 +1,6 @@
 # About Page
 
-**Status: needs implementation**
+**Status: implemented**
 
 ## Background
 
