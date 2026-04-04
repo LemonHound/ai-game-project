@@ -10,7 +10,7 @@ module.exports = defineConfig({
         '**/tests/api/**/*.spec.{js,ts}',
         '**/tests/auth/**/*.spec.js',
         '**/tests/database/**/*.spec.js',
-        '**/tests/e2e/**/*.spec.js',
+        '**/tests/e2e/**/*.spec.{js,ts}',
         '**/tests/games/**/*.spec.js',
         '**/tests/performance/**/*.spec.js',
         '**/tests/smoke/**/*.spec.js',
