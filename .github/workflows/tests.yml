@@ -27,60 +27,87 @@ jobs:
   code-quality:
     name: Code Formatting
     needs: changes
-    if: needs.changes.outputs.code == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      RUN_TESTS: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     steps:
+      - name: Skip (markdown-only changes)
+        if: env.RUN_TESTS != 'true'
+        run: echo "Only markdown files changed -- skipping tests"
+
       - uses: actions/checkout@v6
+        if: env.RUN_TESTS == 'true'
 
       - uses: actions/setup-node@v6
+        if: env.RUN_TESTS == 'true'
         with:
           node-version: 20
           cache: npm
 
       - uses: actions/setup-python@v6
+        if: env.RUN_TESTS == 'true'
         with:
           python-version: '3.11'
 
-      - run: npm ci
+      - if: env.RUN_TESTS == 'true'
+        run: npm ci
 
-      - run: pip install pydocstyle
+      - if: env.RUN_TESTS == 'true'
+        run: pip install pydocstyle
 
-      - run: npm run format:check
+      - if: env.RUN_TESTS == 'true'
+        run: npm run format:check
 
-      - run: npm run lint
+      - if: env.RUN_TESTS == 'true'
+        run: npm run lint
 
-      - run: pydocstyle src/backend/
+      - if: env.RUN_TESTS == 'true'
+        run: pydocstyle src/backend/
 
-      - run: npm audit --audit-level=high
+      - if: env.RUN_TESTS == 'true'
+        run: npm audit --audit-level=high
 
   unit-tests:
     name: Unit Tests
     needs: changes
-    if: needs.changes.outputs.code == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      RUN_TESTS: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     steps:
+      - name: Skip (markdown-only changes)
+        if: env.RUN_TESTS != 'true'
+        run: echo "Only markdown files changed -- skipping tests"
+
       - uses: actions/checkout@v6
+        if: env.RUN_TESTS == 'true'
 
       - uses: actions/setup-node@v6
+        if: env.RUN_TESTS == 'true'
         with:
           node-version: 20
           cache: npm
 
       - uses: actions/setup-python@v6
+        if: env.RUN_TESTS == 'true'
         with:
           python-version: '3.11'
 
-      - run: npm ci
+      - if: env.RUN_TESTS == 'true'
+        run: npm ci
 
-      - run: pip install -r requirements.txt
+      - if: env.RUN_TESTS == 'true'
+        run: pip install -r requirements.txt
 
-      - run: npm run test:unit:coverage
+      - if: env.RUN_TESTS == 'true'
+        run: npm run test:unit:coverage
 
-      - run: python -m pytest tests/unit/ -v
+      - if: env.RUN_TESTS == 'true'
+        run: python -m pytest tests/unit/ -v
         env:
           PYTHONPATH: src/backend
 
       - uses: codecov/codecov-action@v6
+        if: env.RUN_TESTS == 'true'
         with:
           file: ./coverage/lcov.info
           flags: unittests
@@ -90,8 +117,9 @@ jobs:
   smoke-tests:
     name: Smoke Tests
     needs: changes
-    if: needs.changes.outputs.code == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      RUN_TESTS: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     services:
       postgres:
         image: postgres:17
@@ -107,18 +135,29 @@ jobs:
         ports:
           - 5432:5432
     steps:
+      - name: Skip (markdown-only changes)
+        if: env.RUN_TESTS != 'true'
+        run: echo "Only markdown files changed -- skipping tests"
+
       - uses: actions/checkout@v6
+        if: env.RUN_TESTS == 'true'
       - uses: actions/setup-node@v6
+        if: env.RUN_TESTS == 'true'
         with:
           node-version: 20
           cache: npm
       - uses: actions/setup-python@v6
+        if: env.RUN_TESTS == 'true'
         with:
           python-version: '3.11'
-      - run: npm ci
-      - run: pip install -r requirements.txt
-      - run: npm run build
+      - if: env.RUN_TESTS == 'true'
+        run: npm ci
+      - if: env.RUN_TESTS == 'true'
+        run: pip install -r requirements.txt
+      - if: env.RUN_TESTS == 'true'
+        run: npm run build
       - name: Setup test environment
+        if: env.RUN_TESTS == 'true'
         run: |
           cat > .env <<EOF
           DB_HOST=localhost
@@ -134,14 +173,17 @@ jobs:
           python scripts/seed_test_data.py
         env:
           PYTHONPATH: src/backend
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:smoke -- --project=chromium
-      - run: npx playwright test tests/api/persistence.spec.ts tests/api/ttt.spec.ts tests/api/error-handling.spec.ts tests/api/telemetry.spec.ts --project=chromium
+      - if: env.RUN_TESTS == 'true'
+        run: npx playwright install --with-deps chromium
+      - if: env.RUN_TESTS == 'true'
+        run: npm run test:smoke -- --project=chromium
+      - if: env.RUN_TESTS == 'true'
+        run: npx playwright test tests/api/persistence.spec.ts tests/api/ttt.spec.ts tests/api/error-handling.spec.ts tests/api/telemetry.spec.ts --project=chromium
         env:
           NODE_ENV: test
           CI: true
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && env.RUN_TESTS == 'true'
         with:
           name: smoke-test-results
           path: |

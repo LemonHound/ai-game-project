@@ -26,20 +26,29 @@ jobs:
   analyze:
     name: Analyze
     needs: changes
-    if: needs.changes.outputs.code == 'true' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       security-events: write
     strategy:
       matrix:
         language: [javascript-typescript, python]
+    env:
+      RUN_ANALYSIS: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'schedule' }}
     steps:
+      - name: Skip (markdown-only changes)
+        if: env.RUN_ANALYSIS != 'true'
+        run: echo "Only markdown files changed -- skipping analysis"
+
       - uses: actions/checkout@v6
+        if: env.RUN_ANALYSIS == 'true'
 
       - uses: github/codeql-action/init@v4
+        if: env.RUN_ANALYSIS == 'true'
         with:
           languages: ${{ matrix.language }}
 
       - uses: github/codeql-action/autobuild@v4
+        if: env.RUN_ANALYSIS == 'true'
 
       - uses: github/codeql-action/analyze@v4
+        if: env.RUN_ANALYSIS == 'true'
