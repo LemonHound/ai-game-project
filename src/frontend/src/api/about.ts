@@ -7,6 +7,7 @@ export interface AboutStats {
     days_running: number;
 }
 
+/** Fetches platform statistics for the About page. */
 export async function fetchAboutStats(): Promise<AboutStats> {
     const res = await fetch('/api/about/stats');
     if (!res.ok) {

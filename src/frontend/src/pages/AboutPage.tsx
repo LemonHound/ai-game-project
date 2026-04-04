@@ -46,6 +46,7 @@ function StatCard({ value, label, isFloat }: { value: number; label: string; isF
     );
 }
 
+/** Renders the About page with live platform stats, team section, and donation links. */
 export default function AboutPage() {
     const { data: stats } = useQuery({
         queryKey: ['about-stats'],

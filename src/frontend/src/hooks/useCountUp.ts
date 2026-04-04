@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+/** Animates a number from 0 to the target value over the given duration using requestAnimationFrame. */
 export function useCountUp(target: number, duration: number = 1000): number {
     const [value, setValue] = useState(0);
     const rafRef = useRef<number>(0);
