@@ -15,9 +15,7 @@ export default function SettingsPage() {
         mutationFn: (value: boolean) => updateStatsPublic(value),
         onSuccess: (_data, value) => {
             setStatsPublic(value);
-            queryClient.setQueryData(['user'], (old: typeof user) =>
-                old ? { ...old, statsPublic: value } : old,
-            );
+            queryClient.setQueryData(['user'], (old: typeof user) => (old ? { ...old, statsPublic: value } : old));
         },
     });
 

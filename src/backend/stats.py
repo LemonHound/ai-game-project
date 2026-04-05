@@ -182,6 +182,7 @@ async def get_my_stats(
     db: AsyncSession = Depends(db_dependency),
     user: Optional[dict] = Depends(optional_user),
 ):
+    """Return per-game stats for the authenticated user, or zeros if unauthenticated."""
     if not user:
         return _empty_response()
 
@@ -200,6 +201,7 @@ async def get_user_stats(
     db: AsyncSession = Depends(db_dependency),
     user: dict = Depends(require_user),
 ):
+    """Return per-game stats for another user, respecting privacy settings."""
     async with get_session() as session:
         row = (
             await session.execute(
@@ -233,6 +235,7 @@ async def get_leaderboard(
     per_page: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(db_dependency),
 ):
+    """Return a paginated per-game leaderboard."""
     if board_type not in VALID_BOARD_TYPES:
         raise HTTPException(
             status_code=400,

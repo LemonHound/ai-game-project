@@ -32,16 +32,24 @@ export default function LeaderboardPage() {
 
     return (
         <div className='container mx-auto max-w-3xl px-4 py-10'>
-            <PageMeta title='Leaderboard' description='See top players ranked by games played, win streaks, and more.' />
+            <PageMeta
+                title='Leaderboard'
+                description='See top players ranked by games played, win streaks, and more.'
+            />
             <h1 className='mb-6 text-4xl font-bold'>Leaderboard</h1>
 
             <div className='flex flex-wrap gap-3 mb-6'>
                 <select
                     className='select select-bordered select-sm'
                     value={gameType}
-                    onChange={e => { setGameType(e.target.value); setPage(1); }}>
+                    onChange={e => {
+                        setGameType(e.target.value);
+                        setPage(1);
+                    }}>
                     {GAME_TYPES.map(g => (
-                        <option key={g.key} value={g.key}>{g.label}</option>
+                        <option key={g.key} value={g.key}>
+                            {g.label}
+                        </option>
                     ))}
                 </select>
 
@@ -51,7 +59,10 @@ export default function LeaderboardPage() {
                             key={b.key}
                             role='tab'
                             className={`tab ${boardType === b.key ? 'tab-active' : ''}`}
-                            onClick={() => { setBoardType(b.key); setPage(1); }}>
+                            onClick={() => {
+                                setBoardType(b.key);
+                                setPage(1);
+                            }}>
                             {b.label}
                         </button>
                     ))}
@@ -95,10 +106,7 @@ export default function LeaderboardPage() {
 
             {totalPages > 1 && (
                 <div className='flex justify-center gap-2 mt-4'>
-                    <button
-                        className='btn btn-sm btn-outline'
-                        disabled={page <= 1}
-                        onClick={() => setPage(p => p - 1)}>
+                    <button className='btn btn-sm btn-outline' disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
                         Previous
                     </button>
                     <span className='btn btn-sm btn-ghost no-animation'>

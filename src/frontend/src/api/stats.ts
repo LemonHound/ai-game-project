@@ -25,7 +25,7 @@ export async function fetchLeaderboard(
     boardType: string,
     gameType: string,
     page = 1,
-    perPage = 10,
+    perPage = 10
 ): Promise<LeaderboardResponse> {
     const params = new URLSearchParams({
         game_type: gameType,

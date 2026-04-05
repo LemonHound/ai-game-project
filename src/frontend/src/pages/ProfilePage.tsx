@@ -66,9 +66,7 @@ export default function ProfilePage() {
     }
 
     const gameEntries = statsData
-        ? Object.entries(statsData.per_game).filter(
-              ([key, s]) => key in GAME_LABELS && s.games_played > 0,
-          )
+        ? Object.entries(statsData.per_game).filter(([key, s]) => key in GAME_LABELS && s.games_played > 0)
         : [];
 
     return (
