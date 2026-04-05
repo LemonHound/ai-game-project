@@ -1,0 +1,28 @@
+name: Post-Deploy Smoke
+
+on:
+  repository_dispatch:
+    types: [deploy-success]
+  workflow_dispatch:
+    inputs:
+      environment_url:
+        description: 'Production URL to test'
+        default: 'https://game-ai-website-w4453qrbcq-uc.a.run.app'
+
+jobs:
+  smoke:
+    name: Production Smoke Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run smoke tests
+        run: npx playwright test tests/smoke/ --project=chromium
+        env:
+          BASE_URL: ${{ github.event.client_payload.url || inputs.environment_url || 'https://game-ai-website-w4453qrbcq-uc.a.run.app' }}
+          CI: true

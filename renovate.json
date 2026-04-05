@@ -1,0 +1,42 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": ["config:recommended"],
+    "schedule": ["before 9am on Monday"],
+    "timezone": "America/New_York",
+    "packageRules": [
+        {
+            "groupName": "npm minor/patch",
+            "matchManagers": ["npm"],
+            "matchUpdateTypes": ["minor", "patch"],
+            "automerge": true,
+            "automergeType": "pr",
+            "platformAutomerge": true
+        },
+        {
+            "groupName": "npm major",
+            "matchManagers": ["npm"],
+            "matchUpdateTypes": ["major"],
+            "automerge": false,
+            "assignees": ["LemonHound"]
+        },
+        {
+            "groupName": "python dependencies",
+            "matchManagers": ["pip-compile"],
+            "automerge": false,
+            "assignees": ["LemonHound"]
+        },
+        {
+            "groupName": "github actions",
+            "matchManagers": ["github-actions"],
+            "automerge": true,
+            "automergeType": "pr",
+            "platformAutomerge": true
+        }
+    ],
+    "pip-compile": {
+        "fileMatch": ["requirements\\.in$"]
+    },
+    "vulnerabilityAlerts": {
+        "enabled": true
+    }
+}

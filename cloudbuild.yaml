@@ -1,80 +1,101 @@
 substitutions:
-  _REGION: us-central1
-  _PROJECT_ID: halogen-episode-455311-t4
-  _ARTIFACT_REPO: ai-game-app
-  _IMAGE_NAME: app
-  _SERVICE_NAME: game-ai-website
-  _CLOUDSQL_INSTANCE: halogen-episode-455311-t4:us-central1:game-database
-  _ENVIRONMENT: production
-  _WEBSITE_URL: https://game-ai-website-w4453qrbcq-uc.a.run.app
+    _REGION: us-central1
+    _PROJECT_ID: halogen-episode-455311-t4
+    _ARTIFACT_REPO: ai-game-app
+    _IMAGE_NAME: app
+    _SERVICE_NAME: game-ai-website
+    _CLOUDSQL_INSTANCE: halogen-episode-455311-t4:us-central1:game-database
+    _ENVIRONMENT: production
+    _WEBSITE_URL: https://game-ai-website-w4453qrbcq-uc.a.run.app
 
 steps:
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:latest'
-      - '.'
+    - name: 'gcr.io/cloud-builders/docker'
+      args:
+          - 'build'
+          - '-t'
+          - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+          - '-t'
+          - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:latest'
+          - '.'
 
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}'
+    - name: 'gcr.io/cloud-builders/docker'
+      args:
+          - 'push'
+          - '--all-tags'
+          - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}'
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy-migration-job'
-    entrypoint: gcloud
-    args:
-      - 'run'
-      - 'jobs'
-      - 'deploy'
-      - 'migrate-db'
-      - '--image=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
-      - '--region=${_REGION}'
-      - '--set-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
-      - '--set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest'
-      - '--command=bash'
-      - '--args=-c,cd /app && python -m alembic upgrade head'
-      - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT}'
-      - '--max-retries=1'
+    - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+      id: 'deploy-migration-job'
+      entrypoint: gcloud
+      args:
+          - 'run'
+          - 'jobs'
+          - 'deploy'
+          - 'migrate-db'
+          - '--image=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+          - '--region=${_REGION}'
+          - '--set-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
+          - '--set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest'
+          - '--command=bash'
+          - '--args=-c,cd /app && python -m alembic upgrade head'
+          - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT}'
+          - '--max-retries=1'
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'run-migration'
-    entrypoint: gcloud
-    args:
-      - 'run'
-      - 'jobs'
-      - 'execute'
-      - 'migrate-db'
-      - '--region=${_REGION}'
-      - '--wait'
-    waitFor: ['deploy-migration-job']
+    - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+      id: 'run-migration'
+      entrypoint: gcloud
+      args:
+          - 'run'
+          - 'jobs'
+          - 'execute'
+          - 'migrate-db'
+          - '--region=${_REGION}'
+          - '--wait'
+      waitFor: ['deploy-migration-job']
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy-service'
-    entrypoint: gcloud
-    waitFor: ['run-migration']
-    args:
-      - 'run'
-      - 'deploy'
-      - '${_SERVICE_NAME}'
-      - '--image=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
-      - '--region=${_REGION}'
-      - '--platform=managed'
-      - '--allow-unauthenticated'
-      - '--add-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
-      - '--port=8000'
-      - '--timeout=3600'
-      - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT},WEBSITE_URL=${_WEBSITE_URL},GOOGLE_REDIRECT_URI=${_WEBSITE_URL}/api/auth/google/callback'
-      - >-
-        --set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest
+    - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+      id: 'deploy-service'
+      entrypoint: gcloud
+      waitFor: ['run-migration']
+      args:
+          - 'run'
+          - 'deploy'
+          - '${_SERVICE_NAME}'
+          - '--image=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+          - '--region=${_REGION}'
+          - '--platform=managed'
+          - '--allow-unauthenticated'
+          - '--add-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
+          - '--port=8000'
+          - '--timeout=3600'
+          - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT},WEBSITE_URL=${_WEBSITE_URL},GOOGLE_REDIRECT_URI=${_WEBSITE_URL}/api/auth/google/callback'
+          - >-
+              --set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest
+
+    # Trigger post-deploy smoke tests via GitHub Actions.
+    # Requires: github-pat secret in GCP Secret Manager (fine-grained PAT with contents:write scope).
+    - name: 'gcr.io/cloud-builders/curl'
+      id: 'trigger-smoke-tests'
+      waitFor: ['deploy-service']
+      entrypoint: 'bash'
+      args:
+          - '-c'
+          - |
+              curl -X POST \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $$GITHUB_PAT" \
+                https://api.github.com/repos/LemonHound/ai-game-project/dispatches \
+                -d '{"event_type":"deploy-success","client_payload":{"url":"${_WEBSITE_URL}","sha":"$SHORT_SHA"}}'
+      secretEnv: ['GITHUB_PAT']
 
 images:
-  - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
-  - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:latest'
+    - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+    - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_ARTIFACT_REPO}/${_IMAGE_NAME}:latest'
+
+availableSecrets:
+    secretManager:
+        - versionName: projects/${_PROJECT_ID}/secrets/github-pat/versions/latest
+          env: 'GITHUB_PAT'
 
 options:
-  logging: CLOUD_LOGGING_ONLY
+    logging: CLOUD_LOGGING_ONLY
