@@ -5,12 +5,8 @@ import CheckersBoard from './CheckersBoard';
 
 function makeInitialBoard(): string[] {
     const board = Array(64).fill('_');
-    [40, 42, 44, 46, 49, 51, 53, 55, 56, 58, 60, 62].forEach(
-        (p) => (board[p] = 'R'),
-    );
-    [1, 3, 5, 7, 8, 10, 12, 14, 17, 19, 21, 23].forEach(
-        (p) => (board[p] = 'B'),
-    );
+    [40, 42, 44, 46, 49, 51, 53, 55, 56, 58, 60, 62].forEach(p => (board[p] = 'R'));
+    [1, 3, 5, 7, 8, 10, 12, 14, 17, 19, 21, 23].forEach(p => (board[p] = 'B'));
     return board;
 }
 
@@ -35,9 +31,7 @@ describe('CheckersBoard', () => {
     it('checkers board shows valid moves on piece click', async () => {
         const user = userEvent.setup();
         const onPieceClick = vi.fn();
-        const { container } = render(
-            <CheckersBoard {...defaultProps} onPieceClick={onPieceClick} />,
-        );
+        const { container } = render(<CheckersBoard {...defaultProps} onPieceClick={onPieceClick} />);
         const interactivePieces = container.querySelectorAll('[class*="cursor-pointer"][class*="absolute"]');
         expect(interactivePieces.length).toBeGreaterThan(0);
     });

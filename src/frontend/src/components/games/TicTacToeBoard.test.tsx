@@ -16,7 +16,7 @@ describe('TicTacToeBoard', () => {
                 lastPosition={null}
                 locked={false}
                 onCellClick={onCellClick}
-            />,
+            />
         );
         const cells = screen.getAllByRole('button');
         await user.click(cells[4]);
@@ -35,7 +35,7 @@ describe('TicTacToeBoard', () => {
                 lastPosition={null}
                 locked={false}
                 onCellClick={onCellClick}
-            />,
+            />
         );
         const cells = screen.getAllByRole('button');
         await user.click(cells[4]);
@@ -51,7 +51,7 @@ describe('TicTacToeBoard', () => {
                 lastPosition={null}
                 locked={false}
                 onCellClick={() => {}}
-            />,
+            />
         );
         expect(screen.getAllByText('X')).toHaveLength(2);
         expect(screen.getAllByText('O')).toHaveLength(2);
@@ -67,7 +67,7 @@ describe('TicTacToeBoard', () => {
                 lastPosition={null}
                 locked={true}
                 onCellClick={onCellClick}
-            />,
+            />
         );
         const cells = screen.getAllByRole('button');
         await user.click(cells[0]);

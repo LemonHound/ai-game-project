@@ -12,7 +12,7 @@ describe('ErrorBoundary', () => {
         render(
             <ErrorBoundary>
                 <div>Child content</div>
-            </ErrorBoundary>,
+            </ErrorBoundary>
         );
         expect(screen.getByText('Child content')).toBeInTheDocument();
     });
@@ -22,7 +22,7 @@ describe('ErrorBoundary', () => {
         render(
             <ErrorBoundary>
                 <ThrowingComponent shouldThrow={true} />
-            </ErrorBoundary>,
+            </ErrorBoundary>
         );
         expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
         vi.restoreAllMocks();
@@ -33,7 +33,7 @@ describe('ErrorBoundary', () => {
         render(
             <ErrorBoundary>
                 <ThrowingComponent shouldThrow={true} />
-            </ErrorBoundary>,
+            </ErrorBoundary>
         );
         expect(screen.getByText(/go home/i)).toBeInTheDocument();
         vi.restoreAllMocks();

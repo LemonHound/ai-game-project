@@ -21,9 +21,7 @@ describe('Navbar', () => {
         renderWithProviders(<Navbar />, { route: '/about' });
         const aboutLinks = screen.getAllByText('About');
         expect(aboutLinks.length).toBeGreaterThanOrEqual(1);
-        const hasActiveLink = aboutLinks.some(
-            (el) => el.closest('a')?.getAttribute('href') === '/about',
-        );
+        const hasActiveLink = aboutLinks.some(el => el.closest('a')?.getAttribute('href') === '/about');
         expect(hasActiveLink).toBe(true);
     });
 });

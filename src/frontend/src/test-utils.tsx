@@ -17,10 +17,7 @@ interface WrapperOptions {
     routerProps?: Partial<MemoryRouterProps>;
 }
 
-export function renderWithProviders(
-    ui: ReactElement,
-    options?: RenderOptions & WrapperOptions,
-) {
+export function renderWithProviders(ui: ReactElement, options?: RenderOptions & WrapperOptions) {
     const { route = '/', routerProps, ...renderOptions } = options || {};
     const queryClient = createTestQueryClient();
 

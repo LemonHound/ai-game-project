@@ -21,9 +21,7 @@ describe('Connect4Board', () => {
     it('connect4 board click calls move with column', async () => {
         const user = userEvent.setup();
         const onColumnClick = vi.fn();
-        const { container } = render(
-            <Connect4Board {...defaultProps} onColumnClick={onColumnClick} />,
-        );
+        const { container } = render(<Connect4Board {...defaultProps} onColumnClick={onColumnClick} />);
         const clickableElements = container.querySelectorAll('[class*="cursor-pointer"]');
         if (clickableElements.length > 0) {
             await user.click(clickableElements[0]);
@@ -35,13 +33,7 @@ describe('Connect4Board', () => {
         const board = emptyBoard();
         for (let r = 0; r < 6; r++) board[r][3] = 'player';
         const onColumnClick = vi.fn();
-        const { container } = render(
-            <Connect4Board
-                {...defaultProps}
-                board={board}
-                onColumnClick={onColumnClick}
-            />,
-        );
+        const { container } = render(<Connect4Board {...defaultProps} board={board} onColumnClick={onColumnClick} />);
         expect(container).toBeDefined();
     });
 

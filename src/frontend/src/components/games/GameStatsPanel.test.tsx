@@ -5,14 +5,14 @@ import GameStatsPanel from './GameStatsPanel';
 
 describe('GameStatsPanel', () => {
     it('game stats panel renders zero stats', async () => {
-        renderWithProviders(<GameStatsPanel gameType="chess" />);
+        renderWithProviders(<GameStatsPanel gameType='chess' />);
         await waitFor(() => {
             expect(screen.queryByText('Your Stats')).not.toBeInTheDocument();
         });
     });
 
     it('renders stats from API', async () => {
-        renderWithProviders(<GameStatsPanel gameType="tic_tac_toe" />);
+        renderWithProviders(<GameStatsPanel gameType='tic_tac_toe' />);
         await waitFor(() => {
             expect(screen.getByText('Your Stats')).toBeInTheDocument();
         });

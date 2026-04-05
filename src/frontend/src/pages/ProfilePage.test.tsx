@@ -7,18 +7,14 @@ describe('ProfilePage', () => {
     it('renders user profile', async () => {
         renderWithProviders(<ProfilePage />);
         await waitFor(() => {
-            expect(
-                screen.queryByText('testuser') || screen.queryByText('Test User'),
-            ).toBeTruthy();
+            expect(screen.queryByText('testuser') || screen.queryByText('Test User')).toBeTruthy();
         });
     });
 
     it('renders stats display', async () => {
         renderWithProviders(<ProfilePage />);
         await waitFor(() => {
-            expect(
-                screen.queryByText('testuser') || screen.queryByText('Test User'),
-            ).toBeTruthy();
+            expect(screen.queryByText('testuser') || screen.queryByText('Test User')).toBeTruthy();
         });
     });
 });

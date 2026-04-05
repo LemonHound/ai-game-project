@@ -4,7 +4,7 @@ import { useNotificationStore } from './notifications';
 describe('notification store', () => {
     beforeEach(() => {
         const store = useNotificationStore.getState();
-        store.notifications.forEach((n) => store.dismiss(n.id));
+        store.notifications.forEach(n => store.dismiss(n.id));
     });
 
     it('notification store adds and removes', () => {
