@@ -1,0 +1,17 @@
+{
+    "empty": {
+        "board": {"board": [null, null, null, null, null, null, null, null, null], "current_turn": "player", "player_symbol": "X", "ai_symbol": "O", "player_starts": true, "status": "in_progress", "winner": null, "winning_positions": null}
+    },
+    "mid_game": {
+        "board": {"board": ["X", null, "O", null, "X", null, null, null, null], "current_turn": "player", "player_symbol": "X", "ai_symbol": "O", "player_starts": true, "status": "in_progress", "winner": null, "winning_positions": null}
+    },
+    "x_wins_diagonal": {
+        "board": {"board": ["X", "O", null, null, "X", "O", null, null, "X"], "current_turn": "ai", "player_symbol": "X", "ai_symbol": "O", "player_starts": true, "status": "complete", "winner": "X", "winning_positions": [0, 4, 8]}
+    },
+    "o_wins_row": {
+        "board": {"board": ["X", "X", null, "O", "O", "O", "X", null, null], "current_turn": "player", "player_symbol": "X", "ai_symbol": "O", "player_starts": true, "status": "complete", "winner": "O", "winning_positions": [3, 4, 5]}
+    },
+    "draw": {
+        "board": {"board": ["X", "O", "X", "X", "O", "X", "O", "X", "O"], "current_turn": "player", "player_symbol": "X", "ai_symbol": "O", "player_starts": true, "status": "complete", "winner": "draw", "winning_positions": null}
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "empty": {
+        "board": {"board": [[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,null,null,null,null]], "current_turn": "player", "game_active": true, "move_count": 0, "player_starts": true, "last_move": null}
+    },
+    "vertical_win": {
+        "board": {"board": [[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],[null,null,null,"player",null,null,null],[null,null,null,"player",null,null,null],[null,null,null,"player",null,null,null],[null,null,null,"player","ai","ai","ai"]], "current_turn": "ai", "game_active": false, "move_count": 7, "player_starts": true, "last_move": {"row": 2, "col": 3, "player": "player"}}
+    },
+    "diagonal_win": {
+        "board": {"board": [[null,null,null,null,null,null,null],[null,null,null,null,null,null,null],["player",null,null,null,null,null,null],[null,"player",null,null,null,null,null],[null,null,"player",null,null,null,null],[null,null,null,"player","ai","ai","ai"]], "current_turn": "ai", "game_active": false, "move_count": 7, "player_starts": true, "last_move": {"row": 2, "col": 0, "player": "player"}}
+    }
+}
