@@ -66,9 +66,9 @@ export default function AboutPage() {
     return (
         <div className='container mx-auto max-w-5xl px-4 py-10'>
             <PageMeta
-                title="About"
-                description="Meet the team behind AI Game Hub and see live platform stats."
-                ogImage="/images/og/og-about.png"
+                title='About'
+                description='Meet the team behind AI Game Hub and see live platform stats.'
+                ogImage='/images/og/og-about.png'
             />
             <h1 className='mb-6 text-4xl font-bold'>About AI Game Hub</h1>
 

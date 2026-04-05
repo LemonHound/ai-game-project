@@ -295,7 +295,7 @@ export default function DotsAndBoxesPage() {
     if (authLoading) {
         return (
             <div className='container mx-auto px-4 py-10 flex justify-center'>
-                <PageMeta title="Dots and Boxes" description="Compete against AI in Dots and Boxes." noindex />
+                <PageMeta title='Dots and Boxes' description='Compete against AI in Dots and Boxes.' noindex />
                 <span className='loading loading-spinner loading-lg' />
             </div>
         );
@@ -304,7 +304,7 @@ export default function DotsAndBoxesPage() {
     if (!user) {
         return (
             <div className='container mx-auto px-4 py-10'>
-                <PageMeta title="Dots and Boxes" description="Compete against AI in Dots and Boxes." noindex />
+                <PageMeta title='Dots and Boxes' description='Compete against AI in Dots and Boxes.' noindex />
                 <h1 className='mb-6 text-4xl font-bold text-center'>Dots and Boxes</h1>
                 <div className='flex justify-center'>
                     <div className='card bg-base-200 w-full max-w-sm'>
@@ -327,7 +327,7 @@ export default function DotsAndBoxesPage() {
 
     return (
         <div className='container mx-auto px-4 py-6 max-w-lg'>
-            <PageMeta title="Dots and Boxes" description="Compete against AI in Dots and Boxes." noindex />
+            <PageMeta title='Dots and Boxes' description='Compete against AI in Dots and Boxes.' noindex />
             <h1 className='mb-4 text-4xl font-bold text-center'>Dots and Boxes</h1>
 
             <PlayerCard

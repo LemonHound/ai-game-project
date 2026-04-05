@@ -15,7 +15,7 @@ export default function SettingsPage() {
 
     return (
         <div className='container mx-auto max-w-2xl px-4 py-10'>
-            <PageMeta title="Settings" noindex />
+            <PageMeta title='Settings' noindex />
             <h1 className='mb-6 text-4xl font-bold'>Settings</h1>
 
             <div className='card bg-base-200 shadow'>

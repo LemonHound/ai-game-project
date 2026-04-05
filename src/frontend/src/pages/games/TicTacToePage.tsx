@@ -256,7 +256,11 @@ export default function TicTacToePage() {
     if (authLoading) {
         return (
             <div className='container mx-auto px-4 py-10 flex justify-center'>
-                <PageMeta title="Tic Tac Toe" description="Play Tic Tac Toe against an AI that adapts to your strategy." noindex />
+                <PageMeta
+                    title='Tic Tac Toe'
+                    description='Play Tic Tac Toe against an AI that adapts to your strategy.'
+                    noindex
+                />
                 <span className='loading loading-spinner loading-lg' />
             </div>
         );
@@ -265,7 +269,11 @@ export default function TicTacToePage() {
     if (!user) {
         return (
             <div className='container mx-auto px-4 py-10'>
-                <PageMeta title="Tic Tac Toe" description="Play Tic Tac Toe against an AI that adapts to your strategy." noindex />
+                <PageMeta
+                    title='Tic Tac Toe'
+                    description='Play Tic Tac Toe against an AI that adapts to your strategy.'
+                    noindex
+                />
                 <h1 className='mb-6 text-4xl font-bold text-center'>Tic-Tac-Toe</h1>
                 <div className='flex justify-center'>
                     <div className='card bg-base-200 w-full max-w-sm'>
@@ -288,7 +296,11 @@ export default function TicTacToePage() {
 
     return (
         <div className='container mx-auto px-4 py-6 max-w-lg'>
-            <PageMeta title="Tic Tac Toe" description="Play Tic Tac Toe against an AI that adapts to your strategy." noindex />
+            <PageMeta
+                title='Tic Tac Toe'
+                description='Play Tic Tac Toe against an AI that adapts to your strategy.'
+                noindex
+            />
             <h1 className='mb-4 text-4xl font-bold text-center'>Tic-Tac-Toe</h1>
 
             <PlayerCard

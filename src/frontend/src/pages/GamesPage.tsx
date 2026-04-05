@@ -96,9 +96,9 @@ export default function GamesPage() {
     return (
         <div className='container mx-auto px-4 py-10'>
             <PageMeta
-                title="Games"
-                description="Browse all available games -- from Tic Tac Toe to Chess, each with an adaptive AI opponent."
-                ogImage="/images/og/og-games.png"
+                title='Games'
+                description='Browse all available games -- from Tic Tac Toe to Chess, each with an adaptive AI opponent.'
+                ogImage='/images/og/og-games.png'
             />
             <h1 className='mb-8 text-4xl font-bold'>Games</h1>
 

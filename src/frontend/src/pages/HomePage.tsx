@@ -15,23 +15,23 @@ export default function HomePage() {
     return (
         <>
             <PageMeta
-                title="AI Game Hub"
-                description="Play classic games against adaptive AI opponents that learn your style."
-                ogImage="/images/og/og-home.png"
+                title='AI Game Hub'
+                description='Play classic games against adaptive AI opponents that learn your style.'
+                ogImage='/images/og/og-home.png'
             />
-        <div className='hero min-h-[60vh] bg-base-200'>
-            <div className='hero-content text-center'>
-                <div className='max-w-2xl'>
-                    <h1 className='text-5xl font-bold'>AI Game Hub</h1>
-                    <p className='py-6 text-lg opacity-80'>
-                        Play classic games against adaptive AI. Every opponent learns and evolves.
-                    </p>
-                    <Link to='/games' className='btn btn-primary btn-lg'>
-                        Browse Games
-                    </Link>
+            <div className='hero min-h-[60vh] bg-base-200'>
+                <div className='hero-content text-center'>
+                    <div className='max-w-2xl'>
+                        <h1 className='text-5xl font-bold'>AI Game Hub</h1>
+                        <p className='py-6 text-lg opacity-80'>
+                            Play classic games against adaptive AI. Every opponent learns and evolves.
+                        </p>
+                        <Link to='/games' className='btn btn-primary btn-lg'>
+                            Browse Games
+                        </Link>
+                    </div>
                 </div>
             </div>
-        </div>
         </>
     );
 }
