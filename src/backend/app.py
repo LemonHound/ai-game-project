@@ -9,7 +9,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DIST_DIR = BASE_DIR / "dist"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 @asynccontextmanager
@@ -118,6 +119,31 @@ async def health_check():
         "service": "ai-game-hub",
     }
 
+
+
+INDEXABLE_PATHS = ["/", "/games", "/about"]
+
+
+@app.get("/robots.txt")
+async def robots_txt():
+    """Serve the static robots.txt file for search engine crawlers."""
+    return FileResponse(str(STATIC_DIR / "robots.txt"), media_type="text/plain")
+
+
+@app.get("/sitemap.xml")
+async def sitemap_xml():
+    """Generate and serve a sitemap.xml listing all indexable pages."""
+    base_url = os.getenv("WEBSITE_URL", "http://localhost:8000").rstrip("/")
+    urls = "\n".join(
+        f"  <url><loc>{base_url}{path}</loc></url>" for path in INDEXABLE_PATHS
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}\n"
+        "</urlset>\n"
+    )
+    return Response(content=xml, media_type="application/xml")
 
 
 # Catch-all: serve React app for all non-API routes

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import PageMeta from '../components/PageMeta';
 
 /**
  * User profile page displaying account details (display name, email, auth provider).
@@ -29,6 +30,7 @@ export default function ProfilePage() {
 
     return (
         <div className='container mx-auto max-w-2xl px-4 py-10'>
+            <PageMeta title='Profile' noindex />
             <h1 className='mb-6 text-4xl font-bold'>Profile</h1>
             <div className='card bg-base-200 shadow'>
                 <div className='card-body gap-4'>

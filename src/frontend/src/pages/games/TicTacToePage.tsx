@@ -6,6 +6,7 @@ import TicTacToeBoard from '../../components/games/TicTacToeBoard';
 import { useAuth } from '../../hooks/useAuth';
 import { tttMove, tttNewGame, tttResume, tttSubscribeSSE, type TttGameState } from '../../api/ttt';
 import { forfeitGame } from '../../api/games';
+import PageMeta from '../../components/PageMeta';
 
 const HINT_KEY = 'ttt_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -255,6 +256,11 @@ export default function TicTacToePage() {
     if (authLoading) {
         return (
             <div className='container mx-auto px-4 py-10 flex justify-center'>
+                <PageMeta
+                    title='Tic Tac Toe'
+                    description='Play Tic Tac Toe against an AI that adapts to your strategy.'
+                    noindex
+                />
                 <span className='loading loading-spinner loading-lg' />
             </div>
         );
@@ -263,6 +269,11 @@ export default function TicTacToePage() {
     if (!user) {
         return (
             <div className='container mx-auto px-4 py-10'>
+                <PageMeta
+                    title='Tic Tac Toe'
+                    description='Play Tic Tac Toe against an AI that adapts to your strategy.'
+                    noindex
+                />
                 <h1 className='mb-6 text-4xl font-bold text-center'>Tic-Tac-Toe</h1>
                 <div className='flex justify-center'>
                     <div className='card bg-base-200 w-full max-w-sm'>
@@ -285,6 +296,11 @@ export default function TicTacToePage() {
 
     return (
         <div className='container mx-auto px-4 py-6 max-w-lg'>
+            <PageMeta
+                title='Tic Tac Toe'
+                description='Play Tic Tac Toe against an AI that adapts to your strategy.'
+                noindex
+            />
             <h1 className='mb-4 text-4xl font-bold text-center'>Tic-Tac-Toe</h1>
 
             <PlayerCard
