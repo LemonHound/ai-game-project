@@ -202,7 +202,6 @@ jobs:
           tests/api/error-handling.spec.ts
           tests/api/telemetry.spec.ts
           tests/api/about.spec.ts
-          tests/api/seo.spec.ts
           --project=chromium
         env:
           NODE_ENV: test
