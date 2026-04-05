@@ -1,3 +1,4 @@
+/** Props for the PageMeta head-management component. */
 interface PageMetaProps {
     title: string;
     description?: string;
@@ -7,6 +8,7 @@ interface PageMetaProps {
 
 const SITE_NAME = 'AI Game Hub';
 
+/** Renders document head tags (title, meta, OG) using React 19 native hoisting. */
 export default function PageMeta({ title, description, ogImage, noindex }: PageMetaProps) {
     const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
 
