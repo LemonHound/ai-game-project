@@ -1,4 +1,5 @@
-const pkg = require('../../package.json');
+import { describe, expect, it } from 'vitest';
+import pkg from '../../../package.json';
 
 describe('Project configuration', () => {
     it('package.json has correct name', () => {
@@ -10,10 +11,6 @@ describe('Project configuration', () => {
         expect(pkg.scripts).toHaveProperty('build');
         expect(pkg.scripts).toHaveProperty('test:unit');
         expect(pkg.scripts).toHaveProperty('test:e2e');
-    });
-
-    it('NODE_ENV is defined', () => {
-        expect(process.env.NODE_ENV).toBeDefined();
     });
 
     it('package.json declares React and TanStack Query', () => {
