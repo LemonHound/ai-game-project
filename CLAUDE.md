@@ -75,13 +75,13 @@ Transitive dependencies (e.g. `pydantic-core`) are resolved automatically by pip
 
 ## Test Tiers
 
-| Tier | Runner | Location | Requires DB |
-|------|--------|----------|-------------|
-| Unit (Python) | pytest | `tests/unit/` | No |
-| Unit (Frontend) | Vitest | `src/frontend/src/**/*.test.{ts,tsx}` | No |
-| Integration | pytest | `tests/integration/` | Yes (PG on port 5433) |
-| API | pytest + FastAPI TestClient | `tests/api_tests/` | Yes (PG on port 5433) |
-| E2E | Playwright | `tests/e2e/`, `tests/smoke/`, `tests/api/` | Yes (PG on port 5432, server running) |
+| Tier            | Runner                      | Location                                   | Requires DB                           |
+| --------------- | --------------------------- | ------------------------------------------ | ------------------------------------- |
+| Unit (Python)   | pytest                      | `tests/unit/`                              | No                                    |
+| Unit (Frontend) | Vitest                      | `src/frontend/src/**/*.test.{ts,tsx}`      | No                                    |
+| Integration     | pytest                      | `tests/integration/`                       | Yes (PG on port 5433)                 |
+| API             | pytest + FastAPI TestClient | `tests/api_tests/`                         | Yes (PG on port 5433)                 |
+| E2E             | Playwright                  | `tests/e2e/`, `tests/smoke/`, `tests/api/` | Yes (PG on port 5432, server running) |
 
 ## Running Tests Locally
 
