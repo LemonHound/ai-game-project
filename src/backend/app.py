@@ -126,11 +126,13 @@ INDEXABLE_PATHS = ["/", "/games", "/about"]
 
 @app.get("/robots.txt")
 async def robots_txt():
+    """Serve the static robots.txt file for search engine crawlers."""
     return FileResponse(str(STATIC_DIR / "robots.txt"), media_type="text/plain")
 
 
 @app.get("/sitemap.xml")
 async def sitemap_xml():
+    """Generate and serve a sitemap.xml listing all indexable pages."""
     base_url = os.getenv("WEBSITE_URL", "http://localhost:8000").rstrip("/")
     urls = "\n".join(
         f"  <url><loc>{base_url}{path}</loc></url>" for path in INDEXABLE_PATHS
