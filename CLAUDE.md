@@ -25,7 +25,7 @@
 - Frontend: React 18 + TypeScript, Vite, React Router v6, TanStack Query, Zustand, Tailwind CSS + DaisyUI
 - Observability: OpenTelemetry — auto-instrumented FastAPI + psycopg2; GCP Cloud Trace + Cloud Monitoring in prod,
   console exporter locally
-- Testing: Jest (unit), Playwright (E2E / API / smoke)
+- Testing: Vitest (frontend unit), pytest (backend unit + integration + API), Playwright (E2E / smoke)
 - CI/CD: GitHub Actions (CI tests) + GCP Cloud Build (build & deploy) → GCP Cloud Run (see Branch Hygiene)
 - Secrets: GCP Secret Manager (never use .env in production)
 - Logs: GCP Cloud Logging (stdout from Cloud Run, never use print())
@@ -68,8 +68,72 @@ To add or remove a Python dependency:
 3. Commit both files together
 
 Transitive dependencies (e.g. `pydantic-core`) are resolved automatically by pip-compile and must never be added to
-`requirements.in` or edited in `requirements.txt` directly. Dependabot only updates `requirements.in`; the
-`pip-compile.yml` workflow regenerates `requirements.txt` automatically on Dependabot branches.
+`requirements.in` or edited in `requirements.txt` directly. Renovate handles pip-compile natively: it edits
+`requirements.in` and regenerates `requirements.txt` in the same PR.
+
+# Testing
+
+## Test Tiers
+
+| Tier | Runner | Location | Requires DB |
+|------|--------|----------|-------------|
+| Unit (Python) | pytest | `tests/unit/` | No |
+| Unit (Frontend) | Vitest | `src/frontend/src/**/*.test.{ts,tsx}` | No |
+| Integration | pytest | `tests/integration/` | Yes (PG on port 5433) |
+| API | pytest + FastAPI TestClient | `tests/api_tests/` | Yes (PG on port 5433) |
+| E2E | Playwright | `tests/e2e/`, `tests/smoke/`, `tests/api/` | Yes (PG on port 5432, server running) |
+
+## Running Tests Locally
+
+```bash
+# Unit tests only (fast, no Docker)
+npm run test:fast
+
+# Full suite with Docker PG
+docker compose -f docker-compose.test.yml up -d
+python -m pytest tests/ -x --tb=short
+npx vitest run
+docker compose -f docker-compose.test.yml down
+
+# E2E (requires built frontend + running server)
+npm run build
+npx playwright test --project=chromium
+```
+
+## Test Coverage Rules
+
+These rules ensure test coverage is maintained and never reduced as a side effect of fixing issues.
+
+1. **Never delete or weaken a test to fix a failure.** If a test fails, the fix must be in the code under test or in
+   test data/fixtures -- not in removing assertions or reducing the test scope. The only exception is if the test itself
+   is asserting incorrect behavior (e.g., testing a bug as if it were a feature).
+
+2. **Every new endpoint, component, or game engine method must have corresponding tests** at the appropriate tier.
+   Backend logic gets pytest unit tests. Frontend components get Vitest tests. API routes get TestClient tests.
+
+3. **Test correctness means exact values.** Assert specific cell contents, exact counts, precise field values -- not
+   just "no error" or type checks. See `features/test-coverage-overhaul/spec.md` for the data correctness principle.
+
+4. **New features must include a Test Cases section in their spec.** Each test case lists the tier, test name, and
+   scenario. The feature is not complete until all automated test cases pass in CI.
+
+5. **When modifying existing code, run the relevant test tier before pushing.** If you change game engine logic, run
+   `python -m pytest tests/unit/ -x`. If you change a component, run `npx vitest run`. If you change API routes, start
+   the test DB and run `python -m pytest tests/api_tests/ -x`.
+
+6. **If a test must be removed**, document the reason in the commit message and ensure the behavior it covered is either
+   no longer relevant (feature removed) or covered by a different test.
+
+## Deterministic AI for Testing
+
+When `ENVIRONMENT=test`, game route handlers accept an `X-AI-Moves` header (comma-separated move list). This creates a
+`DeterministicAIStrategy` that plays predetermined moves instead of the real AI, enabling reproducible game flow tests.
+The header is ignored in `development` and `production` environments.
+
+## Pre-Push Hook
+
+Husky runs `npm run test:fast` on every `git push` (Vitest + pytest unit + lint + format check). Bypass with
+`--no-verify` if needed, but CI is the hard gate.
 
 # General Instructions
 

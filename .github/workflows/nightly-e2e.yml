@@ -1,0 +1,71 @@
+name: Nightly Cross-Browser E2E
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_ai_game_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: npm ci
+      - run: pip install -r requirements.txt
+      - run: npm run build
+      - name: Setup test environment
+        run: |
+          cat > .env <<EOF
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=test_ai_game_db
+          DB_USER=testuser
+          DB_PASSWORD=testpassword
+          NODE_ENV=test
+          ENVIRONMENT=test
+          PORT=8000
+          WEBSITE_URL=http://localhost:8000
+          EOF
+          python -m alembic upgrade head
+          python scripts/seed_test_data.py
+        env:
+          PYTHONPATH: src/backend
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          NODE_ENV: test
+          CI: true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: nightly-e2e-${{ matrix.browser }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
