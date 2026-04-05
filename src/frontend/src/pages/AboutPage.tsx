@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { fetchAboutStats } from '../api/about';
 import { useCountUp } from '../hooks/useCountUp';
+import PageMeta from '../components/PageMeta';
 
 const DONATE_URLS = {
     buyMeACoffee: 'https://buymeacoffee.com/',
@@ -64,6 +65,11 @@ export default function AboutPage() {
 
     return (
         <div className='container mx-auto max-w-5xl px-4 py-10'>
+            <PageMeta
+                title="About"
+                description="Meet the team behind AI Game Hub and see live platform stats."
+                ogImage="/images/og/og-about.png"
+            />
             <h1 className='mb-6 text-4xl font-bold'>About AI Game Hub</h1>
 
             <p className='mb-10 max-w-3xl text-lg leading-relaxed opacity-90'>

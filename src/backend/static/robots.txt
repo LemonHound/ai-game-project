@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /profile
+Disallow: /settings
+Disallow: /game/
+
+Sitemap: https://aigamehub.com/sitemap.xml

@@ -15,6 +15,7 @@ import {
     type ChessMoveData,
 } from '../../api/chess';
 import { forfeitGame } from '../../api/games';
+import PageMeta from '../../components/PageMeta';
 
 const HINT_KEY = 'chess_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -490,6 +491,7 @@ export default function ChessPage() {
     if (authLoading) {
         return (
             <div className='container mx-auto px-4 py-10 flex justify-center'>
+                <PageMeta title="Chess" description="Challenge an adaptive AI in a game of Chess." noindex />
                 <span className='loading loading-spinner loading-lg' />
             </div>
         );
@@ -498,6 +500,7 @@ export default function ChessPage() {
     if (!user) {
         return (
             <div className='container mx-auto px-4 py-10'>
+                <PageMeta title="Chess" description="Challenge an adaptive AI in a game of Chess." noindex />
                 <h1 className='mb-6 text-4xl font-bold text-center'>Chess</h1>
                 <div className='flex justify-center'>
                     <div className='card bg-base-200 w-full max-w-sm'>
@@ -520,6 +523,7 @@ export default function ChessPage() {
 
     return (
         <div className='container mx-auto px-4 py-4 max-w-4xl'>
+            <PageMeta title="Chess" description="Challenge an adaptive AI in a game of Chess." noindex />
             <h1 className='mb-3 text-3xl font-bold text-center'>Chess</h1>
 
             <div className='flex gap-4 items-stretch'>

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { fetchGames } from '../api/games';
+import PageMeta from '../components/PageMeta';
 
 /**
  * Home page with a hero section linking to the games listing.
@@ -12,6 +13,12 @@ export default function HomePage() {
     });
 
     return (
+        <>
+            <PageMeta
+                title="AI Game Hub"
+                description="Play classic games against adaptive AI opponents that learn your style."
+                ogImage="/images/og/og-home.png"
+            />
         <div className='hero min-h-[60vh] bg-base-200'>
             <div className='hero-content text-center'>
                 <div className='max-w-2xl'>
@@ -25,5 +32,6 @@ export default function HomePage() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

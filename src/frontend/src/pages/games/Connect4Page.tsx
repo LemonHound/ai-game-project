@@ -7,6 +7,7 @@ import Connect4Board from '../../components/games/Connect4Board';
 import { useAuth } from '../../hooks/useAuth';
 import { c4Move, c4NewGame, c4Resume, c4SubscribeSSE, type C4GameState } from '../../api/connect4';
 import { forfeitGame } from '../../api/games';
+import PageMeta from '../../components/PageMeta';
 
 const HINT_KEY = 'c4_game_hint';
 const HINT_TTL_MS = 10 * 60 * 1000;
@@ -276,6 +277,7 @@ export default function Connect4Page() {
     if (authLoading) {
         return (
             <div className='container mx-auto px-4 py-10 flex justify-center'>
+                <PageMeta title="Connect 4" description="Drop pieces and outsmart the AI in Connect 4." noindex />
                 <span className='loading loading-spinner loading-lg' />
             </div>
         );
@@ -284,6 +286,7 @@ export default function Connect4Page() {
     if (!user) {
         return (
             <div className='container mx-auto px-4 py-10'>
+                <PageMeta title="Connect 4" description="Drop pieces and outsmart the AI in Connect 4." noindex />
                 <h1 className='mb-6 text-4xl font-bold text-center'>Connect 4</h1>
                 <div className='flex justify-center'>
                     <div className='card bg-base-200 w-full max-w-sm'>
@@ -306,6 +309,7 @@ export default function Connect4Page() {
 
     return (
         <div className='container mx-auto px-4 py-6 max-w-lg'>
+            <PageMeta title="Connect 4" description="Drop pieces and outsmart the AI in Connect 4." noindex />
             <h1 className='mb-4 text-4xl font-bold text-center'>Connect 4</h1>
 
             <PlayerCard
