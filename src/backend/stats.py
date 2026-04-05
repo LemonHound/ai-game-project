@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import and_, case, extract, func, select, text
+from sqlalchemy import and_, case, column, extract, func, select, table, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth_deps import optional_user, require_user
@@ -15,6 +15,13 @@ from db_models import GAME_TYPE_TO_MODEL
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_users = table(
+    "users",
+    column("id"),
+    column("display_name"),
+    column("stats_public"),
+)
 
 _CACHE_TTL = 60
 _stats_cache: dict[int, dict] = {}
@@ -301,13 +308,13 @@ async def _leaderboard_games_played(
         .subquery()
     )
 
+    public_filter = subq.c.user_id.in_(
+        select(_users.c.id).where(_users.c.stats_public == True)  # noqa: E712
+    )
+
     total_q = await db.execute(
         select(func.count()).select_from(subq).where(
-            subq.c.user_id.in_(
-                select(text("id")).select_from(text("users")).where(
-                    text("stats_public = true")
-                )
-            ),
+            public_filter,
             subq.c.value > 0,
         )
     )
@@ -319,11 +326,11 @@ async def _leaderboard_games_played(
             select(
                 subq.c.user_id,
                 subq.c.value,
-                text("users.display_name"),
+                _users.c.display_name,
             )
             .select_from(subq)
-            .join(text("users"), subq.c.user_id == text("users.id"))
-            .where(text("users.stats_public = true"), subq.c.value > 0)
+            .join(_users, subq.c.user_id == _users.c.id)
+            .where(_users.c.stats_public == True, subq.c.value > 0)  # noqa: E712
             .order_by(subq.c.value.desc(), subq.c.user_id.asc())
             .offset(offset)
             .limit(per_page)
@@ -361,9 +368,7 @@ async def _leaderboard_streak(
     old_abandoned = _is_old_abandoned(model.game_abandoned, model.last_move_at)
 
     user_ids_result = await db.execute(
-        select(text("id")).select_from(text("users")).where(
-            text("stats_public = true")
-        )
+        select(_users.c.id).where(_users.c.stats_public == True)  # noqa: E712
     )
     public_user_ids = [r[0] for r in user_ids_result.all()]
 
@@ -393,12 +398,11 @@ async def _leaderboard_streak(
     display_names = {}
     if page_slice:
         slice_ids = [s[0] for s in page_slice]
-        placeholders = ", ".join(f":id_{i}" for i in range(len(slice_ids)))
-        params = {f"id_{i}": uid for i, uid in enumerate(slice_ids)}
         name_rows = (
             await db.execute(
-                text(f"SELECT id, display_name FROM users WHERE id IN ({placeholders})"),
-                params,
+                select(_users.c.id, _users.c.display_name).where(
+                    _users.c.id.in_(slice_ids)
+                )
             )
         ).all()
         display_names = {r.id: r.display_name for r in name_rows}
