@@ -46,3 +46,29 @@ def test_deterministic_ai_empty_list_raises():
     strategy = DeterministicAIStrategy([])
     with pytest.raises(ValueError, match="exhausted"):
         strategy.generate_move({})
+
+
+def test_deterministic_ai_ignored_in_production():
+    import games
+
+    class FakeStrategy:
+        def generate_move(self, state):
+            return "real_move", 1.0
+
+    default = FakeStrategy()
+    with patch.object(games, "_is_test_env", False):
+        result = games._resolve_strategy(default, {"x-ai-moves": "0,1,2"})
+    assert result is default
+
+
+def test_deterministic_ai_ignored_in_development():
+    import games
+
+    class FakeStrategy:
+        def generate_move(self, state):
+            return "real_move", 1.0
+
+    default = FakeStrategy()
+    with patch.object(games, "_is_test_env", False):
+        result = games._resolve_strategy(default, {"x-ai-moves": "5,6,7"})
+    assert result is default
