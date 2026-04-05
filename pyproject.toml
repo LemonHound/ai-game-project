@@ -1,0 +1,1 @@
+# pytest configuration is in pytest.ini (takes precedence over pyproject.toml)

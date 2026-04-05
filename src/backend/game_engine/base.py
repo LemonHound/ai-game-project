@@ -1,6 +1,7 @@
 """Abstract base classes and shared streaming infrastructure for all game engines."""
 import asyncio
 import logging
+import os
 import random
 import time
 from abc import ABC, abstractmethod
@@ -110,6 +111,21 @@ class AIStrategy(ABC):
         ...
 
 
+class DeterministicAIStrategy(AIStrategy):
+    """Test-only AI that plays predetermined moves in order."""
+
+    def __init__(self, moves: list[str]):
+        self._moves = list(moves)
+        self._index = 0
+
+    def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
+        if self._index >= len(self._moves):
+            raise ValueError("DeterministicAIStrategy exhausted its move list")
+        move = self._moves[self._index]
+        self._index += 1
+        return move, None
+
+
 class MoveProcessor:
     """Validates and applies player and AI moves using a GameEngine and AIStrategy."""
 
@@ -210,10 +226,13 @@ class StatusBroadcaster:
     - First status held ~0.5s to prevent flash on near-instant AI responses
     - Heartbeat every 30s
     - Terminal event closes the stream
+
+    When ENVIRONMENT=test, intervals are reduced to ~50ms so E2E tests
+    complete in under 2 seconds while still exercising the full SSE pipeline.
     """
 
-    MIN_INTERVAL = 2.5
-    INITIAL_HOLD = 0.5
+    MIN_INTERVAL = 0.05 if os.getenv("ENVIRONMENT") == "test" else 2.5
+    INITIAL_HOLD = 0.05 if os.getenv("ENVIRONMENT") == "test" else 0.5
     HEARTBEAT_INTERVAL = 30.0
 
     def __init__(self) -> None:

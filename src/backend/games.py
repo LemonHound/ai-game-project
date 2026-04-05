@@ -18,7 +18,7 @@ import persistence_service
 from auth_service import AuthService
 from db import db_dependency, get_session
 from db_models import GAME_ID_TO_TYPE
-from game_engine.base import MoveProcessor, StatusBroadcaster, StatusEvent
+from game_engine.base import DeterministicAIStrategy, MoveProcessor, StatusBroadcaster, StatusEvent
 from game_engine.checkers_engine import CheckersAIStrategy, CheckersEngine
 from game_engine.chess_engine import ChessAIStrategy, ChessEngine
 from game_engine.connect4_engine import Connect4AIStrategy, Connect4Engine
@@ -72,6 +72,22 @@ _chess_engine = ChessEngine()
 _chess_strategy = ChessAIStrategy()
 _chess_processor = MoveProcessor()
 _chess_move_queues: dict[UUID, asyncio.Queue] = {}
+
+
+_is_test_env = os.getenv("ENVIRONMENT") == "test"
+_TEST_DELAY = 0.05
+
+
+def _delay(seconds: float) -> float:
+    return _TEST_DELAY if _is_test_env else seconds
+
+
+def _resolve_strategy(default_strategy, request_headers):
+    if _is_test_env:
+        ai_moves = request_headers.get("x-ai-moves")
+        if ai_moves:
+            return DeterministicAIStrategy(ai_moves.split(","))
+    return default_strategy
 
 
 from auth_deps import require_user as _require_user
@@ -712,7 +728,7 @@ async def checkers_events(
     async def _checkers_run_ai_turn(state: dict) -> tuple[dict, bool]:
         """Process AI's turn with timing delay. Returns (new_state, terminal)."""
         output_q.put_nowait('data: {"type": "status", "message": "Thinking..."}\n\n')
-        await asyncio.sleep(2.5)
+        await asyncio.sleep(_delay(2.5))
 
         with tracer.start_as_current_span("game.ai.move") as ai_span:
             ai_span.set_attribute("game.id", session_id)
@@ -745,7 +761,7 @@ async def checkers_events(
                 if state.get("must_capture") is None:
                     break
 
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(_delay(0.5))
 
             compute_ms = (time.monotonic() - t0) * 1000
             ai_span.set_attribute("compute_duration_ms", compute_ms)
@@ -1003,7 +1019,7 @@ async def dab_events(
                     continue
 
                 output_q.put_nowait('data: {"type": "status", "message": "Thinking..."}\n\n')
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(_delay(0.5))
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
                     ai_span.set_attribute("game.id", session_id)
@@ -1028,7 +1044,7 @@ async def dab_events(
                         state = ai_state
 
                         if state["current_turn"] == "ai":
-                            await asyncio.sleep(0.5)
+                            await asyncio.sleep(_delay(0.5))
 
                     compute_ms = (time.monotonic() - t0) * 1000
                     ai_span.set_attribute("compute_duration_ms", compute_ms)
