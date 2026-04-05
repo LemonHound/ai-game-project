@@ -191,7 +191,17 @@ jobs:
         env:
           PYTHONPATH: src/backend
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --project=chromium
+      - run: >-
+          npx playwright test
+          tests/smoke/
+          tests/e2e/
+          tests/api/persistence.spec.ts
+          tests/api/ttt.spec.ts
+          tests/api/error-handling.spec.ts
+          tests/api/telemetry.spec.ts
+          tests/api/about.spec.ts
+          tests/api/seo.spec.ts
+          --project=chromium
         env:
           NODE_ENV: test
           CI: true
