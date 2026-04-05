@@ -8,7 +8,7 @@ import time
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from opentelemetry import metrics, trace
 from sqlalchemy import text
@@ -143,6 +143,7 @@ async def ttt_resume(
 @router.post("/game/tic-tac-toe/newgame")
 async def ttt_newgame(
     request: TttNewGameRequest,
+    raw_request: Request,
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
@@ -167,8 +168,9 @@ async def ttt_newgame(
     span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
+        strategy = _resolve_strategy(_ttt_strategy, raw_request.headers)
         ai_state, engine_eval = _ttt_processor.process_ai_turn(
-            _ttt_engine, _ttt_strategy, state
+            _ttt_engine, strategy, state
         )
         ai_position = next(
             (i for i in range(9) if ai_state["board"][i] != state["board"][i]), None
@@ -389,6 +391,7 @@ async def c4_resume(
 @router.post("/game/connect4/newgame")
 async def c4_newgame(
     request: C4NewGameRequest,
+    raw_request: Request,
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
@@ -412,8 +415,9 @@ async def c4_newgame(
     span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
+        strategy = _resolve_strategy(_c4_strategy, raw_request.headers)
         ai_state, engine_eval = _c4_processor.process_ai_turn(
-            _c4_engine, _c4_strategy, state
+            _c4_engine, strategy, state
         )
         is_terminal, outcome = _c4_engine.is_terminal(ai_state)
         ai_state = {**ai_state, "game_active": not is_terminal}
@@ -892,6 +896,7 @@ async def dab_resume(
 @router.post("/game/dots-and-boxes/newgame")
 async def dab_newgame(
     request: DaBNewGameRequest,
+    raw_request: Request,
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
@@ -915,7 +920,8 @@ async def dab_newgame(
     span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
-        ai_move, _ = _dab_strategy.generate_move(state)
+        dab_strat = _resolve_strategy(_dab_strategy, raw_request.headers)
+        ai_move, _ = dab_strat.generate_move(state)
         state = _dab_engine.apply_move(state, ai_move)
         notation = f"{str(ai_move.get('type', ''))[:1]}:{ai_move.get('row', '')},{ai_move.get('col', '')}"
         await persistence_service.record_move(db, game.id, "dots_and_boxes", notation, state)
@@ -1158,6 +1164,7 @@ async def chess_resume(
 @router.post("/game/chess/newgame")
 async def chess_newgame(
     request: ChessNewGameRequest,
+    raw_request: Request,
     user: dict = Depends(_require_user),
     db: AsyncSession = Depends(db_dependency),
 ):
@@ -1182,7 +1189,8 @@ async def chess_newgame(
     span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
-        ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, _chess_strategy, state)
+        strategy = _resolve_strategy(_chess_strategy, raw_request.headers)
+        ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, strategy, state)
         lm = ai_state.get("last_move") or {}
         await persistence_service.record_move(
             db, game.id, "chess", _chess_uci(lm), ai_state, lm.get("notation", "")
