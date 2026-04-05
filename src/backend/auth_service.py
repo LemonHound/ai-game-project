@@ -154,7 +154,7 @@ class AuthService:
                 text("""
                     SELECT u.id, u.username, u.email, u.display_name,
                            u.profile_picture, u.auth_provider, u.email_verified,
-                           u.last_login, u.password_hash
+                           u.last_login, u.password_hash, u.stats_public
                     FROM users u
                     JOIN user_sessions s ON u.id = s.user_id
                     WHERE s.session_id = :session_id AND s.expires_at > NOW()

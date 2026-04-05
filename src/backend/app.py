@@ -17,6 +17,7 @@ from about import router as about_router
 from auth import router as auth_router
 from db import init_db, close_db
 from games import router as games_router
+from stats import router as stats_router
 from telemetry import setup_telemetry
 
 load_dotenv()
@@ -84,6 +85,7 @@ if (DIST_DIR / "images").exists():
 app.include_router(about_router, prefix="/api/about", tags=["About"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(games_router, prefix="/api", tags=["Games"])
+app.include_router(stats_router, prefix="/api", tags=["Stats"])
 
 
 @app.exception_handler(HTTPException)
@@ -121,7 +123,7 @@ async def health_check():
 
 
 
-INDEXABLE_PATHS = ["/", "/games", "/about"]
+INDEXABLE_PATHS = ["/", "/games", "/about", "/leaderboard"]
 
 
 @app.get("/robots.txt")

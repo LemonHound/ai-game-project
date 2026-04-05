@@ -1,0 +1,49 @@
+import { useQuery } from '@tanstack/react-query';
+import { fetchMyStats } from '../../api/stats';
+import type { GameStats } from '../../types';
+
+const STATS_QUERY_KEY = ['myStats'] as const;
+
+function StatItem({ label, value }: { label: string; value: string | number }) {
+    return (
+        <div className='text-center'>
+            <p className='text-lg font-bold'>{value}</p>
+            <p className='text-xs opacity-60'>{label}</p>
+        </div>
+    );
+}
+
+export default function GameStatsPanel({ gameType }: { gameType: string }) {
+    const { data, isLoading } = useQuery({
+        queryKey: STATS_QUERY_KEY,
+        queryFn: fetchMyStats,
+        staleTime: 60_000,
+    });
+
+    if (isLoading) {
+        return (
+            <div className='mt-4 flex justify-center'>
+                <span className='loading loading-dots loading-sm' />
+            </div>
+        );
+    }
+
+    const stats: GameStats | undefined = data?.per_game[gameType];
+    if (!stats || stats.games_played === 0) return null;
+
+    const winRatePercent = `${Math.round(stats.win_rate * 100)}%`;
+
+    return (
+        <div className='card bg-base-200 mt-4'>
+            <div className='card-body p-4'>
+                <h3 className='text-sm font-semibold opacity-70'>Your Stats</h3>
+                <div className='grid grid-cols-4 gap-2'>
+                    <StatItem label='Played' value={stats.games_played} />
+                    <StatItem label='Win Rate' value={winRatePercent} />
+                    <StatItem label='Best Streak' value={stats.best_streak} />
+                    <StatItem label='Current' value={stats.current_streak} />
+                </div>
+            </div>
+        </div>
+    );
+}
