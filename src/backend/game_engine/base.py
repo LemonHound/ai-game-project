@@ -112,13 +112,33 @@ class AIStrategy(ABC):
 
 
 class DeterministicAIStrategy(AIStrategy):
-    """Test-only AI that plays predetermined moves in order."""
+    """Test-only AI that plays predetermined moves in order.
+
+    Used when ENVIRONMENT=test and the request includes an X-AI-Moves header.
+    Each instance is created per-request so parallel tests with different move
+    lists never collide.
+    """
 
     def __init__(self, moves: list[str]):
+        """Initialize with a list of moves to play in order.
+
+        Args:
+            moves: Ordered list of move strings. Each call to generate_move
+                consumes the next element.
+        """
         self._moves = list(moves)
         self._index = 0
 
     def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
+        """Return the next predetermined move.
+
+        Args:
+            state: Current game state (ignored -- moves are predetermined).
+
+        Returns:
+            Tuple of (move_string, None). Raises ValueError if the move list
+            has been fully consumed.
+        """
         if self._index >= len(self._moves):
             raise ValueError("DeterministicAIStrategy exhausted its move list")
         move = self._moves[self._index]
