@@ -1,12 +1,8 @@
-import sys
-import os
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src/backend"))
 
 
 def _make_app():

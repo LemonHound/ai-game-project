@@ -1,9 +1,4 @@
-import sys
-import os
-
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src/backend"))
 
 from game_engine.base import MoveProcessor, StatusBroadcaster, StatusEvent
 from game_engine.ttt_engine import TicTacToeAIStrategy, TicTacToeEngine, WINNING_LINES
@@ -207,6 +202,45 @@ async def test_status_broadcaster_emits_heartbeat():
 # ---------------------------------------------------------------------------
 # engine_eval normalization
 # ---------------------------------------------------------------------------
+
+
+def test_ttt_initial_state_is_empty_3x3(engine):
+    state = engine.initial_state(player_starts=True)
+    assert len(state["board"]) == 9
+    assert all(cell is None for cell in state["board"])
+    assert state["current_turn"] == "player"
+    assert state["player_symbol"] == "X"
+    assert state["ai_symbol"] == "O"
+    assert state["status"] == "in_progress"
+
+
+def test_ttt_initial_state_ai_first(engine):
+    state = engine.initial_state(player_starts=False)
+    assert state["current_turn"] == "ai"
+    assert state["player_symbol"] == "O"
+    assert state["ai_symbol"] == "X"
+
+
+def test_ttt_apply_move_sets_correct_cell(engine, fresh_state):
+    new_state = engine.apply_move(fresh_state, 4)
+    assert new_state["board"][4] == "X"
+    assert sum(cell is not None for cell in new_state["board"]) == 1
+
+
+def test_ttt_is_terminal_detects_row_win(engine, fresh_state):
+    board = ["X", "X", "X", None, "O", "O", None, None, None]
+    state = {**fresh_state, "board": board}
+    is_term, outcome = engine.is_terminal(state)
+    assert is_term is True
+    assert outcome == "X"
+
+
+def test_ttt_ai_returns_legal_move(engine, fresh_state):
+    strategy = TicTacToeAIStrategy()
+    ai_state = {**fresh_state, "current_turn": "ai"}
+    move, _ = strategy.generate_move(ai_state)
+    legal = engine.get_legal_moves(ai_state)
+    assert move in legal
 
 
 def test_engine_eval_normalization():

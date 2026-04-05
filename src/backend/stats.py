@@ -1,5 +1,6 @@
 """Stats and leaderboard endpoints."""
 import logging
+import os
 import time
 from datetime import datetime, timezone
 from typing import Optional
@@ -26,6 +27,14 @@ _users = table(
 _CACHE_TTL = 60
 _stats_cache: dict[int, dict] = {}
 _leaderboard_cache: dict[tuple, dict] = {}
+
+
+def clear_caches():
+    """Reset stats and leaderboard caches. Only callable when ENVIRONMENT=test."""
+    if os.getenv("ENVIRONMENT") != "test":
+        raise RuntimeError("clear_caches is only available in test environment")
+    _stats_cache.clear()
+    _leaderboard_cache.clear()
 
 EMPTY_GAME_STATS = {
     "games_played": 0,

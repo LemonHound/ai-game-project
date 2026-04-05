@@ -1,12 +1,8 @@
-import sys
-import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src/backend"))
 
 import persistence_service
 from db_models import ChessGame, TicTacToeGame
