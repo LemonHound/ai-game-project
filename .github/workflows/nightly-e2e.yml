@@ -41,17 +41,17 @@ jobs:
       - run: npm run build
       - name: Setup test environment
         run: |
-          cat > .env <<EOF
+          cat > .env <<'DOTENV'
           DB_HOST=localhost
           DB_PORT=5432
           DB_NAME=test_ai_game_db
           DB_USER=testuser
           DB_PASSWORD=testpassword
           NODE_ENV=test
-          ENVIRONMENT=test
           PORT=8000
           WEBSITE_URL=http://localhost:8000
-          EOF
+          DOTENV
+          sed -i 's/^ *//' .env
           python -m alembic upgrade head
           python scripts/seed_test_data.py
         env:
