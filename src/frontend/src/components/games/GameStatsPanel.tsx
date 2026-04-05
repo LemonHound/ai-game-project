@@ -13,6 +13,9 @@ function StatItem({ label, value }: { label: string; value: string | number }) {
     );
 }
 
+/**
+ * Displays the authenticated user's stats for a single game type (played, win rate, streaks).
+ */
 export default function GameStatsPanel({ gameType }: { gameType: string }) {
     const { data, isLoading } = useQuery({
         queryKey: STATS_QUERY_KEY,

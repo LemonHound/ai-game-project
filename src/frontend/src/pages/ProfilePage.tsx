@@ -36,6 +36,9 @@ function GameStatCard({ label, stats }: { label: string; stats: GameStats }) {
     );
 }
 
+/**
+ * User profile page displaying account details and per-game statistics.
+ */
 export default function ProfilePage() {
     const { user, isLoading } = useAuth();
 

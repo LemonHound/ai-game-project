@@ -7,6 +7,9 @@ import PageMeta from '../components/PageMeta';
 
 const THEMES = ['dark', 'light', 'cupcake', 'cyberpunk', 'synthwave'];
 
+/**
+ * Settings page with theme selection and stats privacy toggle.
+ */
 export default function SettingsPage() {
     const { user } = useAuth();
     const [statsPublic, setStatsPublic] = useState(user?.statsPublic ?? false);

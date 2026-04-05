@@ -17,6 +17,9 @@ const GAME_TYPES = [
     { key: 'dots_and_boxes', label: 'Dots & Boxes' },
 ] as const;
 
+/**
+ * Per-game leaderboard page with board type tabs and game type selector.
+ */
 export default function LeaderboardPage() {
     const [boardType, setBoardType] = useState('games_played');
     const [gameType, setGameType] = useState('tic_tac_toe');
