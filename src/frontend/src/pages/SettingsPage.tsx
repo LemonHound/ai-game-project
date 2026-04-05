@@ -1,16 +1,34 @@
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { updateStatsPublic } from '../api/stats';
 import { useAuth } from '../hooks/useAuth';
+import { queryClient } from '../queryClient';
 import PageMeta from '../components/PageMeta';
 
 const THEMES = ['dark', 'light', 'cupcake', 'cyberpunk', 'synthwave'];
 
 /**
- * Renders the Settings page with theme selection and account info.
+ * Settings page with theme selection and stats privacy toggle.
  */
 export default function SettingsPage() {
     const { user } = useAuth();
+    const [statsPublic, setStatsPublic] = useState(user?.statsPublic ?? false);
+
+    const mutation = useMutation({
+        mutationFn: (value: boolean) => updateStatsPublic(value),
+        onSuccess: (_data, value) => {
+            setStatsPublic(value);
+            queryClient.setQueryData(['user'], (old: typeof user) => (old ? { ...old, statsPublic: value } : old));
+        },
+    });
 
     function setTheme(theme: string) {
         document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    function handleStatsToggle() {
+        const next = !statsPublic;
+        mutation.mutate(next);
     }
 
     return (
@@ -40,6 +58,23 @@ export default function SettingsPage() {
                             <div>
                                 <h2 className='mb-1 text-lg font-semibold'>Account</h2>
                                 <p className='text-sm opacity-60'>Logged in as {user.email}</p>
+                            </div>
+
+                            <div className='divider' />
+                            <div>
+                                <h2 className='mb-1 text-lg font-semibold'>Statistics</h2>
+                                <label className='flex items-center gap-3 cursor-pointer'>
+                                    <input
+                                        type='checkbox'
+                                        className='toggle toggle-primary'
+                                        checked={statsPublic}
+                                        onChange={handleStatsToggle}
+                                        disabled={mutation.isPending}
+                                    />
+                                    <span className='text-sm'>
+                                        Show my stats on leaderboards and allow other players to view them
+                                    </span>
+                                </label>
                             </div>
                         </>
                     )}

@@ -74,13 +74,7 @@ _chess_processor = MoveProcessor()
 _chess_move_queues: dict[UUID, asyncio.Queue] = {}
 
 
-async def _require_user(sessionId: Optional[str] = Cookie(None)) -> dict:
-    if not sessionId:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    user = await _auth_service.get_user_by_session(sessionId)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
-    return user
+from auth_deps import require_user as _require_user
 
 
 def _winner_to_outcome(winner: str, game_state: dict) -> str:
@@ -1461,11 +1455,6 @@ async def get_game_info(game_id: str):
         }
     }
 
-
-@router.get("/game/{game_id}/stats")
-async def get_game_stats(game_id: str):
-    """Return aggregate statistics for the given game type (stub)."""
-    return {"gamesPlayed": 0, "winRate": 0.0, "bestStreak": 0, "aiLevel": 3}
 
 
 # ============================================

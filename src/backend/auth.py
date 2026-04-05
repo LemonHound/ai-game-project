@@ -13,7 +13,10 @@ from opentelemetry import metrics, trace
 from pydantic import BaseModel, EmailStr
 import secrets
 
+from sqlalchemy import text
+
 from auth_service import AuthService
+from db import get_session
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -145,17 +148,8 @@ async def get_current_user(
         "authProvider": user["auth_provider"],
         "emailVerified": user.get("email_verified", False),
         "lastLogin": user.get("last_login"),
+        "statsPublic": user.get("stats_public", False),
     }
-
-
-@router.get("/stats")
-async def get_user_stats():
-    """Return placeholder user statistics.
-
-    Returns:
-        dict: Zero-value stats stub (gamesPlayed, winRate, aiContributions).
-    """
-    return {"gamesPlayed": 0, "winRate": 0, "aiContributions": 0}
 
 
 @router.post("/register")
@@ -284,6 +278,54 @@ async def logout(
         await auth_service.delete_session(session_id)
     delete_session_cookie(response)
     return {"message": "Logout successful"}
+
+
+class SettingsRequest(BaseModel):
+    """Request body for the /settings endpoint."""
+
+    statsPublic: Optional[bool] = None
+
+
+@router.patch("/settings")
+async def update_settings(
+    request: SettingsRequest,
+    sessionId: Optional[str] = Cookie(None),
+):
+    """Update user account settings.
+
+    Currently supports toggling stats_public.
+
+    Args:
+        request: SettingsRequest with optional statsPublic boolean.
+        sessionId: Session cookie for authentication.
+
+    Returns:
+        dict: Updated settings values.
+
+    Raises:
+        HTTPException 401: If not authenticated.
+    """
+    if not sessionId:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    user = await auth_service.get_user_by_session(sessionId)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    updates = {}
+    if request.statsPublic is not None:
+        updates["stats_public"] = request.statsPublic
+
+    if updates:
+        set_clauses = ", ".join(f"{k} = :{k}" for k in updates)
+        updates["user_id"] = user["id"]
+        async with get_session() as session:
+            await session.execute(
+                text(f"UPDATE users SET {set_clauses} WHERE id = :user_id"),
+                updates,
+            )
+            await session.commit()
+
+    return {"statsPublic": updates.get("stats_public", user.get("stats_public", False))}
 
 
 @router.get("/health")

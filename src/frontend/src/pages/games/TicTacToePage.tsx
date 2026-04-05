@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
+import GameStatsPanel from '../../components/games/GameStatsPanel';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import TicTacToeBoard from '../../components/games/TicTacToeBoard';
@@ -380,6 +381,8 @@ export default function TicTacToePage() {
                     />
                 </div>
             )}
+
+            <GameStatsPanel gameType='tic_tac_toe' />
 
             {showAuthModal && (
                 <AuthModal

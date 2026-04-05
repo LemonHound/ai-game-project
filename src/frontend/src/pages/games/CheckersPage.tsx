@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
+import GameStatsPanel from '../../components/games/GameStatsPanel';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
@@ -553,6 +554,8 @@ export default function CheckersPage() {
                     </div>
                 )}
             </div>
+
+            <GameStatsPanel gameType='checkers' />
 
             {showAuthModal && (
                 <AuthModal
