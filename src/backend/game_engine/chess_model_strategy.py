@@ -110,6 +110,7 @@ class ChessModelStrategy(AIStrategy):
     """
 
     def __init__(self):
+        """Load the ML model from the path specified by CHESS_MODEL_PATH."""
         model_path = os.getenv(_MODEL_PATH_ENV, _DEFAULT_MODEL_PATH)
         logger.info("chess_model_strategy_init", extra={"model_path": model_path})
         self._model = self._load_model(model_path)
