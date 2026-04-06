@@ -93,17 +93,17 @@ ai-game-project/
 
 ## Chess ML Model Integration
 
-Scaffolding exists for replacing the built-in minimax chess AI with an external ML model.
-See [`src/backend/game_engine/INSTRUCTIONS.txt`](src/backend/game_engine/INSTRUCTIONS.txt) for the full walkthrough
-covering Docker setup, database access, model loading, and the PGN/UCI interface.
+Scaffolding exists for replacing the built-in minimax chess AI with an external ML model. See
+[`src/backend/game_engine/INSTRUCTIONS.txt`](src/backend/game_engine/INSTRUCTIONS.txt) for the full walkthrough covering
+Docker setup, database access, model loading, and the PGN/UCI interface.
 
 Key files:
 
-| File | Purpose |
-| --- | --- |
+| File                                  | Purpose                                                 |
+| ------------------------------------- | ------------------------------------------------------- |
 | `game_engine/chess_model_strategy.py` | Strategy stub -- implement `_load_model` and `_predict` |
-| `game_engine/chess_pgn.py` | PGN generation from the DB move history |
-| `game_engine/INSTRUCTIONS.txt` | Step-by-step integration guide |
+| `game_engine/chess_pgn.py`            | PGN generation from the DB move history                 |
+| `game_engine/INSTRUCTIONS.txt`        | Step-by-step integration guide                          |
 
 Toggle via env var: set `CHESS_AI_STRATEGY=model` in `docker-compose.yml` to activate.
 
