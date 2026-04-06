@@ -1,0 +1,190 @@
+============================================================
+  Chess ML Model Integration Guide
+============================================================
+
+This guide walks through booting the app, querying the database, and plugging
+your model into the existing game engine.
+
+
+1. BOOTING THE APP
+============================================================
+
+  docker compose build
+  docker compose up -d
+
+This starts two containers:
+  - db:  PostgreSQL 17 on localhost:5432
+  - app: FastAPI backend + React frontend on localhost:8000
+
+The backend Python files are volume-mounted, so edits to src/backend/ hot-reload
+without a rebuild. If you change requirements.txt or frontend code, rebuild:
+
+  docker compose build app
+  docker compose up -d
+
+
+2. QUERYING THE DATABASE
+============================================================
+
+Option A: psql inside the container
+
+  docker compose exec db psql -U dev_user -d ai_game_db
+
+  Common commands:
+    \dt                          -- list all tables
+    \d chess_games               -- show chess_games schema
+    SELECT * FROM chess_games;   -- view all chess games
+    \q                           -- exit
+
+Option B: Connect from your machine
+
+  Any Postgres client (pgAdmin, DBeaver, DataGrip, psql) works:
+    Host:     localhost
+    Port:     5432
+    Database: ai_game_db
+    User:     dev_user
+    Password: dev_password
+
+Option C: Connect from Python
+
+  import psycopg2
+
+  conn = psycopg2.connect(
+      host="localhost", port=5432,
+      dbname="ai_game_db", user="dev_user", password="dev_password",
+  )
+  cur = conn.cursor()
+  cur.execute("SELECT id, move_list_algebraic FROM chess_games LIMIT 5")
+  for row in cur.fetchall():
+      print(row)
+
+  Or with pandas:
+
+  import pandas as pd
+  from sqlalchemy import create_engine
+
+  engine = create_engine("postgresql://dev_user:dev_password@localhost:5432/ai_game_db")
+  df = pd.read_sql("SELECT * FROM chess_games", engine)
+
+
+3. CHESS DATA SCHEMA
+============================================================
+
+The chess_games table stores:
+  - id:                   UUID primary key
+  - board_state:          JSONB -- full game state after the latest move
+  - move_list:            TEXT[] -- UCI notation moves (e.g. ["e2e4", "e7e5"])
+  - move_list_algebraic:  TEXT[] -- SAN notation moves (e.g. ["e4", "e5", "Nf3"])
+  - game_ended:           BOOLEAN
+  - outcome:              TEXT (player_won, ai_won, draw, or abandoned)
+
+The move_list and move_list_algebraic arrays are parallel (same index = same move).
+The board_state JSONB includes a "fen" key with the FEN string after each move.
+
+
+4. YOUR MODEL INTEGRATION
+============================================================
+
+Your model lives in: src/backend/game_engine/chess_model_strategy.py
+
+There are two methods to implement:
+
+  _load_model(self, path: str)
+    Called once at startup. Load your model weights and return the model object.
+    The path defaults to /app/model_weights/chess.pt (configurable via
+    CHESS_MODEL_PATH env var).
+
+  _predict(self, pgn: str) -> str
+    Called once per AI turn. Receives the full PGN of the game so far.
+    Must return a UCI move string (e.g. "e2e4", "e7e8q").
+
+Everything else is handled:
+  - PGN is built automatically from the DB move history
+  - UCI output is converted to the engine's internal move format
+  - Invalid moves are retried up to 5 times, then a random legal move is used
+  - The PGN and UCI strings are logged so you can see them in docker compose logs
+
+
+5. ADDING YOUR DEPENDENCIES
+============================================================
+
+If your model needs torch, onnx, or other packages:
+
+  1. Edit requirements.in (add the package name, no version pin)
+  2. Run: python -m piptools compile requirements.in --output-file requirements.txt --strip-extras --upgrade
+  3. Rebuild: docker compose build app
+
+Do NOT edit requirements.txt directly -- it's auto-generated.
+
+
+6. SWITCHING BETWEEN MINIMAX AND YOUR MODEL
+============================================================
+
+In docker-compose.yml, the app service has:
+
+  CHESS_AI_STRATEGY: minimax
+
+Change to:
+
+  CHESS_AI_STRATEGY: model
+
+Then restart:
+
+  docker compose up -d
+
+To switch back, set it to "minimax" (or remove the variable entirely).
+
+When CHESS_AI_STRATEGY=model, the app logs the PGN input and UCI output for
+every AI move. Watch with:
+
+  docker compose logs -f app
+
+
+7. MOUNTING MODEL WEIGHTS
+============================================================
+
+In docker-compose.yml, uncomment the volume mount under the app service:
+
+  volumes:
+    - /path/to/local/model_weights:/app/model_weights
+
+Replace /path/to/local/model_weights with the directory containing your model
+file (e.g. chess.pt). The container will see it at /app/model_weights/chess.pt.
+
+
+8. COORDINATE SYSTEM
+============================================================
+
+The engine uses a row/col coordinate system:
+
+  Row 0 = rank 8 (black back rank)
+  Row 7 = rank 1 (white back rank)
+  Col 0 = a-file
+  Col 7 = h-file
+
+UCI "e2e4" translates to:
+  fromRow=6, fromCol=4, toRow=4, toCol=4
+
+Promotion: UCI "e7e8q" has a 5th character for the promotion piece (q/r/b/n).
+
+You should not need to work with row/col directly -- the uci_to_engine_move()
+and engine_move_to_uci() helpers in chess_model_strategy.py handle conversion.
+
+
+9. PGN FORMAT
+============================================================
+
+The PGN your model receives looks like:
+
+  [Event "AI Game Website"]
+  [Site "localhost"]
+  [Date "2025.04.05"]
+  [Round "-"]
+  [White "Player"]
+  [Black "AI"]
+  [Result "*"]
+
+  1. e4 e5 2. Nf3 Nc6 3. Bb5 *
+
+The result is "*" for in-progress games, "1-0" / "0-1" / "1/2-1/2" for finished.
+The moves use Standard Algebraic Notation (SAN): Nf3, O-O, exd5, e8=Q+, etc.
