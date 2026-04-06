@@ -25,8 +25,12 @@ services:
       PORT: 8000
       WEBSITE_URL: http://localhost:8000
       ENVIRONMENT: development
+      CHESS_AI_STRATEGY: minimax
+      # CHESS_MODEL_PATH: /app/model_weights/chess.pt
     volumes:
       - ./src/backend:/app/src/backend
+      # Uncomment to mount local model weights into the container:
+      # - /path/to/local/model_weights:/app/model_weights
     depends_on:
       - db
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

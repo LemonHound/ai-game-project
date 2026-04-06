@@ -69,7 +69,13 @@ _dab_strategy = DaBStrategy()
 _dab_move_queues: dict[UUID, asyncio.Queue] = {}
 
 _chess_engine = ChessEngine()
-_chess_strategy = ChessAIStrategy()
+_chess_strategy_name = os.getenv("CHESS_AI_STRATEGY", "minimax")
+if _chess_strategy_name == "model":
+    from game_engine.chess_model_strategy import ChessModelStrategy
+    _chess_strategy = ChessModelStrategy()
+    logger.info("chess_strategy_selected", extra={"strategy": "model"})
+else:
+    _chess_strategy = ChessAIStrategy()
 _chess_processor = MoveProcessor()
 _chess_move_queues: dict[UUID, asyncio.Queue] = {}
 
@@ -1190,6 +1196,8 @@ async def chess_newgame(
 
     if not request.player_starts:
         strategy = _resolve_strategy(_chess_strategy, raw_request.headers)
+        if hasattr(strategy, "set_move_history"):
+            strategy.set_move_history([])
         ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, strategy, state)
         lm = ai_state.get("last_move") or {}
         await persistence_service.record_move(
@@ -1302,6 +1310,12 @@ async def chess_events(
 
                 broadcaster.emit(StatusEvent("player_move", payload=_chess_state_payload(player_state, "player")))
                 broadcaster.emit(StatusEvent("status", message="Thinking..."))
+
+                if hasattr(_chess_strategy, "set_move_history"):
+                    fresh_record = await persistence_service.get_game(db, sid, "chess")
+                    _chess_strategy.set_move_history(
+                        fresh_record.move_list_algebraic if fresh_record else []
+                    )
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
                     ai_span.set_attribute("game.id", session_id)
