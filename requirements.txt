@@ -36,7 +36,7 @@ colorama==0.4.6
     # via
     #   click
     #   pytest
-cryptography==46.0.6
+cryptography==46.0.7
     # via google-auth
 dnspython==2.8.0
     # via email-validator
