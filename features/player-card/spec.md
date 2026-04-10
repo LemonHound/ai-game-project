@@ -1,6 +1,6 @@
 # Feature: PlayerCard
 
-**Status: in-progress**
+**Status: ready**
 
 ## Background
 

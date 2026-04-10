@@ -1,6 +1,6 @@
 # Game: Checkers
 
-**Status: in-progress**
+**Status: ready**
 
 ## Background
 
@@ -246,7 +246,7 @@ reflects the AI's first move and `current_turn: "player"`).
 
 **Response 200:**
 ```json
-{"session_id": "uuid", "state": { "...initial game state..." }}
+{"id": "uuid", "state": { "...initial game state..." }}
 ```
 
 ### `POST /api/game/checkers/move`

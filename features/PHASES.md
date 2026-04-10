@@ -1,6 +1,6 @@
 # Development Phases & Dependency Order
 
-**Last updated: 2026-03-30** (documentation done 2026-03-30)
+**Last updated: 2026-04-10**
 
 This file defines the order in which features should be implemented, based on hard dependencies between
 specs. Update it whenever specs are added, completed, or their dependencies change.
@@ -24,7 +24,7 @@ These are done or in-progress and unblock everything else.
 |------|--------|-------|
 | google-oauth | ready/done | Auth layer; required by all authenticated features |
 | react-migration | done | React/Vite frontend in place |
-| observability | in-progress | OTel base; update for new persistence model before Phase 2 games |
+| observability | ready | OTel base; update for new persistence model before Phase 2 games |
 
 ---
 
@@ -48,7 +48,7 @@ These can run in parallel with each other.
 | Spec | Status | Blocked by |
 |------|--------|------------|
 | error-handling | done (needs minor update) | game-data-persistence |
-| observability | in-progress | game-data-persistence |
+| observability | ready | game-data-persistence |
 | about | needs implementation | — (no dependencies) |
 
 ---
@@ -60,8 +60,8 @@ UI component needed by all game pages.
 
 | Spec | Status | Blocked by |
 |------|--------|------------|
-| game-tic-tac-toe | in-progress | game-data-persistence |
-| player-card | in-progress | google-oauth |
+| game-tic-tac-toe | ready | game-data-persistence |
+| player-card | ready | google-oauth |
 
 ---
 
@@ -73,7 +73,7 @@ the reference pattern is validated.
 | Spec | Status | Blocked by |
 |------|--------|------------|
 | game-connect4 | ready | game-tic-tac-toe |
-| game-checkers | in-progress | game-tic-tac-toe |
+| game-checkers | ready | game-tic-tac-toe |
 | game-dots-and-boxes | ready | game-tic-tac-toe |
 
 ---
@@ -86,11 +86,7 @@ requires at least one game implemented to be testable end-to-end.
 | Spec | Status | Blocked by |
 |------|--------|------------|
 | game-chess | ready | game-data-persistence, player-card (for UI) |
-| game-statistics | **draft** — needs planning session before implementation | game-data-persistence (at least one game in Phase 3–4 done) |
-
-> `game-statistics` is in draft status. Before implementation begins, schedule a dedicated planning
-> conversation to answer the open questions in its spec (streak definition, public vs. private
-> profiles, leaderboard scope, completed vs. abandoned game definition).
+| game-statistics | ready | game-data-persistence (at least one game in Phase 3–4 done) |
 
 ---
 
@@ -148,12 +144,12 @@ These can be worked at any time alongside any phase. They do not block or get bl
 
 ## Discussion Points (Unresolved)
 
-These are open questions flagged during the 2026-03-30 planning session that affect phasing:
+These are open questions that affect phasing:
 
 1. **`session_id` vs `id` column naming**: The `{game_type}_games` tables use `id` as the PK (the
    session identifier). All game specs and API response shapes have been updated to use `id`. The
    existing frontend code still uses `session_id` throughout and will need migration during each
-   game's implementation pass. See the discussion in the 2026-03-30 planning session notes.
+   game's implementation pass.
 
 2. **Pong + persistence** (deferred with Phase 6): Does pong create a `pong_games` record (for stats,
    with empty `board_state`/`move_list`)? Or use a separate lightweight record? Decide at Phase 6
@@ -162,10 +158,6 @@ These are open questions flagged during the 2026-03-30 planning session that aff
 3. **Pong rally training data** (deferred with Phase 6): The `flush_rally` stub discards data.
    Training model for pong (continuous state, not discrete moves) is undefined. Decide at Phase 6
    planning time.
-
-4. **`game-statistics` open questions**: Streak definition, public vs. private profiles, leaderboard
-   scope, completed vs. abandoned definition. Must be resolved in a planning conversation before
-   Phase 5 statistics implementation begins.
 
 ---
 
