@@ -1,6 +1,6 @@
 # Game: Tic-Tac-Toe
 
-**Status: in-progress**
+**Status: ready**
 
 ## Background
 

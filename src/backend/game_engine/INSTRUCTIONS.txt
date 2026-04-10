@@ -188,3 +188,48 @@ The PGN your model receives looks like:
 
 The result is "*" for in-progress games, "1-0" / "0-1" / "1/2-1/2" for finished.
 The moves use Standard Algebraic Notation (SAN): Nf3, O-O, exd5, e8=Q+, etc.
+
+
+10. TESTING YOUR MODEL INTEGRATION
+============================================================
+
+Run chess-specific unit and API tests with:
+
+  python -m pytest tests/unit/ -k chess -x --tb=short
+  python -m pytest tests/api_tests/ -k chess -x --tb=short
+
+Your model is NOT called during test runs. When ENVIRONMENT=test, the server
+uses DeterministicAIStrategy (predetermined moves supplied via the X-AI-Moves
+request header) instead of the real AI strategy. This means:
+
+  - Your model weights do not need to be present in the test environment.
+  - CHESS_AI_STRATEGY is ignored in tests.
+  - All existing chess tests pass regardless of whether _load_model is
+    implemented.
+
+To verify your model locally without running the full test suite:
+
+  1. Set CHESS_AI_STRATEGY=model in docker-compose.yml.
+  2. Mount your model weights (see section 7).
+  3. docker compose up -d
+  4. Log in at http://localhost:8000, start a chess game, and play a move.
+  5. Watch the logs: docker compose logs -f app
+
+You should see "chess_model_pgn_input" and "chess_model_uci_output" log lines
+for each AI turn. If _load_model raises NotImplementedError, the app will fail
+to start — check the startup logs for the error message.
+
+
+11. ENVIRONMENT VARIABLES REFERENCE
+============================================================
+
+  CHESS_AI_STRATEGY   "minimax" (default) or "model"
+                      Controls which AIStrategy is used for chess.
+
+  CHESS_MODEL_PATH    "/app/model_weights/chess.pt" (default)
+                      Path inside the container to your model file.
+                      Override if your file has a different name or location.
+
+  ENVIRONMENT         "development" (default), "test", or "production"
+                      Do not change this manually. The test Docker Compose
+                      file sets it to "test" automatically.

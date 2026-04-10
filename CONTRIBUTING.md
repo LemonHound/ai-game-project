@@ -95,6 +95,25 @@ _ttt_strategy = TicTacToeAIStrategy()
 
 Replace with your new class and it will be used for all new moves immediately.
 
+**Chess model integration:**
+
+Chess has a dedicated scaffold for plugging in an external ML model. See section 10 for the short
+version, or [`src/backend/game_engine/INSTRUCTIONS.txt`](src/backend/game_engine/INSTRUCTIONS.txt)
+for the full walkthrough.
+
+**How AI move generation works (all games):**
+
+The `MoveProcessor` in `game_engine/base.py` manages the AI turn loop:
+
+1. Calls `strategy.generate_move(state)` to get a move candidate.
+2. Validates the move with `engine.validate_move(state, move)`.
+3. If invalid, retries up to 5 times with fresh `generate_move` calls.
+4. After 5 failed attempts, falls back to a random move from `engine.get_legal_moves(state)`.
+
+This means your `generate_move` does not have to guarantee a legal move — the framework handles
+retries and fallback automatically. All retry attempts are logged as warnings so you can observe
+them in `docker compose logs -f app`.
+
 ---
 
 ## 5. Reading game state and move history
@@ -216,7 +235,105 @@ export async function getActiveGame(gameType: string): Promise<GameSession | nul
 
 ---
 
-## 9. Checking your work
+## 9. Environment configuration
+
+The app reads these environment variables. In local development they are set in `docker-compose.yml`
+under the `app` service's `environment:` block.
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `ENVIRONMENT` | `development` | Set to `test` in the test Docker Compose file. Affects SSE timing (fast mode for tests) and enables the `X-AI-Moves` test header. Never set to `test` in production. |
+| `CHESS_AI_STRATEGY` | `minimax` | Set to `model` to activate `ChessModelStrategy` instead of the built-in minimax AI. |
+| `CHESS_MODEL_PATH` | `/app/model_weights/chess.pt` | Path inside the container where `ChessModelStrategy` looks for model weights. Override if your file is named differently. |
+
+To change a variable locally:
+
+1. Edit the `environment:` section in `docker-compose.yml`.
+2. Restart: `docker compose up -d`.
+
+No rebuild is needed for environment variable changes.
+
+---
+
+## 10. Chess model integration (short version)
+
+The scaffold for plugging in an external chess model lives in two files:
+
+| File | What to edit |
+| ---- | ------------ |
+| `src/backend/game_engine/chess_model_strategy.py` | Implement `_load_model(path)` and `_predict(pgn)` |
+| `docker-compose.yml` | Set `CHESS_AI_STRATEGY: model` and mount your weights volume |
+
+`_load_model` is called once at startup. `_predict` is called once per AI turn and receives the full
+PGN of the game so far; it must return a UCI move string (e.g. `"e2e4"`).
+
+Everything else — PGN construction, UCI→engine move conversion, move validation retry, logging — is
+handled by the framework. You do not need to touch any other file.
+
+See [`src/backend/game_engine/INSTRUCTIONS.txt`](src/backend/game_engine/INSTRUCTIONS.txt) for the
+full walkthrough including database access, dependency management, and how to mount model weights.
+
+---
+
+## 11. Running tests
+
+There are four test tiers. You usually only need to run the first two.
+
+**Fast tests (no Docker DB required):**
+
+```bash
+npm run test:fast
+```
+
+This runs Python unit tests (`tests/unit/`) and frontend Vitest tests in one command. No database
+needed. Run this after any backend or frontend change.
+
+**Integration and API tests (requires the test database):**
+
+```bash
+docker compose -f docker-compose.test.yml up -d
+python -m pytest tests/integration/ tests/api_tests/ -x --tb=short
+docker compose -f docker-compose.test.yml down
+```
+
+These tests hit a real PostgreSQL instance. Run them after changing API routes, database queries, or
+game engine logic.
+
+**To run only chess-related tests:**
+
+```bash
+python -m pytest tests/unit/ -k chess -x --tb=short
+python -m pytest tests/api_tests/ -k chess -x --tb=short
+```
+
+**How tests handle AI moves (deterministic testing):**
+
+When `ENVIRONMENT=test`, every game API endpoint accepts an optional `X-AI-Moves` header — a
+comma-separated list of moves. The server uses these predetermined moves instead of calling the real
+AI strategy. This makes tests reproducible without a trained model.
+
+Example (using `pytest` with the `TestClient`):
+
+```python
+response = client.post(
+    "/api/game/tic-tac-toe/move",
+    json={"position": 4},
+    headers={"X-AI-Moves": "0,8"},
+)
+```
+
+The `X-AI-Moves` header is ignored in `development` and `production` environments — it only works
+when `ENVIRONMENT=test`.
+
+**What this means for your model:**
+
+When tests run, the server uses `DeterministicAIStrategy` (if `X-AI-Moves` is set) regardless of
+the `CHESS_AI_STRATEGY` env var. Your model is never called during test runs, so it does not need to
+be available in the test environment.
+
+---
+
+## 12. Checking your work
 
 Run all checks manually before committing:
 
