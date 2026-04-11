@@ -49,6 +49,7 @@
 - Whenever submitting a draft PR (after review is complete in Claude Code):
     1. Mark as ready: `gh pr ready <number>`
     2. Enable auto-merge: `gh pr merge <number> --auto --squash`. This is the default; only skip if explicitly told to.
+    3. Watch CI: `gh run watch`. If it fails, fix immediately and push again. The required gate is `Test Summary` — all other jobs feed into it automatically and do not need to be individually tracked in the ruleset.
 - For implementation pushes (any change to runtime behavior — features, bug fixes where a test could plausibly fail): 6.
   Watch GitHub Actions inline: `gh run watch`. If CI fails, fix immediately and push again. 7. Once the PR is merged,
   GCP Cloud Build will automatically build, push to Artifact Registry, and deploy to Cloud Run. Do **not** block waiting
