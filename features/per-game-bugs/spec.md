@@ -32,26 +32,19 @@ Five games showed "Coming Soon" despite being fully functional. The label should
 The `games` table in PostgreSQL also stores these fields. Run the following after confirming the frontend changes look correct:
 
 ```sql
--- Remove "1 Player" and "Coming Soon", add "No AI Yet" for all non-pong games
+-- Non-pong: remove '1 Player' and 'Coming Soon', add 'No AI Yet'
 UPDATE games
-SET tags = (
-    SELECT jsonb_agg(t)
-    FROM jsonb_array_elements_text(tags::jsonb) t
-    WHERE t NOT IN ('1 Player', 'Coming Soon')
-) || '["No AI Yet"]'::jsonb
+SET tags = array_append(
+    array_remove(array_remove(tags, '1 Player'), 'Coming Soon'),
+    'No AI Yet'
+)
 WHERE id != 'pong';
 
--- Pong: just remove "1 Player", keep "Coming Soon"
+-- Pong: remove '1 Player' only, keep 'Coming Soon'
 UPDATE games
-SET tags = (
-    SELECT jsonb_agg(t)
-    FROM jsonb_array_elements_text(tags::jsonb) t
-    WHERE t != '1 Player'
-)
+SET tags = array_remove(tags, '1 Player')
 WHERE id = 'pong';
 ```
-
-> Note: exact SQL depends on how `tags` is stored (JSON array vs text array). Verify column type first with `\d games`.
 
 ---
 
