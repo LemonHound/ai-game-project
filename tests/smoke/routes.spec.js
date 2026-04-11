@@ -9,7 +9,8 @@ test.describe('Route Smoke Tests', () => {
         await expect(page.locator('h1')).toContainText('AI Game Hub', { timeout: 10000 });
         await expect(page.locator('.navbar').first()).toBeVisible({ timeout: 5000 });
         await expect(page.locator('.hero')).toBeVisible({ timeout: 5000 });
-        await expect(page.locator('a:has-text("Browse Games")')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByRole('link', { name: /^All games$/i })).toBeVisible({ timeout: 5000 });
+        await expect(page.getByRole('link', { name: /^Public stats$/i })).toBeVisible({ timeout: 5000 });
     });
 
     test('games page loads correctly', async ({ page }) => {

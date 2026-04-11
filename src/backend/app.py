@@ -123,7 +123,7 @@ async def health_check():
 
 
 
-INDEXABLE_PATHS = ["/", "/games", "/about", "/leaderboard"]
+INDEXABLE_PATHS = ["/", "/games", "/about", "/stats"]
 
 
 @app.get("/robots.txt")

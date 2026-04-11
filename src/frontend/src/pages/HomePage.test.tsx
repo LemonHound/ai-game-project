@@ -9,9 +9,9 @@ describe('HomePage', () => {
         expect(screen.getByText('AI Game Hub')).toBeInTheDocument();
     });
 
-    it('home page game cards link to correct routes', () => {
+    it('home page links to games and stats', () => {
         renderWithProviders(<HomePage />);
-        const browseLink = screen.getByText(/browse games/i);
-        expect(browseLink.closest('a')).toHaveAttribute('href', '/games');
+        expect(screen.getByRole('link', { name: /^all games$/i })).toHaveAttribute('href', '/games');
+        expect(screen.getByRole('link', { name: /^public stats$/i })).toHaveAttribute('href', '/stats');
     });
 });

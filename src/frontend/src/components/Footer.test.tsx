@@ -4,11 +4,12 @@ import { renderWithProviders } from '../test-utils';
 import Footer from './Footer';
 
 describe('Footer', () => {
-    it('renders footer links', () => {
+    it('renders copyright without duplicate nav links', () => {
         renderWithProviders(<Footer />);
-        expect(screen.getByText('Home')).toBeInTheDocument();
-        expect(screen.getByText('Games')).toBeInTheDocument();
-        expect(screen.getByText('About')).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Games' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'About' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Stats' })).not.toBeInTheDocument();
     });
 
     it('renders copyright text', () => {
