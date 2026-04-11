@@ -54,4 +54,5 @@ The `games` table exposes explicit columns instead of overloading `tags`:
 | Unit            | `GameInfo pydantic includes shell and AI flags`              | `tests/unit/test_models.py` constructs valid `GameInfo`.   |
 | Unit            | `GameSummaryCard reflects shell and AI flags`                | Warning vs neutral badges from `GameSummaryCard.test.tsx`. |
 | API integration | (existing) `GET /api/games_list`                             | Response games include boolean flags after migration.      |
+| E2E             | `smoke homepage shows All games and Public stats links`      | `tests/smoke/routes.spec.js` asserts hero CTAs.            |
 | Manual          | `GET /leaderboard` in browser                                | Old bookmark redirects to `/stats`.                        |
