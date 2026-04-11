@@ -121,6 +121,89 @@ the seeded test accounts:
 
 ---
 
+## 1b. Working on an open pull request
+
+If the task is to **review, amend, or extend** work that already has a PR, check out that PR’s branch before editing so
+commits push to the correct remote branch:
+
+```bash
+gh pr checkout <number>
+```
+
+Inspecting a PR with `gh pr view` or `gh pr diff` while staying on `main` does not switch branches; without an explicit
+checkout, local commits would not update the PR.
+
+---
+
+## 1c. Pull request descriptions during review
+
+Treat the GitHub PR **title** and **body** as part of the deliverable, not optional prose.
+
+Whenever review discussion **narrows scope**, **adds scope**, or **locks a decision** (product, data shape, timing,
+cross-game behavior), update the PR before or with the next push so reviewers and CI see the same story as the branch:
+
+- **Title:** still accurate for what will merge (edit if the PR shifted from the original headline).
+- **Body:** Summary matches the final change set; “decisions made” and any trade-offs called out explicitly; test plan
+  and dependency notes (e.g. “merge after X”) stay current. Link relevant **`features/*/adr.md`** files when the PR
+  implements or supersedes an architectural decision.
+
+Use the GitHub CLI from the PR branch, for example:
+
+```bash
+gh pr edit <number> --title "type: concise subject"
+gh pr edit <number> --body-file path/to/pr-body.md
+```
+
+If you only need a small fix, `gh pr edit <number> --body "..."` is fine. Do not leave stale review questions in the
+body once they are answered; replace them with the agreed outcome.
+
+---
+
+## 1d. Architecture Decision Records (ADRs)
+
+**Decisions belong in ADRs, not only in chat or PR comments.** If work encodes a **significant, long-lived**
+architectural or product decision (new persistence contract, SSE/event cadence rules, cross-game env semantics,
+auth/session boundary, observability strategy, or any pattern other features must copy), add or update
+**`features/<feature-name>/adr.md`** alongside that feature’s `spec.md`. Co-locate the ADR with the feature that owns
+the change unless the team already keeps cross-cutting ADRs under `docs/`.
+
+Workflow:
+
+1. When a decision is made during design or review, **stop and ask** whether it meets the bar above.
+2. If yes, **write the ADR** (status, context, decision, consequences) in the same PR as the spec or implementation that
+   carries it out.
+3. Link the ADR from the feature `spec.md` if readers would otherwise miss it.
+
+Small or reversible changes do not need an ADR; **routine** fixes stay in `spec.md` **Test Cases** only. When in doubt,
+prefer a **short ADR** over losing the rationale in a closed PR thread.
+
+---
+
+## 1e. Cursor agents and authentication (GitHub / GCP)
+
+Remote or integrated **Cursor** sessions may use a shell where `gh` / `gcloud` are **not** logged in the same way as
+your day-to-day terminal. If a command fails with **permission**, **401/403**, **Resource not accessible by
+integration**, or **not authenticated**, do **not** ask the user to paste tokens into chat or commit secrets to the
+repo.
+
+**Ask the user** to perform authorization **on their Windows machine** so credentials land in the OS trust store (for
+example **Windows Credential Manager** via normal GitHub CLI and Google Cloud flows):
+
+- **GitHub / `gh`:** In **Cursor’s integrated terminal** (or any terminal on the PC), run `gh auth login` and complete
+  the browser or device flow. That stores the session where `gh` expects it on Windows (Credential Manager / GitHub CLI
+  config under `%AppData%`). Retry `gh pr view`, `gh pr edit`, or `gh api` after login. If `gh pr edit` fails with a
+  **Projects (classic)** GraphQL deprecation error, use `gh api repos/<owner>/<repo>/pulls/<n> -X PATCH` with a JSON
+  body as a workaround, or remove the PR from classic Projects.
+- **GCP / `gcloud`:** Run `gcloud auth login` and, when tools need application default credentials,
+  `gcloud auth application-default login`, again from a terminal on the user’s machine so ADC and tokens are stored
+  locally.
+
+After the user confirms they completed login, **re-run** the failing command. If the agent environment still cannot see
+those credentials (common for **cloud-only** agents), say so clearly: the user may need to **configure Cursor’s GitHub
+integration** or **Secrets** for that environment, not only local Windows auth.
+
+---
+
 ## 2. Running locally
 
 `docker compose up` starts the backend and database together. The backend hot-reloads when you edit files in
