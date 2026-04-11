@@ -34,6 +34,8 @@ Refer to `CLAUDE.md` "Testing" section and `package.json` scripts. Key commands:
 ### Non-obvious notes
 
 - Node.js 20 is required (not 22). Use `nvm use 20`.
+- The Husky pre-push hook and `test:fast` script invoke `python` (not `python3`). The VM snapshot includes a symlink
+  `sudo ln -sf /usr/bin/python3 /usr/local/bin/python`. If a fresh VM is missing it, recreate it.
 - Python packages install to `~/.local/bin` — ensure it is on PATH.
 - Docker is needed for PostgreSQL. In Cloud Agent VMs, Docker requires `fuse-overlayfs` storage driver and
   `iptables-legacy` — see the setup hints in the system prompt.
