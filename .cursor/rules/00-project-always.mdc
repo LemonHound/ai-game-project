@@ -1,0 +1,32 @@
+---
+description: Core stack, paths, and non-negotiables for every turn
+alwaysApply: true
+---
+
+# AI Game Hub — always apply
+
+Read **[CONTRIBUTING.md](../../CONTRIBUTING.md)** for the full workflow (spec-driven development, ADRs, tests, branch hygiene).
+
+## Stack (short)
+
+- Backend: FastAPI, Python 3.11+, PostgreSQL via psycopg2.
+- Frontend: React 18, TypeScript, Vite, React Router v6, TanStack Query, Zustand, Tailwind + DaisyUI.
+- Observability: OpenTelemetry (GCP Trace/Monitoring in prod; console locally).
+- Tests: Vitest (frontend unit), pytest (unit / integration / API), Playwright (E2E/smoke/api specs per config).
+
+## Where code goes
+
+- Backend: `src/backend/`
+- Frontend: `src/frontend/src/`
+- Feature specs: `features/<feature-name>/spec.md` (and `adr.md` when warranted)
+
+## Invariants
+
+- Spec-first: see CONTRIBUTING — every meaningful change ties to an updated `spec.md` with a **Test Cases** section.
+- Use `logging` in Python, never `print()` for application output.
+- SQL must be parameterized.
+- Python deps: edit only `requirements.in`; regenerate `requirements.txt` with pip-compile (never hand-edit the lockfile).
+
+## Refactors and new ideas
+
+Prefer new work behind a **feature folder + spec** unless the user explicitly asked for a tiny, isolated fix.

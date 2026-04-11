@@ -1,0 +1,16 @@
+---
+description: Rebases, draft PRs, CI watch, post-merge deploy checks
+globs:
+  - ".github/**/*.yml"
+  - ".github/**/*.yaml"
+---
+
+# Branch and pull request workflow
+
+Use **[CONTRIBUTING.md](../../CONTRIBUTING.md)** (section on branch hygiene and CI) as the source of truth. Summary for agents:
+
+- Stay current with the target branch (usually `main`); prefer `git fetch` + rebase onto `origin/main` before push when appropriate.
+- When pushing substantive work: open a **draft** PR by default (`gh pr create --draft`); resolve merge conflicts; watch **Test Summary** (`gh run watch`).
+- After merge: Cloud Build deploys to Cloud Run — do not block the session on deploy; on a **later** pass, verify build/service health with `gcloud` if you are doing release hygiene (commands in CONTRIBUTING).
+
+Adapt steps if the user’s workflow explicitly differs (e.g. no `gh` CLI).
