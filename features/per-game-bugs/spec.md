@@ -8,6 +8,37 @@ Bugs filed in issues #96-#99 from March 28, 2026. Items made obsolete by `featur
 
 ---
 
+## Global conventions (all games)
+
+### Move history and exports
+
+Canonical per-session move storage remains the append-only **`move_list`** (or equivalent) in standard notation for each game (chess: SAN). Do **not** treat a growing stored PGN blob as the source of truth. **Regenerate** presentation or export strings (e.g. full chess PGN with headers) from `move_list` plus session metadata whenever consumers need them (UI snapshots, DS pipelines, downloads). The same pattern applies elsewhere: derive long-form text from the move array rather than persisting redundant cumulative strings.
+
+### Chess snapshot vs training
+
+- **`board_state`**: after each applied move, store a **valid FEN** for the current position (instant resume and validation).
+- **`move_list`**: **SAN** per half-move, append-only (human-readable move list and ML-friendly replay).
+- **PGN for data science**: build with the existing PGN helper from accumulated SAN plus headers and result when a PGN string is required; regeneration is the supported path.
+
+### Server pacing between emitted events
+
+All games use one **global minimum delay** between consecutive **server-emitted** game events (SSE steps, AI segments, etc.), regardless of older per-game millisecond values in individual specs.
+
+- **Configuration**: single environment variable (e.g. `GAME_SERVER_MIN_EVENT_INTERVAL_MS`) in local, test, and GCP (Secret Manager or runtime env). **Prod** sets the product default (on the order of 2–3 seconds where that was previously specified). **Local and CI** set `0` or a small value for speed; tests that assert pacing set the variable explicitly for that case.
+- **Implementation**: enforce in the **central** scheduler or emit path used by game SSE (not only checkers), so every game’s outbound cadence respects the same floor.
+- **Observability**: at startup or on first scheduled emit, **log** the resolved interval and its source (default vs env). Record the same in **OpenTelemetry** attributes where spans already cover game moves, so misconfiguration is visible in GCP.
+
+### Optimistic UI: animation vs rejection
+
+When the client applies a move **optimistically**, piece or token **animations run** toward the optimistic placement. If the **server rejects** the move, **do not** play that animation to completion as if it succeeded: replace the view with the **authoritative `board_state`** immediately and surface a **user-visible error** (toast, inline alert, or existing error component). No celebratory or “commit” animation for rejected moves.
+
+### Explicitly not in scope
+
+- **Premove** (chess, checkers, or any game): omitted due to rules complexity, sync with AI, and test surface.
+- **Checkers multi-jump “plan full path then execute”** and **piece move polish** beyond the bug list: desirable follow-ups; not required to close this spec. If implemented later, chain visualization and server validation of the full jump sequence must be specified separately.
+
+---
+
 ## Games Page Labels (GamesPage.tsx)
 
 Three display problems on `/games`:
@@ -89,10 +120,10 @@ The captured pieces shown in the panel currently display as letters. Use the sam
 
 **Fix**: Render captured piece images at ~60% size of board pieces, grouped by piece type.
 
-### Bug 4: Board state must use FEN or PGN
-**Backend**: The `board_state` column in the chess game table currently stores an arbitrary format. It must store FEN (or PGN) so any move can reconstruct the exact board state without reading prior moves.
+### Bug 4: Board state and notation for resume, UI, and analysis
+**Backend**: `board_state` must be a **valid FEN** string after every persisted move (replace arbitrary JSON shapes). **`move_list`** holds **SAN** half-moves only (append-only). For consumers that need a **PGN document**, **regenerate** it from `move_list` plus session metadata (player names, date, result); do not store an authoritative growing PGN column. Reconstruction from an arbitrary ply remains: replay `move_list` from the start through that ply (fast for typical game length), with current position always available from latest FEN in `board_state`.
 
-**Fix**: Ensure each move stored in the DB includes the FEN string for that position. Update move serialization and deserialization accordingly.
+**Fix**: Normalize chess persistence to FEN + SAN; wire PGN generation at export/API boundaries where the DS pipeline or downloads need the full string.
 
 ### Bug 5: Move notation must be Algebraic Notation
 The move list currently shows raw coordinate pairs (e.g., `e2-e4`). Display Standard Algebraic Notation (e.g., `e4`, `Nf3`, `O-O`).
@@ -118,10 +149,10 @@ When the bot makes a forced capture that gives the player another consecutive tu
 
 **Fix**: Add a prominent animated indicator (e.g., an arrow or pulsing highlight) anchored to the active player's side of the board. This indicator should be visible any time it's the player's turn.
 
-### Bug 3: AI move delay too fast
-The AI responds almost instantly (~20ms), well below the 2-3 second enqueue/dequeue delay specified in the checkers spec.
+### Bug 3: AI / server event cadence too fast
+The bot or server can emit the next step almost instantly (~20ms), which feels wrong versus the intended human-paced cadence.
 
-**Fix**: Verify the `MOVE_DELAY_MS` / throttling configuration in the backend checkers strategy or SSE handler. The delay between a player's move completing and the bot's response appearing should be 2000-3000ms (with a "thinking..." indicator during the wait).
+**Fix**: Apply the **global** minimum interval between server-emitted game events (see Global conventions). Checkers must respect the same central pacing as other games. Client continues to show a “thinking…” style indicator during enforced waits where applicable.
 
 ---
 
@@ -129,18 +160,19 @@ The AI responds almost instantly (~20ms), well below the 2-3 second enqueue/dequ
 
 - `src/frontend/src/pages/games/Connect4Page.tsx` — column click zone, hover preview
 - `src/frontend/src/pages/games/DotsAndBoxesPage.tsx` — box fill icons, button alignment
-- `src/frontend/src/pages/games/ChessPage.tsx` — board orientation, piece images, captures panel, FEN, AN, layout
+- `src/frontend/src/pages/games/ChessPage.tsx` — board orientation, piece images, captures panel, FEN, AN, layout; optimistic animation vs rejection behavior per Global conventions
 - `src/frontend/src/components/games/ChessBoard.tsx` — piece rendering
 - `src/frontend/src/pages/games/CheckersPage.tsx` — forced capture visual, turn indicator
-- Backend checkers SSE/strategy — AI timing delay
-- Backend chess game persistence — FEN board state
+- Backend game SSE / `MoveProcessor` (or shared emit scheduler) — **global** minimum interval between emitted events; remove reliance on ad hoc per-game hardcoded delays where they conflict
+- Backend chess game persistence — FEN in `board_state`, SAN in `move_list`, PGN regenerated when needed
 
 ## Acceptance Criteria
 
 - Connect4: clicking anywhere in a column drops a piece; hovering shows a preview
 - DotsAndBoxes: claimed boxes show player/AI icon; buttons centered
-- Chess: player's pieces at bottom; piece images rendered; captures shown as icons; board state stored as FEN; move list shows AN; page never scrolls
-- Checkers: inactive pieces visually dimmed during forced capture; turn indicator visible; bot delay 2-3 seconds
+- Chess: player's pieces at bottom; piece images rendered; captures shown as icons; `board_state` is FEN; move list shows SAN; PGN can be regenerated from stored moves; page never scrolls
+- Checkers: inactive pieces visually dimmed during forced capture; turn indicator visible; time between server-emitted steps respects the configured global minimum (prod default in the 2–3 second range where specified)
+- All SSE-backed games: outbound event spacing respects the same global minimum; rejected optimistic moves snap to server state with a user-visible error and **no** success animation
 
 ## Test Cases
 
@@ -151,7 +183,9 @@ The AI responds almost instantly (~20ms), well below the 2-3 second enqueue/dequ
 | Unit (Frontend) | `ChessBoard > renders piece images not letters` | piece element is an img, not text |
 | Unit (Frontend) | `ChessBoard > flips board for black player` | rank 1 appears at top when playerColor=white, bottom when playerColor=black |
 | Unit (Python) | `test_chess_move_stores_fen` | After each move, board_state is a valid FEN string |
-| Unit (Python) | `test_checkers_ai_delay` | Bot SSE event is emitted >= 2000ms after player move |
+| Unit (Python) | `test_game_server_min_event_interval` | With `GAME_SERVER_MIN_EVENT_INTERVAL_MS=2000`, next server-emitted game event after a player move is not sent before 2000ms elapsed (checkers or representative SSE game) |
+| Unit (Python) | `test_chess_pgn_regenerated_from_moves` | Given SAN `move_list` and metadata, regenerated PGN string matches expected movetext/headers |
 | API | `test_chess_move_response_has_algebraic_notation` | Move response includes AN string |
+| Unit (Frontend) | `optimisticMoveRejectedSnapsState` | On move error response, board matches server payload and error UI is shown; no completion animation for the rejected path |
 | Manual | Checkers forced capture | Only capturable pieces are highlighted |
 | Manual | Chess layout | No scrollbar at 1280×800 viewport with 10+ moves and captures on both sides |

@@ -29,6 +29,20 @@ the seeded test accounts:
 
 ---
 
+## 1b. Working on an open pull request
+
+If the task is to **review, amend, or extend** work that already has a PR, check out that PR’s branch before editing so
+commits push to the correct remote branch:
+
+```bash
+gh pr checkout <number>
+```
+
+Inspecting a PR with `gh pr view` or `gh pr diff` while staying on `main` does not switch branches; without an explicit
+checkout, local commits would not update the PR.
+
+---
+
 ## 2. Running locally
 
 `docker compose up` starts the backend and database together. The backend hot-reloads when you edit files in
