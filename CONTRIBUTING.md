@@ -34,6 +34,34 @@ fully localized (single obvious bug fix).
 
 ---
 
+## Bugs, regressions, and GitHub issues
+
+**Bug definition:** A bug is behavior that **contradicts documented intent** (feature **`spec.md`**, **`adr.md`**, or
+this guide where we treat text as contract). If resolving the report needs **new infrastructure**, env contracts, or a
+product/architecture decision, treat it as **feature work**: update or add a spec (and ADR if warranted), then
+implement.
+
+**Where bugs live:** Open a **GitHub Issue** with a short title, link to the doc section that defines correct behavior,
+and steps or evidence to reproduce. Do **not** use the repo as a substitute for the issue tracker (no standalone
+“bug.md” or similar in place of an issue). Bug fixes do **not** depend on merging some other PR first; the issue tracks
+the defect independently.
+
+**Regression tests:** The PR that fixes a bug should **add or extend automated tests** that fail on the old behavior and
+pass on the fixed behavior, at the lowest tier that still catches the defect (pytest unit, TestClient API, integration,
+Vitest, or Playwright). Prefer red-then-green locally when practical; CI must pass before merge.
+
+**Live games:** A **live game** is any game route users can reach in production through the normal hub, including games
+that ship **without** AI. Whenever a game becomes live, the same change (or an immediately follow-up PR) must extend
+**smoke** route checks, **E2E** game-flow specs, and **API** tests to match that game’s contracts. **Current live
+games:** Tic-tac-toe, Checkers, Chess, Connect4, Dots and Boxes. **Pong** is not live until its feature spec marks it
+shipped and routes are enabled; then it joins this list.
+
+**Full-product coverage:** Aim for tests that would catch any documented regression if the pyramid were complete.
+`features/test-coverage-overhaul/spec.md` is the umbrella for CI tiers, TestClient vs Playwright, and long-term coverage
+across the site. `features/test-audit-and-regression/spec.md` tracks the current audit and live-game E2E parity work.
+
+---
+
 ## Architecture decision records (ADRs)
 
 ADRs record **significant, long-lived** decisions so future contributors (and agents) do not reverse them by accident.
@@ -489,7 +517,8 @@ npx playwright test --project=chromium
 1. **Never delete or weaken a test** to fix a failure unless the test is objectively wrong (e.g. it encodes a bug as
    expected behavior). Prefer fixing code, fixtures, or test data.
 2. **New surface area** needs tests at the appropriate tier: new endpoints → API tests; game engine methods → unit;
-   components → Vitest; critical user flows → E2E when already covered by that style in the repo.
+   components → Vitest; critical user flows → E2E when already covered by that style in the repo. **Live games** (see
+   **Bugs, regressions, and GitHub issues** above) must gain matching smoke, E2E, and API coverage when they ship.
 3. **Assertions should be precise** — specific counts, field values, board cells — not only “no exception” or type-only
    checks. See `features/test-coverage-overhaul/spec.md` for the data-correctness principle.
 4. **New features** must list automated cases in the feature **`spec.md` Test Cases** section; see **Development
