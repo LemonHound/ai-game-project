@@ -43,6 +43,50 @@ checkout, local commits would not update the PR.
 
 ---
 
+## 1c. Pull request descriptions during review
+
+Treat the GitHub PR **title** and **body** as part of the deliverable, not optional prose.
+
+Whenever review discussion **narrows scope**, **adds scope**, or **locks a decision** (product, data shape, timing,
+cross-game behavior), update the PR before or with the next push so reviewers and CI see the same story as the branch:
+
+- **Title:** still accurate for what will merge (edit if the PR shifted from the original headline).
+- **Body:** Summary matches the final change set; “decisions made” and any trade-offs called out explicitly; test plan
+  and dependency notes (e.g. “merge after X”) stay current. Link relevant **`features/*/adr.md`** files when the PR
+  implements or supersedes an architectural decision.
+
+Use the GitHub CLI from the PR branch, for example:
+
+```bash
+gh pr edit <number> --title "type: concise subject"
+gh pr edit <number> --body-file path/to/pr-body.md
+```
+
+If you only need a small fix, `gh pr edit <number> --body "..."` is fine. Do not leave stale review questions in the
+body once they are answered; replace them with the agreed outcome.
+
+---
+
+## 1d. Architecture Decision Records (ADRs)
+
+**Decisions belong in ADRs, not only in chat or PR comments.** If work encodes a **significant, long-lived**
+architectural or product decision (new persistence contract, SSE/event cadence rules, cross-game env semantics,
+auth/session boundary, observability strategy, or any pattern other features must copy), add or update
+**`features/<feature-name>/adr.md`** alongside that feature’s `spec.md`. Co-locate the ADR with the feature that owns
+the change unless the team already keeps cross-cutting ADRs under `docs/`.
+
+Workflow:
+
+1. When a decision is made during design or review, **stop and ask** whether it meets the bar above.
+2. If yes, **write the ADR** (status, context, decision, consequences) in the same PR as the spec or implementation that
+   carries it out.
+3. Link the ADR from the feature `spec.md` if readers would otherwise miss it.
+
+Small or reversible changes do not need an ADR; **routine** fixes stay in `spec.md` **Test Cases** only. When in doubt,
+prefer a **short ADR** over losing the rationale in a closed PR thread.
+
+---
+
 ## 2. Running locally
 
 `docker compose up` starts the backend and database together. The backend hot-reloads when you edit files in
