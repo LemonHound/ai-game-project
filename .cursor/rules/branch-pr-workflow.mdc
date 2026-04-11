@@ -7,10 +7,12 @@ globs:
 
 # Branch and pull request workflow
 
-Use **[CONTRIBUTING.md](../../CONTRIBUTING.md)** (section on branch hygiene and CI) as the source of truth. Summary for agents:
+See **[CONTRIBUTING.md](../../CONTRIBUTING.md)** and **`00-project-always.mdc`** (push gate + `gh pr checks --watch` + auto-merge defaults).
 
-- Stay current with the target branch (usually `main`); prefer `git fetch` + rebase onto `origin/main` before push when appropriate.
-- When pushing substantive work: open a **draft** PR by default (`gh pr create --draft`); resolve merge conflicts; watch **Test Summary** (`gh run watch`).
-- After merge: Cloud Build deploys to Cloud Run — do not block the session on deploy; on a **later** pass, verify build/service health with `gcloud` if you are doing release hygiene (commands in CONTRIBUTING).
+- Stay current with `main`: `git fetch` + rebase onto `origin/main` before push when appropriate.
+- Default PR: **draft** (`gh pr create --draft`) until ready; resolve conflicts before merge.
+- After creating or updating a PR branch: **`gh pr checks <number> --watch`** unless the user said not to watch.
+- When submitting for merge: **`gh pr merge <number> --auto --squash`** unless the user disabled auto-merge.
+- Post-merge deploy (Cloud Run): optional `gcloud` verification on a later pass — CONTRIBUTING.
 
-Adapt steps if the user’s workflow explicitly differs (e.g. no `gh` CLI).
+If `gh` is unavailable, say so and use the web UI equivalents.

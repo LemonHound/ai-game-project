@@ -5,7 +5,20 @@ alwaysApply: true
 
 # AI Game Hub — always apply
 
-Read **[CONTRIBUTING.md](../../CONTRIBUTING.md)** for the full workflow (spec-driven development, ADRs, tests, branch hygiene).
+Audience: **tech lead / staff engineer** — lead with the **solution or decision**; minimal preamble unless depth is requested.
+
+Read **[CONTRIBUTING.md](../../CONTRIBUTING.md)** for spec/ADR/test detail and branch hygiene.
+
+## Push gate (non-negotiable)
+
+Before **`git push`**: run **`npm run test:fast`** locally (Vitest, pytest unit, ESLint, Prettier check). Use additional tiers from CONTRIBUTING when the change warrants. **Do not** push to “let CI find” lint/format/test issues. **Do not** use `git push --no-verify` unless the user explicitly allows it.
+
+## Pull requests (`gh`)
+
+Unless the user opts out:
+
+1. After **`gh pr create`** (draft or not): **`gh pr checks <pr> --watch`** until required checks settle.
+2. When submitting / marking ready to merge: **`gh pr merge <pr> --auto --squash`** (same unless user says not to enable auto-merge).
 
 ## Stack (short)
 

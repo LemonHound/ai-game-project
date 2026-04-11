@@ -19,9 +19,9 @@ Non-trivial work is **spec-first**, not “code first, document later.”
 3. **Design** (conversation or review): refine the approach against the spec until the team agrees.
 4. **Update `spec.md`** with the final design before or while implementing. The spec must include a **Test Cases**
    section listing **every** new scenario with:
-   - **Tier:** unit (Python), unit (frontend), integration, API, E2E, or manual
-   - **Concrete test name** (or checklist item for manual)
-   - **Scenario** (what is being proved)
+    - **Tier:** unit (Python), unit (frontend), integration, API, E2E, or manual
+    - **Concrete test name** (or checklist item for manual)
+    - **Scenario** (what is being proved)
 5. **Implement** against the finalized spec. A feature is **not complete** until all **automated** test cases listed in
    the spec pass in CI and any **manual** cases are documented in a manual checklist in the same spec (or linked from
    it).
@@ -58,13 +58,19 @@ Existing example: `features/game-tic-tac-toe/adr.md`.
 - **Before pushing:** `git fetch` and **rebase onto `origin/main`** (or merge, if that is your team convention).
 - **Pull requests:** Open PRs as **draft** by default until ready for review (`gh pr create --draft`, when using GitHub
   CLI). Fix merge conflicts before requesting review.
-- **CI:** The required GitHub Actions check is **Test Summary**. Watch runs after pushes (`gh run watch` if available).
-  Fix failures before merging.
+- **Before push:** Run **`npm run test:fast`** locally (and any other relevant test tiers); it runs Prettier check,
+  ESLint, Vitest, and pytest unit. Do not push to discover lint/format failures in CI. Avoid **`git push --no-verify`**
+  unless you intentionally bypass the hook.
+- **After opening or updating a PR:** Watch required checks until they finish, e.g. **`gh pr checks <number> --watch`**
+  (unless you choose not to).
+- **When submitting a PR for merge:** Prefer **`gh pr merge <number> --auto --squash`** so it merges when checks pass
+  (unless auto-merge is inappropriate for that change).
+- **CI:** The required GitHub Actions check is **Test Summary**. Fix failures before merging.
 - **After merge:** GCP Cloud Build deploys to Cloud Run (typically a few minutes). You do not need to block every
   session on deploy completion; on a later hygiene pass you can verify with:
-  - `gcloud builds list --limit=5 --region=global`
-  - `gcloud run services describe game-ai-website --region=us-central1`  
-  A **failed deploy** should be treated as high priority before starting unrelated new work.
+    - `gcloud builds list --limit=5 --region=global`
+    - `gcloud run services describe game-ai-website --region=us-central1`  
+      A **failed deploy** should be treated as high priority before starting unrelated new work.
 
 ---
 
@@ -74,9 +80,9 @@ Python dependencies are locked with **pip-tools**.
 
 - Edit **`requirements.in`** only (direct dependencies, no version pins unless you intend to pin).
 - Regenerate the lockfile — **never edit `requirements.txt` by hand:**
-  ```bash
-  python -m piptools compile requirements.in --output-file requirements.txt --strip-extras --upgrade
-  ```
+    ```bash
+    python -m piptools compile requirements.in --output-file requirements.txt --strip-extras --upgrade
+    ```
 - Commit **`requirements.in`** and **`requirements.txt`** together.
 
 Transitive packages belong in the lockfile only, not in `requirements.in`. Renovate may update both in automated PRs.
@@ -371,7 +377,7 @@ APIs, or full-browser flows.
 | Unit (Python)   | pytest                      | `tests/unit/`                              | No                                    |
 | Unit (Frontend) | Vitest                      | `src/frontend/src/**/*.test.{ts,tsx}`      | No                                    |
 | Integration     | pytest                      | `tests/integration/`                       | Yes (PostgreSQL on port 5433)         |
-| API             | pytest + FastAPI TestClient | `tests/api_tests/`                        | Yes (PostgreSQL on port 5433)         |
+| API             | pytest + FastAPI TestClient | `tests/api_tests/`                         | Yes (PostgreSQL on port 5433)         |
 | E2E             | Playwright                  | `tests/e2e/`, `tests/smoke/`, `tests/api/` | Yes (PostgreSQL on port 5432, server) |
 
 **Nightly cross-browser E2E:** Any `*.spec.{js,ts}` file under the directories matched by `playwright.config.js` —
@@ -405,8 +411,8 @@ npx playwright test --project=chromium
    checks. See `features/test-coverage-overhaul/spec.md` for the data-correctness principle.
 4. **New features** must list automated cases in the feature **`spec.md` Test Cases** section; see **Development
    workflow** above.
-5. **Before pushing**, run the tier that matches your edit (`npm run test:fast`, or pytest subsets, or API tests with the
-   test compose file).
+5. **Before pushing**, run the tier that matches your edit (`npm run test:fast`, or pytest subsets, or API tests with
+   the test compose file).
 6. **Removing a test** requires a commit-message explanation and either removed behavior or replacement coverage.
 
 **Pre-push:** Husky runs `npm run test:fast` on `git push` (Vitest + pytest unit + lint + format check). You can bypass
