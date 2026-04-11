@@ -15,6 +15,8 @@ class GameInfo(BaseModel):
     status: str
     category: str
     tags: List[str]
+    game_shell_ready: bool
+    ai_model_integrated: bool
 
 class MoveRequest(BaseModel):
     """Generic request body for the game end/forfeit endpoint."""

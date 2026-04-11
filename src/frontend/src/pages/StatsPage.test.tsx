@@ -1,11 +1,11 @@
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderWithProviders } from '../test-utils';
-import LeaderboardPage from './LeaderboardPage';
+import StatsPage from './StatsPage';
 
-describe('LeaderboardPage', () => {
-    it('leaderboard page renders table rows', async () => {
-        renderWithProviders(<LeaderboardPage />);
+describe('StatsPage', () => {
+    it('stats page renders table rows', async () => {
+        renderWithProviders(<StatsPage />);
         await waitFor(() => {
             expect(screen.getByText('Alice')).toBeInTheDocument();
             expect(screen.getByText('Bob')).toBeInTheDocument();
@@ -13,8 +13,8 @@ describe('LeaderboardPage', () => {
         });
     });
 
-    it('renders leaderboard heading', () => {
-        renderWithProviders(<LeaderboardPage />);
-        expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();
+    it('renders stats heading', () => {
+        renderWithProviders(<StatsPage />);
+        expect(screen.getByRole('heading', { name: /^stats$/i })).toBeInTheDocument();
     });
 });

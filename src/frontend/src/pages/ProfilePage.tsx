@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchMyStats } from '../api/stats';
 import { useAuth } from '../hooks/useAuth';
 import PageMeta from '../components/PageMeta';
+import { SkeletonBlock } from '../components/Skeleton';
 import type { GameStats } from '../types';
 
 const GAME_LABELS: Record<string, string> = {
@@ -51,8 +52,18 @@ export default function ProfilePage() {
 
     if (isLoading) {
         return (
-            <div className='flex justify-center py-20'>
-                <span className='loading loading-spinner loading-lg' />
+            <div className='container mx-auto max-w-2xl px-4 py-10'>
+                <SkeletonBlock className='mb-6 h-10 w-48' />
+                <div className='card bg-base-200 shadow'>
+                    <div className='card-body flex-row gap-4'>
+                        <SkeletonBlock className='h-16 w-16 shrink-0 rounded-full' />
+                        <div className='flex flex-1 flex-col gap-3'>
+                            <SkeletonBlock className='h-6 w-40' />
+                            <SkeletonBlock className='h-4 w-28' />
+                            <SkeletonBlock className='h-4 w-full' />
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

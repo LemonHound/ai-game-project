@@ -16,6 +16,9 @@ export default function Footer() {
                 <Link to='/about' className='link link-hover'>
                     About
                 </Link>
+                <Link to='/stats' className='link link-hover'>
+                    Stats
+                </Link>
             </nav>
             <p className='text-sm opacity-60'>&copy; {new Date().getFullYear()} AI Game Hub</p>
         </footer>
