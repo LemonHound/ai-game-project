@@ -25,7 +25,7 @@ test.describe('API Endpoints', () => {
             expect(data.games.length).toBeGreaterThan(0);
 
             if (data.games.length > 0) {
-                verifyApiResponse(data.games[0], ['id', 'name']);
+                verifyApiResponse(data.games[0], ['id', 'name', 'game_shell_ready', 'ai_model_integrated']);
             }
         });
     });

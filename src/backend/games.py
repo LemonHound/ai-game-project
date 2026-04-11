@@ -1433,7 +1433,8 @@ async def get_games(category: Optional[str] = None, status: Optional[str] = None
     """Return a list of all games, optionally filtered by category and/or status."""
     async with get_session() as session:
         query = (
-            "SELECT id, name, description, icon, difficulty, players, status, category, tags"
+            "SELECT id, name, description, icon, difficulty, players, status, category, tags,"
+            " game_shell_ready, ai_model_integrated"
             " FROM games WHERE 1=1"
         )
         params: dict = {}
@@ -1457,6 +1458,8 @@ async def get_games(category: Optional[str] = None, status: Optional[str] = None
             "status": r[6],
             "category": r[7],
             "tags": r[8],
+            "game_shell_ready": r[9],
+            "ai_model_integrated": r[10],
         }
         for r in rows
     ]
@@ -1469,7 +1472,8 @@ async def get_game_info(game_id: str):
     async with get_session() as session:
         result = await session.execute(
             text(
-                "SELECT id, name, description, icon, difficulty, players, status, category, tags"
+                "SELECT id, name, description, icon, difficulty, players, status, category, tags,"
+                " game_shell_ready, ai_model_integrated"
                 " FROM games WHERE id = :id"
             ),
             {"id": game_id},
@@ -1490,6 +1494,8 @@ async def get_game_info(game_id: str):
             "status": row[6],
             "category": row[7],
             "tags": row[8],
+            "game_shell_ready": row[9],
+            "ai_model_integrated": row[10],
         }
     }
 
