@@ -20,6 +20,9 @@ Unless the user opts out:
 1. After **`gh pr create`** (draft or not): **`gh pr checks <pr> --watch`** until required checks settle.
 2. When submitting / marking ready to merge: **`gh pr merge <pr> --auto --squash`** (same unless user says not to enable auto-merge).
 
+Cloud agents: **`gh pr edit` / merge** need **`GH_TOKEN`** (scoped PAT) in the agent environment if `gh auth status`
+shows the limited **`cursor`** / **`ghs_`** integration; see **CONTRIBUTING.md §1e**.
+
 ## Stack (short)
 
 - Backend: FastAPI, Python 3.11+, PostgreSQL via psycopg2.

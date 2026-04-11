@@ -186,21 +186,44 @@ your day-to-day terminal. If a command fails with **permission**, **401/403**, *
 integration**, or **not authenticated**, do **not** ask the user to paste tokens into chat or commit secrets to the
 repo.
 
-**Ask the user** to perform authorization **on their Windows machine** so credentials land in the OS trust store (for
-example **Windows Credential Manager** via normal GitHub CLI and Google Cloud flows):
+### GitHub CLI (`gh`)
 
-- **GitHub / `gh`:** In **Cursor’s integrated terminal** (or any terminal on the PC), run `gh auth login` and complete
-  the browser or device flow. That stores the session where `gh` expects it on Windows (Credential Manager / GitHub CLI
-  config under `%AppData%`). Retry `gh pr view`, `gh pr edit`, or `gh api` after login. If `gh pr edit` fails with a
-  **Projects (classic)** GraphQL deprecation error, use `gh api repos/<owner>/<repo>/pulls/<n> -X PATCH` with a JSON
-  body as a workaround, or remove the PR from classic Projects.
-- **GCP / `gcloud`:** Run `gcloud auth login` and, when tools need application default credentials,
-  `gcloud auth application-default login`, again from a terminal on the user’s machine so ADC and tokens are stored
-  locally.
+**Local Cursor / your PC:** In **Cursor’s integrated terminal** (or any terminal on the machine), run `gh auth login`
+and complete the browser or device flow. That stores the session where `gh` expects it (for example Windows Credential
+Manager and GitHub CLI config under `%AppData%`).
+
+**Cloud or background agents (Linux VM):** Browser login on your PC does **not** apply to that environment. The VM may
+show `gh auth status` as account **`cursor`** with a **`ghs_`** token; that integration can **read** PRs but often
+**cannot** mutate them (`gh pr edit`, `gh pr merge`, some `gh api` writes), which surfaces as **Resource not accessible
+by integration**.
+
+For **any** `gh` call that must act as **you** (or a bot user with repo write), set a **personal access token** in the
+**agent shell environment** as **`GH_TOKEN`** (GitHub CLI treats `GH_TOKEN` as higher precedence than `gh auth login`
+for API requests). Scope the PAT to the minimum needed (for PR edits: **pull requests** write on this repo; add
+**contents** if you also need merge or branch operations). Configure the value wherever Cursor exposes **secrets** or
+**environment variables** for cloud agents, or export it for the session before running `gh` — **never** commit a PAT to
+the repository.
+
+Verify the effective identity (after setting `GH_TOKEN`):
+
+```bash
+gh api user -q .login
+```
+
+If `gh pr edit` fails with a **Projects (classic)** GraphQL deprecation error, use
+`gh api repos/<owner>/<repo>/pulls/<n> -X PATCH` with a JSON body as a workaround, or remove the PR from classic
+Projects.
+
+### GCP (`gcloud`)
+
+**Ask the user** to perform authorization **on their Windows machine** so credentials land in the OS trust store:
+
+- Run `gcloud auth login` and, when tools need application default credentials, `gcloud auth application-default login`,
+  from a terminal on the user’s machine so ADC and tokens are stored locally.
 
 After the user confirms they completed login, **re-run** the failing command. If the agent environment still cannot see
-those credentials (common for **cloud-only** agents), say so clearly: the user may need to **configure Cursor’s GitHub
-integration** or **Secrets** for that environment, not only local Windows auth.
+those credentials (common for **cloud-only** agents), say so clearly: the user may need **GCP secrets or ADC**
+configured for that environment, not only local Windows auth.
 
 ---
 

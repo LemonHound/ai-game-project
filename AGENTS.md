@@ -39,6 +39,10 @@ what must be fresh in every turn; long prose stays in CONTRIBUTING.
 
 ## Cursor Cloud and agent VMs
 
+**GitHub CLI in cloud agents:** `gh pr edit`, merge, and similar writes need a user-scoped token in the VM environment.
+See **[CONTRIBUTING.md](CONTRIBUTING.md) (section 1e — GitHub CLI)** for **`GH_TOKEN`** and verification with
+`gh api user`.
+
 ### Services overview
 
 | Service                    | How to start              | Port |
