@@ -23,7 +23,7 @@ const PLACEHOLDER_GAMES: Game[] = [
         players: '1',
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', '1 Player', 'Quick Play'],
+        tags: ['Strategy', 'Quick Play'],
     },
     {
         id: 'connect4',
@@ -34,7 +34,7 @@ const PLACEHOLDER_GAMES: Game[] = [
         players: '1',
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', '1 Player', 'Coming Soon'],
+        tags: ['Strategy', 'No AI Yet'],
     },
     {
         id: 'dots-and-boxes',
@@ -45,7 +45,7 @@ const PLACEHOLDER_GAMES: Game[] = [
         players: '1',
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', '1 Player', 'Coming Soon'],
+        tags: ['Strategy', 'No AI Yet'],
     },
     {
         id: 'chess',
@@ -56,7 +56,7 @@ const PLACEHOLDER_GAMES: Game[] = [
         players: '1',
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', '1 Player', 'Coming Soon'],
+        tags: ['Strategy', 'No AI Yet'],
     },
     {
         id: 'checkers',
@@ -67,7 +67,7 @@ const PLACEHOLDER_GAMES: Game[] = [
         players: '1',
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', '1 Player', 'Coming Soon'],
+        tags: ['Strategy', 'No AI Yet'],
     },
     {
         id: 'pong',
@@ -78,7 +78,7 @@ const PLACEHOLDER_GAMES: Game[] = [
         players: '1',
         status: 'active',
         category: 'arcade',
-        tags: ['Arcade', '1 Player', 'Coming Soon'],
+        tags: ['Arcade', 'Coming Soon'],
     },
 ];
 
@@ -110,6 +110,7 @@ export default function GamesPage() {
                 <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
                     {games.map(game => {
                         const isComingSoon = game.tags.includes('Coming Soon');
+                        const isNoAiYet = game.tags.includes('No AI Yet');
                         return (
                             <Link
                                 key={game.id}
@@ -120,8 +121,8 @@ export default function GamesPage() {
                                     <h2 className='card-title'>{game.name}</h2>
                                     <p className='text-sm opacity-70'>{game.description}</p>
                                     <div className='card-actions mt-2'>
-                                        <div className='badge badge-outline'>{game.difficulty}</div>
-                                        <div className='badge badge-outline'>{game.players}</div>
+                                        <div className='badge badge-outline'>AI Difficulty: {game.difficulty}</div>
+                                        {isNoAiYet && <div className='badge badge-warning badge-outline'>No AI Yet</div>}
                                         {isComingSoon && <div className='badge badge-neutral'>Coming Soon</div>}
                                     </div>
                                 </div>
