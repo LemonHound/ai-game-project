@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchLeaderboard } from '../api/stats';
 import PageMeta from '../components/PageMeta';
+import { SkeletonBlock } from '../components/Skeleton';
 
 const BOARD_TYPES = [
     { key: 'games_played', label: 'Games Played' },
@@ -17,10 +19,41 @@ const GAME_TYPES = [
     { key: 'dots_and_boxes', label: 'Dots & Boxes' },
 ] as const;
 
+function StatsTableSkeleton() {
+    return (
+        <div className='overflow-x-auto p-4'>
+            <table className='table'>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th className='text-right'>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <tr key={i}>
+                            <td>
+                                <SkeletonBlock className='h-4 w-8' />
+                            </td>
+                            <td>
+                                <SkeletonBlock className='h-4 w-32' />
+                            </td>
+                            <td className='text-right'>
+                                <SkeletonBlock className='ml-auto h-4 w-12' />
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 /**
- * Per-game leaderboard page with board type tabs and game type selector.
+ * Per-game public rankings: games played and streak boards, filterable by game type.
  */
-export default function LeaderboardPage() {
+export default function StatsPage() {
     const [boardType, setBoardType] = useState('games_played');
     const [gameType, setGameType] = useState('tic_tac_toe');
     const [page, setPage] = useState(1);
@@ -35,11 +68,25 @@ export default function LeaderboardPage() {
 
     return (
         <div className='container mx-auto max-w-3xl px-4 py-10'>
-            <PageMeta
-                title='Leaderboard'
-                description='See top players ranked by games played, win streaks, and more.'
-            />
-            <h1 className='mb-6 text-4xl font-bold'>Leaderboard</h1>
+            <PageMeta title='Stats' description='See top players ranked by games played, win streaks, and more.' />
+            <div className='mb-6 flex flex-wrap items-end justify-between gap-4'>
+                <h1 className='text-4xl font-bold'>Stats</h1>
+                <div className='flex flex-wrap gap-3 text-sm'>
+                    <Link to='/' className='link link-hover'>
+                        Home
+                    </Link>
+                    <Link to='/games' className='link link-hover'>
+                        Games
+                    </Link>
+                    <Link to='/about' className='link link-hover'>
+                        About
+                    </Link>
+                </div>
+            </div>
+            <p className='mb-6 text-sm opacity-70'>
+                Rankings include players who opted in under Settings. For aggregate activity across the site, see the
+                home page.
+            </p>
 
             <div className='flex flex-wrap gap-3 mb-6'>
                 <select
@@ -75,9 +122,7 @@ export default function LeaderboardPage() {
             <div className='card bg-base-200 shadow'>
                 <div className='card-body p-0'>
                     {isLoading ? (
-                        <div className='flex justify-center py-10'>
-                            <span className='loading loading-spinner loading-lg' />
-                        </div>
+                        <StatsTableSkeleton />
                     ) : !data || data.entries.length === 0 ? (
                         <p className='py-10 text-center opacity-60'>No entries yet. Play some games!</p>
                     ) : (

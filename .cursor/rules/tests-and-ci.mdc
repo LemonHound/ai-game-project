@@ -1,0 +1,16 @@
+---
+description: pytest, Vitest, Playwright layout, coverage discipline, workflows
+globs:
+  - "tests/**/*"
+  - ".github/workflows/**/*"
+  - "playwright.config.*"
+---
+
+# Tests and CI
+
+- **Never delete or weaken a test** to mask a failure unless the test is objectively wrong.
+- **New surface area** needs tests at the right tier (unit vs API vs E2E); assert **exact** outcomes where feasible (counts, payloads, cells), not only “no error”.
+- **Playwright / nightly:** Any `*.spec.{js,ts}` under globs in `playwright.config.js` (`tests/api/`, `tests/auth/`, `tests/database/`, `tests/e2e/`, `tests/games/`, `tests/performance/`, `tests/smoke/`) is picked up by nightly cross-browser E2E.
+- **Removing a test:** Document why in the commit message; behavior must still be covered or intentionally removed.
+
+Commands and DB ports: **[CONTRIBUTING.md](../../CONTRIBUTING.md)**.

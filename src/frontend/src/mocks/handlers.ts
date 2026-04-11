@@ -120,6 +120,8 @@ export const handlers = [
                     status: 'active',
                     category: 'strategy',
                     tags: ['classic'],
+                    game_shell_ready: true,
+                    ai_model_integrated: true,
                 },
                 {
                     id: 'chess',
@@ -131,6 +133,8 @@ export const handlers = [
                     status: 'active',
                     category: 'strategy',
                     tags: ['classic'],
+                    game_shell_ready: true,
+                    ai_model_integrated: false,
                 },
             ],
         });
