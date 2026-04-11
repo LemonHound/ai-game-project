@@ -87,6 +87,31 @@ prefer a **short ADR** over losing the rationale in a closed PR thread.
 
 ---
 
+## 1e. Cursor agents and authentication (GitHub / GCP)
+
+Remote or integrated **Cursor** sessions may use a shell where `gh` / `gcloud` are **not** logged in the same way as
+your day-to-day terminal. If a command fails with **permission**, **401/403**, **Resource not accessible by
+integration**, or **not authenticated**, do **not** ask the user to paste tokens into chat or commit secrets to the
+repo.
+
+**Ask the user** to perform authorization **on their Windows machine** so credentials land in the OS trust store (for
+example **Windows Credential Manager** via normal GitHub CLI and Google Cloud flows):
+
+- **GitHub / `gh`:** In **Cursor’s integrated terminal** (or any terminal on the PC), run `gh auth login` and complete
+  the browser or device flow. That stores the session where `gh` expects it on Windows (Credential Manager / GitHub CLI
+  config under `%AppData%`). Retry `gh pr view`, `gh pr edit`, or `gh api` after login. If `gh pr edit` fails with a
+  **Projects (classic)** GraphQL deprecation error, use `gh api repos/<owner>/<repo>/pulls/<n> -X PATCH` with a JSON
+  body as a workaround, or remove the PR from classic Projects.
+- **GCP / `gcloud`:** Run `gcloud auth login` and, when tools need application default credentials,
+  `gcloud auth application-default login`, again from a terminal on the user’s machine so ADC and tokens are stored
+  locally.
+
+After the user confirms they completed login, **re-run** the failing command. If the agent environment still cannot see
+those credentials (common for **cloud-only** agents), say so clearly: the user may need to **configure Cursor’s GitHub
+integration** or **Secrets** for that environment, not only local Windows auth.
+
+---
+
 ## 2. Running locally
 
 `docker compose up` starts the backend and database together. The backend hot-reloads when you edit files in

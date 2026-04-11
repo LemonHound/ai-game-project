@@ -12,6 +12,9 @@
    **CONTRIBUTING.md** §1c). Use `gh pr edit`.
 6. Implementation conversation: reference CLAUDE.md + finalized `spec.md` + `adr.md` where applicable
 
+**GitHub / GCP auth failures:** See **CONTRIBUTING.md** §1e. Ask the user to complete `gh auth login` /
+`gcloud auth login` on their Windows machine (Credential Manager); never request tokens in chat.
+
 # Conversation Preferences
 
 - Keep responses brief. Only provide explanations when requested.
