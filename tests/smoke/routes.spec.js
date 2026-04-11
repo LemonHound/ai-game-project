@@ -30,7 +30,7 @@ test.describe('Route Smoke Tests', () => {
     });
 
     test('individual game pages load for active games', async ({ page }) => {
-        const activeGames = ['tic-tac-toe', 'dots-and-boxes', 'connect4'];
+        const activeGames = ['tic-tac-toe', 'chess', 'checkers', 'connect4', 'dots-and-boxes'];
 
         for (const gameId of activeGames) {
             await page.goto(`/game/${gameId}`);
