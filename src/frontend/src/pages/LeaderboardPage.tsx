@@ -36,10 +36,10 @@ export default function LeaderboardPage() {
     return (
         <div className='container mx-auto max-w-3xl px-4 py-10'>
             <PageMeta
-                title='Leaderboard'
+                title='Leaderboards'
                 description='See top players ranked by games played, win streaks, and more.'
             />
-            <h1 className='mb-6 text-4xl font-bold'>Leaderboard</h1>
+            <h1 className='mb-6 text-4xl font-bold'>Leaderboards</h1>
 
             <div className='flex flex-wrap gap-3 mb-6'>
                 <select

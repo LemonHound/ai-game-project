@@ -57,7 +57,7 @@ export default function Navbar() {
                                 <Link to='/about'>About</Link>
                             </li>
                             <li>
-                                <Link to='/leaderboard'>Leaderboard</Link>
+                                <Link to='/leaderboard'>Leaderboards</Link>
                             </li>
                         </ul>
                     </div>
