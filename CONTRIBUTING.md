@@ -1,7 +1,99 @@
 # Contributing to AI Game Hub
 
-This guide is written for ML/AI engineers and data scientists who want to add AI logic, read game data, or run the
-project locally. No frontend experience required.
+This guide covers **how we develop and document** the project (specs, ADRs, tests, GitHub workflow) and **practical
+how-to** for running the app, extending game AI, reading database fields, and validating changes. Use the sections you
+need; maintainers and reviewers should skim **Development workflow** and **Branch hygiene** at least once.
+
+For **Cursor** and other coding agents, see **[AGENTS.md](AGENTS.md)** and the rules under **`.cursor/rules/`** — they
+repeat only what must stay top-of-mind in each turn; this file remains the full reference.
+
+---
+
+## Development workflow (spec-driven)
+
+Non-trivial work is **spec-first**, not “code first, document later.”
+
+1. Create a folder **`features/<short-name>/`** (kebab-case or similar, match existing features).
+2. Add **`spec.md`**. Use it to capture problem statement, design, API or UI touchpoints, data model impacts, rollout,
+   and edge cases.
+3. **Design** (conversation or review): refine the approach against the spec until the team agrees.
+4. **Update `spec.md`** with the final design before or while implementing. The spec must include a **Test Cases**
+   section listing **every** new scenario with:
+    - **Tier:** unit (Python), unit (frontend), integration, API, E2E, or manual
+    - **Concrete test name** (or checklist item for manual)
+    - **Scenario** (what is being proved)
+5. **Implement** against the finalized spec. A feature is **not complete** until all **automated** test cases listed in
+   the spec pass in CI and any **manual** cases are documented in a manual checklist in the same spec (or linked from
+   it).
+
+**Planning vs implementation:** If it is unclear whether work is still in the design/spec phase or in implementation,
+clarify before writing large amounts of code. Planning finishes steps 1–4; implementation is step 5.
+
+**Refactors and broad cleanups** should also go through **`features/<name>/spec.md`** unless the change is trivial and
+fully localized (single obvious bug fix).
+
+---
+
+## Architecture decision records (ADRs)
+
+ADRs record **significant, long-lived** decisions so future contributors (and agents) do not reverse them by accident.
+
+- **Default location:** **`features/<name>/adr.md`** next to the spec that motivated the decision.
+- **When to add one:** New or changed **architecture** (e.g. transport choice, auth/session model, cross-game engine
+  contracts), **operational** strategy (observability, deployment shape), or a **pattern other features must follow**.
+  Routine bug fixes, small UI tweaks, or one-off CRUD usually **do not** need an ADR.
+- **When unsure:** Prefer a **short** ADR over silent knowledge loss.
+- **Cross-cutting decisions** that are not tied to one feature may live under **`docs/`** if the repository already uses
+  that pattern; otherwise keep them with the feature that introduced the change.
+
+Existing example: `features/game-tic-tac-toe/adr.md`.
+
+---
+
+## Branch hygiene, pull requests, and continuous integration
+
+- Keep work **up to date** with the target branch (usually `main`) while coding.
+- **Before pulling:** If your team uses shared branches or multiple open PRs, resolve **merge conflicts** on blocked PRs
+  before integrating new upstream work, when applicable.
+- **Before pushing:** `git fetch` and **rebase onto `origin/main`** (or merge, if that is your team convention).
+- **Pull requests:** Open PRs as **draft** by default until ready for review (`gh pr create --draft`, when using GitHub
+  CLI). Fix merge conflicts before requesting review.
+- **Before push:** Run **`npm run test:fast`** locally (and any other relevant test tiers); it runs Prettier check,
+  ESLint, Vitest, and pytest unit. Do not push to discover lint/format failures in CI. Avoid **`git push --no-verify`**
+  unless you intentionally bypass the hook.
+- **After opening or updating a PR:** Watch required checks until they finish, e.g. **`gh pr checks <number> --watch`**
+  (unless you choose not to).
+- **When submitting a PR for merge:** Prefer **`gh pr merge <number> --auto --squash`** so it merges when checks pass
+  (unless auto-merge is inappropriate for that change).
+- **CI:** The required GitHub Actions check is **Test Summary**. Fix failures before merging.
+- **After merge:** GCP Cloud Build deploys to Cloud Run (typically a few minutes). You do not need to block every
+  session on deploy completion; on a later hygiene pass you can verify with:
+    - `gcloud builds list --limit=5 --region=global`
+    - `gcloud run services describe game-ai-website --region=us-central1`  
+      A **failed deploy** should be treated as high priority before starting unrelated new work.
+
+---
+
+## Python dependencies (pip-tools)
+
+Python dependencies are locked with **pip-tools**.
+
+- Edit **`requirements.in`** only (direct dependencies, no version pins unless you intend to pin).
+- Regenerate the lockfile — **never edit `requirements.txt` by hand:**
+    ```bash
+    python -m piptools compile requirements.in --output-file requirements.txt --strip-extras --upgrade
+    ```
+- Commit **`requirements.in`** and **`requirements.txt`** together.
+
+Transitive packages belong in the lockfile only, not in `requirements.in`. Renovate may update both in automated PRs.
+
+---
+
+## AI-assisted development (Cursor)
+
+- **Project rules:** `.cursor/rules/*.mdc` — scoped instructions (always-on, glob-based, or attach manually with `@`).
+- **Short agent defaults:** [AGENTS.md](AGENTS.md)
+- **Full human workflow:** this document.
 
 ---
 
@@ -26,6 +118,89 @@ the seeded test accounts:
 | `test@example.com`    | `password123` |
 | `demo@aigamehub.com`  | `password123` |
 | `player1@example.com` | `password123` |
+
+---
+
+## 1b. Working on an open pull request
+
+If the task is to **review, amend, or extend** work that already has a PR, check out that PR’s branch before editing so
+commits push to the correct remote branch:
+
+```bash
+gh pr checkout <number>
+```
+
+Inspecting a PR with `gh pr view` or `gh pr diff` while staying on `main` does not switch branches; without an explicit
+checkout, local commits would not update the PR.
+
+---
+
+## 1c. Pull request descriptions during review
+
+Treat the GitHub PR **title** and **body** as part of the deliverable, not optional prose.
+
+Whenever review discussion **narrows scope**, **adds scope**, or **locks a decision** (product, data shape, timing,
+cross-game behavior), update the PR before or with the next push so reviewers and CI see the same story as the branch:
+
+- **Title:** still accurate for what will merge (edit if the PR shifted from the original headline).
+- **Body:** Summary matches the final change set; “decisions made” and any trade-offs called out explicitly; test plan
+  and dependency notes (e.g. “merge after X”) stay current. Link relevant **`features/*/adr.md`** files when the PR
+  implements or supersedes an architectural decision.
+
+Use the GitHub CLI from the PR branch, for example:
+
+```bash
+gh pr edit <number> --title "type: concise subject"
+gh pr edit <number> --body-file path/to/pr-body.md
+```
+
+If you only need a small fix, `gh pr edit <number> --body "..."` is fine. Do not leave stale review questions in the
+body once they are answered; replace them with the agreed outcome.
+
+---
+
+## 1d. Architecture Decision Records (ADRs)
+
+**Decisions belong in ADRs, not only in chat or PR comments.** If work encodes a **significant, long-lived**
+architectural or product decision (new persistence contract, SSE/event cadence rules, cross-game env semantics,
+auth/session boundary, observability strategy, or any pattern other features must copy), add or update
+**`features/<feature-name>/adr.md`** alongside that feature’s `spec.md`. Co-locate the ADR with the feature that owns
+the change unless the team already keeps cross-cutting ADRs under `docs/`.
+
+Workflow:
+
+1. When a decision is made during design or review, **stop and ask** whether it meets the bar above.
+2. If yes, **write the ADR** (status, context, decision, consequences) in the same PR as the spec or implementation that
+   carries it out.
+3. Link the ADR from the feature `spec.md` if readers would otherwise miss it.
+
+Small or reversible changes do not need an ADR; **routine** fixes stay in `spec.md` **Test Cases** only. When in doubt,
+prefer a **short ADR** over losing the rationale in a closed PR thread.
+
+---
+
+## 1e. Cursor agents and authentication (GitHub / GCP)
+
+Remote or integrated **Cursor** sessions may use a shell where `gh` / `gcloud` are **not** logged in the same way as
+your day-to-day terminal. If a command fails with **permission**, **401/403**, **Resource not accessible by
+integration**, or **not authenticated**, do **not** ask the user to paste tokens into chat or commit secrets to the
+repo.
+
+**Ask the user** to perform authorization **on their Windows machine** so credentials land in the OS trust store (for
+example **Windows Credential Manager** via normal GitHub CLI and Google Cloud flows):
+
+- **GitHub / `gh`:** In **Cursor’s integrated terminal** (or any terminal on the PC), run `gh auth login` and complete
+  the browser or device flow. That stores the session where `gh` expects it on Windows (Credential Manager / GitHub CLI
+  config under `%AppData%`). Retry `gh pr view`, `gh pr edit`, or `gh api` after login. If `gh pr edit` fails with a
+  **Projects (classic)** GraphQL deprecation error, use `gh api repos/<owner>/<repo>/pulls/<n> -X PATCH` with a JSON
+  body as a workaround, or remove the PR from classic Projects.
+- **GCP / `gcloud`:** Run `gcloud auth login` and, when tools need application default credentials,
+  `gcloud auth application-default login`, again from a terminal on the user’s machine so ADC and tokens are stored
+  locally.
+
+After the user confirms they completed login, **re-run** the failing command. If the agent environment still cannot see
+those credentials (common for **cloud-only** agents), say so clearly: the user may need to **configure Cursor’s GitHub
+integration** or **Secrets** for that environment, not only local Windows auth.
 
 ---
 
@@ -275,7 +450,56 @@ including database access, dependency management, and how to mount model weights
 
 ## 11. Running tests
 
-There are four test tiers. You usually only need to run the first two.
+You usually only need **fast** tests day to day; use integration/API/E2E when your change touches the database, HTTP
+APIs, or full-browser flows.
+
+### Tier reference
+
+| Tier            | Runner                      | Location                                   | Requires DB                           |
+| --------------- | --------------------------- | ------------------------------------------ | ------------------------------------- |
+| Unit (Python)   | pytest                      | `tests/unit/`                              | No                                    |
+| Unit (Frontend) | Vitest                      | `src/frontend/src/**/*.test.{ts,tsx}`      | No                                    |
+| Integration     | pytest                      | `tests/integration/`                       | Yes (PostgreSQL on port 5433)         |
+| API             | pytest + FastAPI TestClient | `tests/api_tests/`                         | Yes (PostgreSQL on port 5433)         |
+| E2E             | Playwright                  | `tests/e2e/`, `tests/smoke/`, `tests/api/` | Yes (PostgreSQL on port 5432, server) |
+
+**Nightly cross-browser E2E:** Any `*.spec.{js,ts}` file under the directories matched by `playwright.config.js` —
+`tests/api/`, `tests/auth/`, `tests/database/`, `tests/e2e/`, `tests/games/`, `tests/performance/`, `tests/smoke/` — is
+included automatically in the nightly cross-browser job (`.github/workflows/nightly-e2e.yml`). Adding a file under those
+paths adds CI surface area; prefer colocating new Playwright specs there intentionally.
+
+**Full suite (with Docker test DB):**
+
+```bash
+docker compose -f docker-compose.test.yml up -d
+python -m pytest tests/ -x --tb=short
+npx vitest run
+docker compose -f docker-compose.test.yml down
+```
+
+**E2E (built frontend + running server):**
+
+```bash
+npm run build
+npx playwright test --project=chromium
+```
+
+### Coverage policy
+
+1. **Never delete or weaken a test** to fix a failure unless the test is objectively wrong (e.g. it encodes a bug as
+   expected behavior). Prefer fixing code, fixtures, or test data.
+2. **New surface area** needs tests at the appropriate tier: new endpoints → API tests; game engine methods → unit;
+   components → Vitest; critical user flows → E2E when already covered by that style in the repo.
+3. **Assertions should be precise** — specific counts, field values, board cells — not only “no exception” or type-only
+   checks. See `features/test-coverage-overhaul/spec.md` for the data-correctness principle.
+4. **New features** must list automated cases in the feature **`spec.md` Test Cases** section; see **Development
+   workflow** above.
+5. **Before pushing**, run the tier that matches your edit (`npm run test:fast`, or pytest subsets, or API tests with
+   the test compose file).
+6. **Removing a test** requires a commit-message explanation and either removed behavior or replacement coverage.
+
+**Pre-push:** Husky runs `npm run test:fast` on `git push` (Vitest + pytest unit + lint + format check). You can bypass
+with `--no-verify` when necessary; **CI remains the hard gate**.
 
 **Fast tests (no Docker DB required):**
 

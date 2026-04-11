@@ -238,7 +238,34 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, code-quality, python-unit, frontend-unit, integration, e2e-tests, security]
     if: always()
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
+      - name: Check PR mergeability (merge conflict)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pr="${{ github.event.pull_request.number }}"
+          mergeable=""
+          for i in $(seq 1 45); do
+            mergeable=$(gh pr view "$pr" --repo "${{ github.repository }}" --json mergeable -q .mergeable)
+            if [ "$mergeable" = "true" ] || [ "$mergeable" = "false" ]; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$mergeable" = "false" ]; then
+            echo "::error::Pull request is not mergeable (resolve merge conflicts with the base branch)."
+            exit 1
+          fi
+          if [ -z "$mergeable" ] || [ "$mergeable" = "null" ]; then
+            echo "::error::Mergeability still unknown after retries; refusing to pass the gate."
+            exit 1
+          fi
+
       - name: Generate Test Summary
         run: |
           echo "## Test Results" >> $GITHUB_STEP_SUMMARY
@@ -250,3 +277,30 @@ jobs:
           echo "| Integration + API | ${{ needs.integration.result == 'success' && 'Pass' || (needs.integration.result == 'skipped' && 'Skipped' || 'Fail') }} |" >> $GITHUB_STEP_SUMMARY
           echo "| E2E (Chromium) | ${{ needs.e2e-tests.result == 'success' && 'Pass' || (needs.e2e-tests.result == 'skipped' && 'Skipped' || 'Fail') }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security (CodeQL) | ${{ needs.security.result == 'success' && 'Pass' || (needs.security.result == 'skipped' && 'Skipped' || 'Fail') }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any suite failed or was cancelled
+        env:
+          CODE_QUALITY: ${{ needs.code-quality.result }}
+          PYTHON_UNIT: ${{ needs.python-unit.result }}
+          FRONTEND_UNIT: ${{ needs.frontend-unit.result }}
+          INTEGRATION: ${{ needs.integration.result }}
+          E2E: ${{ needs.e2e-tests.result }}
+          SECURITY: ${{ needs.security.result }}
+        run: |
+          set -euo pipefail
+          bad=0
+          for name_val in \
+            "Code Quality:$CODE_QUALITY" \
+            "Python Unit:$PYTHON_UNIT" \
+            "Frontend Unit:$FRONTEND_UNIT" \
+            "Integration + API:$INTEGRATION" \
+            "E2E (Chromium):$E2E" \
+            "Security (CodeQL):$SECURITY"; do
+            name="${name_val%%:*}"
+            val="${name_val#*:}"
+            if [ "$val" = "failure" ] || [ "$val" = "cancelled" ]; then
+              echo "::error::$name job result: $val"
+              bad=1
+            fi
+          done
+          exit "$bad"

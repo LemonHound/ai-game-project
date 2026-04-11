@@ -1,17 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { fetchGames } from '../api/games';
-import type { Game } from '../types';
+import GameSummaryCard from '../components/games/GameSummaryCard';
 import PageMeta from '../components/PageMeta';
-
-const GAME_ROUTES: Record<string, string> = {
-    'tic-tac-toe': '/game/tic-tac-toe',
-    chess: '/game/chess',
-    checkers: '/game/checkers',
-    connect4: '/game/connect4',
-    'dots-and-boxes': '/game/dots-and-boxes',
-    pong: '/game/pong',
-};
+import { GameCardGridSkeleton } from '../components/Skeleton';
+import type { Game } from '../types';
 
 const PLACEHOLDER_GAMES: Game[] = [
     {
@@ -20,10 +13,12 @@ const PLACEHOLDER_GAMES: Game[] = [
         description: 'Classic 3x3 grid game with adaptive AI opponent that learns your strategies',
         icon: '⭕',
         difficulty: 'Very Easy',
-        players: '1',
+        players: 1,
         status: 'active',
         category: 'strategy',
         tags: ['Strategy', 'Quick Play'],
+        game_shell_ready: true,
+        ai_model_integrated: true,
     },
     {
         id: 'connect4',
@@ -31,10 +26,12 @@ const PLACEHOLDER_GAMES: Game[] = [
         description: 'Drop pieces to connect four in a row - vertically, horizontally, or diagonally',
         icon: '🔴',
         difficulty: 'Very Easy',
-        players: '1',
+        players: 1,
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', 'No AI Yet'],
+        tags: ['Strategy'],
+        game_shell_ready: true,
+        ai_model_integrated: false,
     },
     {
         id: 'dots-and-boxes',
@@ -42,10 +39,12 @@ const PLACEHOLDER_GAMES: Game[] = [
         description: 'Connect dots to complete boxes and claim territory in this strategic paper game',
         icon: '⬜',
         difficulty: 'Very Easy',
-        players: '1',
+        players: 1,
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', 'No AI Yet'],
+        tags: ['Strategy', 'Territory'],
+        game_shell_ready: true,
+        ai_model_integrated: false,
     },
     {
         id: 'chess',
@@ -53,10 +52,12 @@ const PLACEHOLDER_GAMES: Game[] = [
         description: 'Chess with AI that learns your playing style and adapts its strategy',
         icon: '♟️',
         difficulty: 'Very Easy',
-        players: '1',
+        players: 1,
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', 'No AI Yet'],
+        tags: ['Strategy'],
+        game_shell_ready: true,
+        ai_model_integrated: false,
     },
     {
         id: 'checkers',
@@ -64,10 +65,12 @@ const PLACEHOLDER_GAMES: Game[] = [
         description: 'Classic checkers with an AI that adapts to your tactical preferences',
         icon: '⚫',
         difficulty: 'Very Easy',
-        players: '1',
+        players: 1,
         status: 'active',
         category: 'strategy',
-        tags: ['Strategy', 'No AI Yet'],
+        tags: ['Strategy', 'Classic'],
+        game_shell_ready: true,
+        ai_model_integrated: false,
     },
     {
         id: 'pong',
@@ -75,10 +78,12 @@ const PLACEHOLDER_GAMES: Game[] = [
         description: 'Classic pong game, popularized by Atari',
         icon: '🕹️',
         difficulty: 'Very Easy',
-        players: '1',
+        players: 1,
         status: 'active',
         category: 'arcade',
-        tags: ['Arcade', 'Coming Soon'],
+        tags: ['Arcade', 'Classic'],
+        game_shell_ready: false,
+        ai_model_integrated: false,
     },
 ];
 
@@ -87,48 +92,45 @@ const PLACEHOLDER_GAMES: Game[] = [
  * Falls back to PLACEHOLDER_GAMES if the API returns an empty list.
  */
 export default function GamesPage() {
-    const { data: apiGames, isLoading } = useQuery({
+    const {
+        data: apiGames,
+        isLoading,
+        isError,
+    } = useQuery({
         queryKey: ['games'],
         queryFn: () => fetchGames(),
     });
     const games = apiGames?.length ? apiGames : PLACEHOLDER_GAMES;
 
     return (
-        <div className='container mx-auto px-4 py-10'>
+        <div className='container mx-auto max-w-6xl px-4 py-10'>
             <PageMeta
                 title='Games'
                 description='Browse all available games -- from Tic Tac Toe to Chess, each with an adaptive AI opponent.'
                 ogImage='/images/og/og-games.png'
             />
-            <h1 className='mb-8 text-4xl font-bold'>Games</h1>
-
-            {isLoading ? (
-                <div className='flex justify-center py-20'>
-                    <span className='loading loading-spinner loading-lg' />
+            <div className='mb-8 flex flex-wrap items-end justify-between gap-4'>
+                <h1 className='text-4xl font-bold'>Games</h1>
+                <div className='flex flex-wrap gap-3 text-sm'>
+                    <Link to='/' className='link link-hover'>
+                        Home
+                    </Link>
+                    <Link to='/stats' className='link link-hover'>
+                        Stats
+                    </Link>
+                    <Link to='/about' className='link link-hover'>
+                        About
+                    </Link>
                 </div>
-            ) : (
+            </div>
+
+            {isLoading && <GameCardGridSkeleton cards={6} />}
+            {isError && <p className='text-error'>Could not load games from the server. Showing cached defaults.</p>}
+            {!isLoading && (
                 <div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-                    {games.map(game => {
-                        const isComingSoon = game.tags.includes('Coming Soon');
-                        const isNoAiYet = game.tags.includes('No AI Yet');
-                        return (
-                            <Link
-                                key={game.id}
-                                to={GAME_ROUTES[game.id] ?? `/game/${game.id}`}
-                                className='card bg-base-200 shadow-md transition-shadow hover:shadow-xl'>
-                                <div className='card-body'>
-                                    <div className='text-4xl'>{game.icon}</div>
-                                    <h2 className='card-title'>{game.name}</h2>
-                                    <p className='text-sm opacity-70'>{game.description}</p>
-                                    <div className='card-actions mt-2'>
-                                        <div className='badge badge-outline'>AI Difficulty: {game.difficulty}</div>
-                                        {isNoAiYet && <div className='badge badge-warning badge-outline'>No AI Yet</div>}
-                                        {isComingSoon && <div className='badge badge-neutral'>Coming Soon</div>}
-                                    </div>
-                                </div>
-                            </Link>
-                        );
-                    })}
+                    {games.map(game => (
+                        <GameSummaryCard key={game.id} game={game} />
+                    ))}
                 </div>
             )}
         </div>

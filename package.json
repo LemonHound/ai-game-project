@@ -25,8 +25,8 @@
         "format:check": "prettier --check \"src/**/*.{ts,tsx,js,css,html}\" \"tests/**/*.js\" \"*.{js,mjs,ts,json,md}\"",
         "quality:check": "npm run format:check && npm audit --audit-level=high",
         "prepare": "husky",
-        "test:fast": "vitest run && python -m pytest tests/unit/ -x --tb=short && npm run lint && npm run format:check",
-        "test:full": "docker compose -f docker-compose.test.yml up -d && python -m pytest tests/ -x --tb=short && docker compose -f docker-compose.test.yml down",
+        "test:fast": "vitest run && python3 -m pytest tests/unit/ -x --tb=short && npm run lint && npm run format:check",
+        "test:full": "docker compose -f docker-compose.test.yml up -d && python3 -m pytest tests/ -x --tb=short && docker compose -f docker-compose.test.yml down",
         "deps:check": "npm outdated",
         "deps:update": "npx npm-check-updates --upgrade --target minor && npm install"
     },

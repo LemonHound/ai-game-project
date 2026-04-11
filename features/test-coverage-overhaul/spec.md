@@ -723,9 +723,9 @@ Renovate handles pip-compile natively: it edits `requirements.in` and runs `pip-
 
 ---
 
-## Phase 7: CLAUDE.md & Documentation Updates
+## Phase 7: CONTRIBUTING.md & Documentation Updates
 
-### CLAUDE.md additions
+### CONTRIBUTING.md additions
 
 Add to the "After Writing Code" or a new "Before Pushing Code" section:
 

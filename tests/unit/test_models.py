@@ -93,6 +93,8 @@ def test_game_info_valid():
         status="active",
         category="strategy",
         tags=["classic", "quick"],
+        game_shell_ready=True,
+        ai_model_integrated=True,
     )
     assert info.id == "ttt"
     assert info.tags == ["classic", "quick"]

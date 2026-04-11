@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchMyStats } from '../../api/stats';
+import { SkeletonBlock } from '../Skeleton';
 import type { GameStats } from '../../types';
 
 const STATS_QUERY_KEY = ['myStats'] as const;
@@ -25,8 +26,15 @@ export default function GameStatsPanel({ gameType }: { gameType: string }) {
 
     if (isLoading) {
         return (
-            <div className='mt-4 flex justify-center'>
-                <span className='loading loading-dots loading-sm' />
+            <div className='card bg-base-200 mt-4'>
+                <div className='card-body gap-3 p-4'>
+                    <SkeletonBlock className='h-4 w-24' />
+                    <div className='grid grid-cols-4 gap-2'>
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <SkeletonBlock key={i} className='mx-auto h-10 w-full max-w-[4.5rem]' />
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }

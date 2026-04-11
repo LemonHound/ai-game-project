@@ -79,7 +79,7 @@ ai-game-project/
 │           ├── store/              # Zustand stores
 │           └── types/              # TypeScript interfaces
 ├── tests/                          # Playwright (E2E/API/smoke) + Jest (unit)
-├── features/                       # Feature specs (see CLAUDE.md)
+├── features/                       # Feature specs + ADRs (see CONTRIBUTING.md)
 ├── scripts/
 │   └── pre-commit                  # Git hook: format → lint → pydocstyle
 ├── .github/workflows/
