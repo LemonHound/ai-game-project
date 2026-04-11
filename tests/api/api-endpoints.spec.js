@@ -300,7 +300,7 @@ test.describe('API Endpoints', () => {
     test.describe('CORS and Headers', () => {
         test('CORS headers are present', async ({ request }) => {
             const response = await request.get('/api/health', {
-                headers: { 'Origin': 'http://localhost:5173' },
+                headers: { Origin: 'http://localhost:5173' },
             });
 
             const corsHeader = response.headers()['access-control-allow-origin'];
