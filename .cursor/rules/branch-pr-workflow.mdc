@@ -1,0 +1,18 @@
+---
+description: Rebases, draft PRs, CI watch, post-merge deploy checks
+globs:
+  - ".github/**/*.yml"
+  - ".github/**/*.yaml"
+---
+
+# Branch and pull request workflow
+
+See **[CONTRIBUTING.md](../../CONTRIBUTING.md)** and **`00-project-always.mdc`** (push gate + `gh pr checks --watch` + auto-merge defaults).
+
+- Stay current with `main`: `git fetch` + rebase onto `origin/main` before push when appropriate.
+- Default PR: **draft** (`gh pr create --draft`) until ready; resolve conflicts before merge.
+- After creating or updating a PR branch: **`gh pr checks <number> --watch`** unless the user said not to watch.
+- When submitting for merge: **`gh pr merge <number> --auto --squash`** unless the user disabled auto-merge.
+- Post-merge deploy (Cloud Run): optional `gcloud` verification on a later pass — CONTRIBUTING.
+
+If `gh` is unavailable, say so and use the web UI equivalents.

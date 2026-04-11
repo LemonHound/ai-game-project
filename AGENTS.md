@@ -1,4 +1,43 @@
-## Cursor Cloud specific instructions
+# AI assistants in this repository
+
+Human-readable defaults for automation and coding agents. **Authoritative detail:** [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Non-negotiables
+
+- **Spec-first:** Non-trivial work is driven by `features/<name>/spec.md` (see CONTRIBUTING). Do not ship behavior that
+  is not reflected in the spec and its **Test Cases** section.
+- **ADR when it matters:** If the change encodes a significant, long-lived architectural or product decision, add or
+  update `adr.md` in the same feature folder (see CONTRIBUTING for the bar).
+- **Code locations:** Backend in `src/backend/`, frontend in `src/frontend/src/`, shared styles in
+  `src/frontend/src/styles/input.css`.
+- **Backend:** Use `logging`, not `print`. Parameterize all SQL (`psycopg2` / `cursor.execute` with placeholders).
+- **Secrets:** Never commit production secrets. Production uses GCP Secret Manager, not checked-in `.env`.
+
+## Before you push
+
+- Run **`npm run test:fast`** locally before every push (covers Vitest, pytest unit, ESLint, Prettier). Add tiers from
+  CONTRIBUTING when appropriate. **Do not** push untested and rely on CI for format/lint/tests; **`--no-verify`** only
+  if the user explicitly allows it.
+- CI gate on GitHub: **Test Summary**.
+
+## Pull requests
+
+Unless the user opts out: after **`gh pr create`**, run **`gh pr checks <pr> --watch`**. When marking ready to land, use
+**`gh pr merge <pr> --auto --squash`** by default.
+
+## Planning vs implementation
+
+If the user has not said whether the task is **planning** (spec/design) or **implementation**, ask once. Planning
+follows CONTRIBUTING’s design steps; implementation follows the finalized spec.
+
+## Where Cursor rules live
+
+Project-scoped instructions for Cursor are in **`.cursor/rules/*.mdc`**. They narrow context (globs) and repeat only
+what must be fresh in every turn; long prose stays in CONTRIBUTING.
+
+---
+
+## Cursor Cloud and agent VMs
 
 ### Services overview
 
@@ -26,7 +65,7 @@ DB_HOST=localhost DB_PORT=5432 DB_NAME=ai_game_db DB_USER=dev_user DB_PASSWORD=d
 
 ### Running tests
 
-Refer to `CLAUDE.md` "Testing" section and `package.json` scripts. Key commands:
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** (Running tests) and `package.json` scripts. Key commands:
 
 - `npm run test:fast` — Vitest + pytest unit + lint + format (no DB needed)
 - Integration/API tests need `docker compose -f docker-compose.test.yml up -d` (port 5433)
@@ -34,16 +73,16 @@ Refer to `CLAUDE.md` "Testing" section and `package.json` scripts. Key commands:
 ### Non-obvious notes
 
 - Node.js 20 is required (not 22). Use `nvm use 20`.
-- The Husky pre-push hook and `test:fast` script invoke `python` (not `python3`). The VM snapshot includes a symlink
-  `sudo ln -sf /usr/bin/python3 /usr/local/bin/python`. If a fresh VM is missing it, recreate it.
-- Python packages install to `~/.local/bin` — ensure it is on PATH.
-- Docker is needed for PostgreSQL. In Cloud Agent VMs, Docker requires `fuse-overlayfs` storage driver and
-  `iptables-legacy` — see the setup hints in the system prompt.
+- `npm run test:fast` invokes pytest via **`python3`**. Ensure `python3` is on PATH; on some VMs a `python` → `python3`
+  symlink is added. If a fresh VM is missing it, recreate it.
+- Python packages may install to `~/.local/bin` — ensure it is on PATH.
+- Docker is needed for PostgreSQL. In Cloud Agent VMs, Docker may require `fuse-overlayfs` storage driver and
+  `iptables-legacy` — see setup hints in the environment documentation.
 - The OTel console exporter may log `ValueError: I/O operation on closed file` after pytest runs. This is benign and
   does not indicate test failure.
-- The ESLint `--max-warnings=0` check (`lint:check`) will flag existing JSDoc warnings — these are pre-existing, not
-  caused by agent changes.
-- `CLAUDE.md` `format:check` warns about `CLAUDE.md` formatting — also pre-existing.
-- The Husky pre-push hook runs `npm run test:fast`. Bypass with `--no-verify` if needed but CI is the hard gate.
+- The ESLint `--max-warnings=0` check (`lint:check`) may flag existing JSDoc warnings — treat as pre-existing unless
+  your change touched those files.
+- The Husky pre-push hook runs `npm run test:fast`. Prefer fixing failures locally over `--no-verify`; CI remains the
+  merge gate.
 - The backend serves the built frontend from `dist/` — run `npm run build` before starting the backend if you need the
   full app at port 8000 without the Vite dev server.
