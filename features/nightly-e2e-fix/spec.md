@@ -30,6 +30,7 @@ Four test cases assert behavior that doesn't match the actual API:
   - Games list test: change `/api/games` to `/api/games_list`
   - Non-existent endpoint test: verify actual behavior (check if SPA catch-all swallows it; if so, test a route that truly 404s like `/api/nonexistent-endpoint-xyz`)
   - Malformed JSON test: include 422 in accepted status codes
+- `CLAUDE.md` — add a note in the Testing section clarifying that any `.spec.{js,ts}` file placed under the directories matched by `playwright.config.js` globs (`tests/api/`, `tests/auth/`, `tests/database/`, `tests/e2e/`, `tests/games/`, `tests/performance/`, `tests/smoke/`) is automatically included in the nightly cross-browser E2E job
 
 No other files should be touched.
 
