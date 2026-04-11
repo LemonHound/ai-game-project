@@ -9,7 +9,7 @@ describe('Navbar', () => {
         expect(screen.getAllByText('Home').length).toBeGreaterThanOrEqual(1);
         expect(screen.getAllByText('Games').length).toBeGreaterThanOrEqual(1);
         expect(screen.getAllByText('About').length).toBeGreaterThanOrEqual(1);
-        expect(screen.getAllByText('Leaderboard').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Leaderboards').length).toBeGreaterThanOrEqual(1);
     });
 
     it('renders brand link', () => {
