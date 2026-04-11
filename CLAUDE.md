@@ -44,8 +44,9 @@
     1. Fetch and rebase onto `origin/main`.
     2. Scan for open PRs. If any are open, resolve them first.
     3. Push the code.
-    4. Retrieve the PR that was submitted, and check that it has no merge conflicts. If any are present, resolve them.
-    5. Enable auto-merge: `gh pr merge <number> --auto --squash`
+    4. Open a PR in **draft** status (`gh pr create --draft ...`). This is the default; only omit `--draft` if explicitly told to.
+    5. Retrieve the PR that was submitted, and check that it has no merge conflicts. If any are present, resolve them.
+    6. Enable auto-merge (`gh pr merge <number> --auto --squash`). This is the default; only skip if explicitly told to.
 - For implementation pushes (any change to runtime behavior — features, bug fixes where a test could plausibly fail): 6.
   Watch GitHub Actions inline: `gh run watch`. If CI fails, fix immediately and push again. 7. Once the PR is merged,
   GCP Cloud Build will automatically build, push to Artifact Registry, and deploy to Cloud Run. Do **not** block waiting
@@ -82,6 +83,8 @@ Transitive dependencies (e.g. `pydantic-core`) are resolved automatically by pip
 | Integration     | pytest                      | `tests/integration/`                       | Yes (PG on port 5433)                 |
 | API             | pytest + FastAPI TestClient | `tests/api_tests/`                         | Yes (PG on port 5433)                 |
 | E2E             | Playwright                  | `tests/e2e/`, `tests/smoke/`, `tests/api/` | Yes (PG on port 5432, server running) |
+
+Any `.spec.{js,ts}` file under the directories matched by `playwright.config.js` globs (`tests/api/`, `tests/auth/`, `tests/database/`, `tests/e2e/`, `tests/games/`, `tests/performance/`, `tests/smoke/`) is automatically included in the nightly cross-browser E2E job (`nightly-e2e.yml`).
 
 ## Running Tests Locally
 
