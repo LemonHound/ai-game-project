@@ -8,6 +8,53 @@ Bugs filed in issues #96-#99 from March 28, 2026. Items made obsolete by `featur
 
 ---
 
+## Games Page Labels (GamesPage.tsx)
+
+Three display problems on `/games`:
+
+### Bug 1: Difficulty label has no context
+`Very Easy` is shown in a badge with no explanation. Updated to **`AI Difficulty: Very Easy`**.
+
+### Bug 2: Player count badge is useless
+`1` is displayed in a badge. All games are 1-player (human vs bot) by definition on this site. Badge removed.
+
+### Bug 3: "Coming Soon" applied to fully playable games
+Five games showed "Coming Soon" despite being fully functional. The label should only apply to Pong (the game itself is not yet implemented). For all other games, the AI model has not been integrated yet but the game is fully playable — show **`No AI Yet`** instead (styled as a warning badge to distinguish from the neutral "Coming Soon").
+
+### Implementation status
+**Already implemented** — `src/frontend/src/pages/GamesPage.tsx` updated:
+- `PLACEHOLDER_GAMES` tags cleaned up (removed "1 Player", "Coming Soon" → "No AI Yet" for non-pong)
+- Difficulty badge prefixed with "AI Difficulty:"
+- Players badge removed from render
+- "No AI Yet" renders as `badge-warning badge-outline`
+
+### DB update required (Kevin to run)
+The `games` table in PostgreSQL also stores these fields. Run the following after confirming the frontend changes look correct:
+
+```sql
+-- Remove "1 Player" and "Coming Soon", add "No AI Yet" for all non-pong games
+UPDATE games
+SET tags = (
+    SELECT jsonb_agg(t)
+    FROM jsonb_array_elements_text(tags::jsonb) t
+    WHERE t NOT IN ('1 Player', 'Coming Soon')
+) || '["No AI Yet"]'::jsonb
+WHERE id != 'pong';
+
+-- Pong: just remove "1 Player", keep "Coming Soon"
+UPDATE games
+SET tags = (
+    SELECT jsonb_agg(t)
+    FROM jsonb_array_elements_text(tags::jsonb) t
+    WHERE t != '1 Player'
+)
+WHERE id = 'pong';
+```
+
+> Note: exact SQL depends on how `tags` is stored (JSON array vs text array). Verify column type first with `\d games`.
+
+---
+
 ## Connect 4 (#97)
 
 ### Bug 1: Column click target too narrow
