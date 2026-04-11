@@ -72,7 +72,7 @@ export default function SettingsPage() {
                                         disabled={mutation.isPending}
                                     />
                                     <span className='text-sm'>
-                                        Show my stats on leaderboards and allow other players to view them
+                                        Show my stats on public rankings and allow other players to view them
                                     </span>
                                 </label>
                             </div>

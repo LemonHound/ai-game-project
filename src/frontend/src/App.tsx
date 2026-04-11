@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import NotificationRenderer from './components/NotificationRenderer';
@@ -8,7 +8,7 @@ import { useNotificationStore } from './store/notifications';
 import AboutPage from './pages/AboutPage';
 import GamesPage from './pages/GamesPage';
 import HomePage from './pages/HomePage';
-import LeaderboardPage from './pages/LeaderboardPage';
+import StatsPage from './pages/StatsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
@@ -88,13 +88,14 @@ export default function App() {
                         }
                     />
                     <Route
-                        path='/leaderboard'
+                        path='/stats'
                         element={
                             <ErrorBoundary>
-                                <LeaderboardPage />
+                                <StatsPage />
                             </ErrorBoundary>
                         }
                     />
+                    <Route path='/leaderboard' element={<Navigate to='/stats' replace />} />
                     <Route
                         path='/settings'
                         element={

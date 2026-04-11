@@ -31,7 +31,7 @@ Automated tests run against staging. The same image is promoted to production on
 - Image promotion from staging to production (same artifact, no second build)
 - Staging URL must be accessible for manual testing but should not be treated as public-facing
 - There must be a documented rollback mechanism if issues are discovered after production promotion
-- The CLAUDE.md branch hygiene and push workflow must be updated to reflect the new pipeline steps
+- The CONTRIBUTING.md branch hygiene and push workflow must be updated to reflect the new pipeline steps
 
 ## Open Questions
 

@@ -9,6 +9,7 @@ describe('Footer', () => {
         expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument();
         expect(screen.queryByRole('link', { name: 'Games' })).not.toBeInTheDocument();
         expect(screen.queryByRole('link', { name: 'About' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Stats' })).not.toBeInTheDocument();
     });
 
     it('renders copyright text', () => {

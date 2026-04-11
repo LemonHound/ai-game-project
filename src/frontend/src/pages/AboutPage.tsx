@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchAboutStats } from '../api/about';
-import { useCountUp } from '../hooks/useCountUp';
+import AboutPlatformStats from '../components/AboutPlatformStats';
 import PageMeta from '../components/PageMeta';
+import { StatGridSkeleton } from '../components/Skeleton';
+import { useCountUp } from '../hooks/useCountUp';
 
 const DONATE_URLS = {
     buyMeACoffee: 'https://buymeacoffee.com/',
@@ -33,14 +36,12 @@ function seededRandom(seed: number): number {
     return x - Math.floor(x);
 }
 
-function StatCard({ value, label, isFloat }: { value: number; label: string; isFloat?: boolean }) {
+function PlaceholderStatCard({ value, label }: { value: number; label: string }) {
     const animated = useCountUp(value);
-    const display = isFloat ? `${(animated * 100).toFixed(1)}%` : animated.toLocaleString();
-
     return (
         <div className='card bg-base-200 shadow-sm'>
             <div className='card-body items-center p-4 text-center'>
-                <span className='text-3xl font-bold text-primary'>{display}</span>
+                <span className='text-3xl font-bold text-primary'>{animated.toLocaleString()}</span>
                 <span className='text-sm opacity-70'>{label}</span>
             </div>
         </div>
@@ -49,7 +50,11 @@ function StatCard({ value, label, isFloat }: { value: number; label: string; isF
 
 /** Renders the About page with live platform stats, team section, and donation links. */
 export default function AboutPage() {
-    const { data: stats } = useQuery({
+    const {
+        data: stats,
+        isLoading,
+        isError,
+    } = useQuery({
         queryKey: ['about-stats'],
         queryFn: fetchAboutStats,
         staleTime: 60_000,
@@ -80,17 +85,30 @@ export default function AboutPage() {
             </p>
 
             <section className='mb-12'>
-                <h2 className='mb-4 text-2xl font-semibold'>Platform Stats</h2>
-                <div className='grid grid-cols-2 gap-4 md:grid-cols-4'>
-                    <StatCard value={stats?.games_played ?? 0} label='Games Played' />
-                    <StatCard value={stats?.moves_analyzed ?? 0} label='Moves Analyzed' />
-                    <StatCard value={stats?.unique_players ?? 0} label='Players' />
-                    <StatCard value={stats?.ai_win_rate ?? 0} label='AI Win Rate' isFloat />
-                    <StatCard value={stats?.training_moves ?? 0} label='Training Moves' />
-                    <StatCard value={stats?.days_running ?? 0} label='Days Running' />
-                    <StatCard value={placeholders.aiIterations} label='AI Iterations' />
-                    <StatCard value={placeholders.bugsSquashed} label='Bugs Squashed' />
+                <div className='mb-4 flex flex-wrap items-end justify-between gap-4'>
+                    <h2 className='text-2xl font-semibold'>Platform Stats</h2>
+                    <Link to='/stats' className='link link-primary text-sm'>
+                        Public rankings
+                    </Link>
                 </div>
+                {isLoading && <StatGridSkeleton count={8} />}
+                {isError && <p className='text-error'>Could not load platform statistics.</p>}
+                {stats && (
+                    <div className='space-y-4'>
+                        <AboutPlatformStats
+                            gamesPlayed={stats.games_played}
+                            movesAnalyzed={stats.moves_analyzed}
+                            uniquePlayers={stats.unique_players}
+                            aiWinRate={stats.ai_win_rate}
+                            trainingMoves={stats.training_moves}
+                            daysRunning={stats.days_running}
+                        />
+                        <div className='grid grid-cols-2 gap-4 md:grid-cols-4'>
+                            <PlaceholderStatCard value={placeholders.aiIterations} label='AI Iterations' />
+                            <PlaceholderStatCard value={placeholders.bugsSquashed} label='Bugs Squashed' />
+                        </div>
+                    </div>
+                )}
             </section>
 
             <section className='mb-12'>

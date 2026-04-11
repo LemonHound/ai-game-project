@@ -34,7 +34,7 @@
         }
     ],
     "pip-compile": {
-        "fileMatch": ["requirements\\.in$"]
+        "managerFilePatterns": ["/requirements\\.txt$/"]
     },
     "vulnerabilityAlerts": {
         "enabled": true

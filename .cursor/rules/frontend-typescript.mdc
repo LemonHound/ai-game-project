@@ -1,0 +1,14 @@
+---
+description: React, TypeScript, Vite, Vitest, and UI conventions
+globs:
+  - "src/frontend/**/*.{ts,tsx,css}"
+  - "src/frontend/**/*.test.{ts,tsx}"
+---
+
+# Frontend (TypeScript / React)
+
+- Match existing component and hook patterns; colocate tests as `*.test.ts` / `*.test.tsx`.
+- **Tests:** `npx vitest run` (or `npm run test:fast` for repo-wide quick check).
+- Styles: prefer Tailwind + DaisyUI; global input in `src/frontend/src/styles/input.css`.
+
+See **[CONTRIBUTING.md](../../CONTRIBUTING.md)** for docstrings (JSDoc on exports), formatting, and lint.

@@ -16,10 +16,12 @@ export interface Game {
     description: string;
     icon: string;
     difficulty: string;
-    players: string;
+    players: string | number;
     status: string;
     category: string;
     tags: string[];
+    game_shell_ready: boolean;
+    ai_model_integrated: boolean;
 }
 
 export interface ApiError {
