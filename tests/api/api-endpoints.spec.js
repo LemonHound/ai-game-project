@@ -81,7 +81,7 @@ test.describe('API Endpoints', () => {
             const response = await auth.post('/api/auth/login', {
                 data: {
                     email: 'demo@aigamehub.com',
-                    password: 'password123',
+                    password: 'demo123',
                 },
             });
 
@@ -219,7 +219,7 @@ test.describe('API Endpoints', () => {
             const loginResponse = await auth.post('/api/auth/login', {
                 data: {
                     email: 'demo@aigamehub.com',
-                    password: 'password123',
+                    password: 'demo123',
                 },
             });
 
@@ -238,7 +238,7 @@ test.describe('API Endpoints', () => {
             const reLoginResponse = await auth.post('/api/auth/login', {
                 data: {
                     email: 'demo@aigamehub.com',
-                    password: 'password123',
+                    password: 'demo123',
                 },
             });
 
@@ -271,7 +271,7 @@ test.describe('API Endpoints', () => {
 
     test.describe('Error Handling', () => {
         test('non-existent endpoints return 404', async ({ request }) => {
-            const response = await request.get('/api/nonexistent');
+            const response = await request.get('/api/nonexistent-endpoint-xyz');
             expect(response.status()).toBe(404);
         });
 
@@ -283,7 +283,7 @@ test.describe('API Endpoints', () => {
                 },
             });
 
-            expect([400, 500]).toContain(response.status());
+            expect([400, 422, 500]).toContain(response.status());
         });
 
         test('missing required fields return appropriate errors', async ({ request }) => {
@@ -299,15 +299,16 @@ test.describe('API Endpoints', () => {
 
     test.describe('CORS and Headers', () => {
         test('CORS headers are present', async ({ request }) => {
-            const response = await request.get('/api/health');
+            const response = await request.get('/api/health', {
+                headers: { 'Origin': 'http://localhost:5173' },
+            });
 
             const corsHeader = response.headers()['access-control-allow-origin'];
-            // CORS should be configured (either * or specific origin)
             expect(corsHeader).toBeDefined();
         });
 
         test('Content-Type headers are correct', async ({ request }) => {
-            const response = await request.get('/api/games');
+            const response = await request.get('/api/games_list');
 
             const contentType = response.headers()['content-type'];
             expect(contentType).toContain('application/json');

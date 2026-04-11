@@ -26,19 +26,19 @@ _TEST_USERS = [
     {
         "username": "demo",
         "email": "demo@aigamehub.com",
-        "password_hash": "$2b$12$ZzFtjWukLb1z7wJ8B8EM.uUijqU1b0LcUFqXhp2LH646KezufWtni",
+        "password_hash": "$2b$12$yRa5XdiD234Dvuavu0Cx0u5lJXaPsyufv9aG3QdIun9FIUx.t0cVS",
         "display_name": "Demo Player",
     },
     {
         "username": "test",
         "email": "test@example.com",
-        "password_hash": "$2b$12$ZzFtjWukLb1z7wJ8B8EM.uUijqU1b0LcUFqXhp2LH646KezufWtni",
+        "password_hash": "$2b$12$yRa5XdiD234Dvuavu0Cx0u5lJXaPsyufv9aG3QdIun9FIUx.t0cVS",
         "display_name": "Test User",
     },
     {
         "username": "player1",
         "email": "player1@example.com",
-        "password_hash": "$2b$12$ZzFtjWukLb1z7wJ8B8EM.uUijqU1b0LcUFqXhp2LH646KezufWtni",
+        "password_hash": "$2b$12$yRa5XdiD234Dvuavu0Cx0u5lJXaPsyufv9aG3QdIun9FIUx.t0cVS",
         "display_name": "Player One",
     },
 ]
