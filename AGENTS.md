@@ -26,8 +26,8 @@ Unless the user opts out: after **`gh pr create`**, run **`gh pr checks <pr> --w
 **`gh pr merge <pr> --auto --squash`** by default.
 
 **GitHub writes from agents:** Run **`gh pr create`**, **`gh pr edit`**, and **`gh pr merge`** only in a **local**
-terminal where `gh` is you (see **CONTRIBUTING.md §1e**). On **sub-agents**, skip those commands and use
-the **§1c handoff** block in CONTRIBUTING so a local session or the human applies the title, body, and merge.
+terminal where `gh` is you (see **CONTRIBUTING.md §1e**). On **sub-agents**, skip those commands and use the **§1c
+handoff** block in CONTRIBUTING so a local session or the human applies the title, body, and merge.
 
 ## Planning vs implementation
 

@@ -4,7 +4,8 @@ This guide covers **how we develop and document** the project (specs, ADRs, test
 how-to** for running the app, extending game AI, reading database fields, and validating changes. Use the sections you
 need; maintainers and reviewers should skim **Development workflow** and **Branch hygiene** at least once.
 
-For coding agents, see **[AGENTS.md](AGENTS.md)** — it repeats only what must stay top-of-mind in each turn; this file remains the full reference.
+For coding agents, see **[AGENTS.md](AGENTS.md)** — it repeats only what must stay top-of-mind in each turn; this file
+remains the full reference.
 
 ---
 
@@ -174,10 +175,9 @@ cross-game behavior), update the PR before or with the next push so reviewers an
   implements or supersedes an architectural decision.
 
 **Where to run `gh pr edit` (and other GitHub writes):** Only on a **machine where GitHub CLI is authenticated as you**
-(your local terminal, Git Bash, and so on). **Sub-agents** typically cannot
-mutate PRs (see **§1e**). If work runs in a sub-agent, **do not** keep retrying `gh pr edit` there; finish the branch,
-then apply the title/body using a **local** shell or hand the exact commands to the contributor (see **§1c handoff**
-below).
+(your local terminal, Git Bash, and so on). **Sub-agents** typically cannot mutate PRs (see **§1e**). If work runs in a
+sub-agent, **do not** keep retrying `gh pr edit` there; finish the branch, then apply the title/body using a **local**
+shell or hand the exact commands to the contributor (see **§1c handoff** below).
 
 Use the GitHub CLI from the PR branch, for example:
 
@@ -233,8 +233,8 @@ prefer a **short ADR** over losing the rationale in a closed PR thread.
 ## 1e. Sub-agents and authentication (GitHub / GCP)
 
 Sub-agents share the local machine context but may not inherit all shell auth state from the parent session. If a
-command fails with **permission**, **401/403**, **Resource not accessible by integration**, or **not authenticated**,
-do **not** ask the user to paste tokens into chat or commit secrets to the repo.
+command fails with **permission**, **401/403**, **Resource not accessible by integration**, or **not authenticated**, do
+**not** ask the user to paste tokens into chat or commit secrets to the repo.
 
 ### GitHub CLI (`gh`)
 
@@ -248,9 +248,9 @@ it (for example Windows Credential Manager and GitHub CLI config). Optionally se
 PAT to the repository.
 
 **Sub-agents:** Prefer read-only `gh` commands (`gh pr view`, `gh pr diff`, `gh pr checks`). Mutations (`gh pr create`,
-`gh pr edit`, `gh pr merge`) should run in the main session. If a sub-agent cannot mutate PRs, complete code and
-pushes on the branch, then use **§1c handoff** so the main session or the contributor applies the change, or edit the
-PR on **github.com**.
+`gh pr edit`, `gh pr merge`) should run in the main session. If a sub-agent cannot mutate PRs, complete code and pushes
+on the branch, then use **§1c handoff** so the main session or the contributor applies the change, or edit the PR on
+**github.com**.
 
 Verify the effective identity before relying on writes:
 
