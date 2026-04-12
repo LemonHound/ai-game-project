@@ -1,6 +1,7 @@
 # OTel User Engagement Analytics Spec
 
-**Status: ready**
+**Status: planning** — all open questions below must be resolved before this becomes ready for
+implementation. Do not begin implementation without a planning session.
 
 ## Background
 
@@ -28,42 +29,48 @@ observability infrastructure.
 
 ## Open Questions
 
-### Goals & Use Cases
+All of these must be resolved in a planning session before implementation begins.
+
+### Goals & Use Cases (required before scoping instrumentation)
+
 - What specific questions do we want to answer? (e.g., "which game is most played?", "where do users drop
   off?", "what is average session length by game?")
 - Is this for internal product decisions only, or does it need to be shared externally?
 - What decisions would be made differently if we had this data?
 
 ### Scope of Instrumentation
+
 - What UI interactions beyond page views and game events should be tracked? (Button clicks? Modal opens? Form
   abandonment?)
 - Should we track anonymous (unauthenticated) users, or only authenticated users?
 - How do we handle users who block telemetry (e.g., ad blockers intercepting requests)?
 
-### Frontend OTel
+### Frontend OTel Strategy
+
 - Which OTel JS SDK? (`@opentelemetry/sdk-web` + document load auto-instrumentation, or manual spans only?)
 - How does the frontend export traces? Direct to GCP, via an OTel collector sidecar, or via a backend proxy
   endpoint?
 - How is trace context propagated from frontend spans to backend spans across API calls?
 
 ### Metrics vs. Traces
+
 - Should engagement events go into traces, metrics, or both? (Traces = per-event detail; metrics = aggregated)
 - What specific Cloud Monitoring dashboards or alerts do we want to build?
 - GCP Cloud Trace retention is 30 days by default — is that sufficient, or do we need to export to BigQuery?
 
-### Game-Specific Events
-- What game events carry the most signal? (Move quality? Time-to-move? Win/loss by difficulty level?)
-- How does this overlap with the game-data-persistence feature — where is the boundary?
-- The observability spec (`features/observability/`) already defines `game.id` as the primary span
-  attribute and `game.sessions.started` / `game.sessions.completed` counters. Before implementing
-  engagement analytics, review the current observability spec to avoid duplicating instrumentation.
-  Open question: does otel-engagement extend the existing spans and metrics, or introduce a separate
-  analytics layer alongside them?
+### Relationship to Existing Observability
+
+- The observability spec (`features/observability/`) already defines `game.id` as the primary span attribute
+  and `game.sessions.started` / `game.sessions.completed` counters. Before implementing engagement analytics,
+  clarify: does this spec extend the existing spans and metrics, or introduce a separate analytics layer?
+- What is the boundary between this spec and the game-statistics feature? Game stats are computed from DB
+  records; engagement analytics comes from OTel. Make sure the two do not duplicate event capture.
 
 ### Privacy & Compliance
+
 - What user identifiers (user_id, session_id, anonymous ID) can be included in spans?
 - Are there GDPR or regional data residency considerations for trace data stored in GCP?
 
 ## Test Cases
 
-_To be defined during planning session._
+_To be defined during planning session after open questions are resolved._
