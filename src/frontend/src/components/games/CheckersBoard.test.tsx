@@ -40,4 +40,13 @@ describe('CheckersBoard', () => {
         const { container } = render(<CheckersBoard {...defaultProps} />);
         expect(container.firstChild).toBeTruthy();
     });
+
+    it('dims non-playable pieces', () => {
+        const board = makeInitialBoard();
+        const { container } = render(
+            <CheckersBoard {...defaultProps} board={board} legalPieces={[40]} mustCapture={40} />
+        );
+        const dimmedPieces = container.querySelectorAll('[class*="opacity-35"]');
+        expect(dimmedPieces.length).toBeGreaterThan(0);
+    });
 });
