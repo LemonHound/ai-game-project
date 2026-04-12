@@ -163,6 +163,8 @@ async def serve_react_app(full_path: str):
     Returns:
         FileResponse for index.html, or raises HTTPException 503 if not built.
     """
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not found")
     index_path = DIST_DIR / "index.html"
     if index_path.exists():
         return FileResponse(str(index_path))

@@ -226,16 +226,14 @@ test.describe('Tic Tac Toe Database Integration', () => {
         test('should validate board position format', async ({ request }) => {
             const auth = addAuth(request);
 
-            const startResponse = await auth.post('/api/tic-tac-toe/start');
+            const startResponse = await auth.post('/api/game/tic-tac-toe/newgame', {
+                data: { player_starts: true },
+            });
             expect(startResponse.ok()).toBeTruthy();
-            const gameSession = await startResponse.json();
 
             // Try to make an invalid move (position out of range)
-            const moveResponse = await auth.post('/api/tic-tac-toe/move', {
-                data: {
-                    sessionId: gameSession.sessionId,
-                    move: { position: 10 }, // Invalid position
-                },
+            const moveResponse = await auth.post('/api/game/tic-tac-toe/move', {
+                data: { position: 10 }, // Invalid position (valid range is 0–8)
             });
 
             // Should handle error gracefully

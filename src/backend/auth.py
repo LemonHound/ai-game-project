@@ -152,7 +152,7 @@ async def get_current_user(
     }
 
 
-@router.post("/register")
+@router.post("/register", status_code=201)
 async def register(request: RegisterRequest, response: Response):
     """Register a new local user account and return an authenticated session.
 

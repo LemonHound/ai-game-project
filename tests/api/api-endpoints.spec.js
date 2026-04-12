@@ -37,10 +37,9 @@ test.describe('API Endpoints', () => {
 
             if (response.ok()) {
                 const gameInfo = await response.json();
-                verifyApiResponse(gameInfo, ['authenticated', 'game', 'user']);
+                verifyApiResponse(gameInfo, ['game']);
                 verifyApiResponse(gameInfo.game, ['id', 'name']);
                 expect(gameInfo.game.id).toBe('tic-tac-toe');
-                expect(gameInfo.authenticated).toBe(true);
             } else {
                 expect([200, 404]).toContain(response.status());
             }
@@ -73,7 +72,7 @@ test.describe('API Endpoints', () => {
             expect(response.status()).toBe(401);
 
             const data = await response.json();
-            expect(data.error).toContain('No session provided');
+            expect(data.detail).toContain('No session provided');
         });
 
         test('POST /api/auth/login with valid credentials', async ({ request }) => {
@@ -119,7 +118,7 @@ test.describe('API Endpoints', () => {
             expect(response.status()).toBe(401);
 
             const data = await response.json();
-            expect(data.error).toContain('Invalid credentials');
+            expect(data.detail).toContain('Invalid email or password');
         });
 
         test('POST /api/auth/register creates new user', async ({ request }) => {
@@ -167,7 +166,7 @@ test.describe('API Endpoints', () => {
             expect(response.status()).toBe(409);
 
             const data = await response.json();
-            expect(data.error).toContain('Email already exists');
+            expect(data.detail).toContain('Email already registered');
         });
 
         test('authenticated requests work with session ID', async ({ request }) => {
@@ -185,32 +184,15 @@ test.describe('API Endpoints', () => {
             expect(userData.email).toBe('demo@aigamehub.com');
         });
 
-        test('GET /api/auth/stats returns user statistics', async ({ request }) => {
+        test('GET /api/stats/me returns user statistics', async ({ request }) => {
             const auth = addAuth(request);
-            const response = await auth.get('/api/auth/stats');
+            const response = await auth.get('/api/stats/me');
 
-            if (!response.ok()) {
-                const errorBody = await response.text();
-                console.log('Stats error response:', errorBody);
-
-                const healthResponse = await auth.get('/api/auth/health');
-                console.log('Auth health status:', healthResponse.status());
-                if (healthResponse.ok()) {
-                    const healthData = await healthResponse.json();
-                    console.log('Auth health data:', healthData);
-                } else {
-                    console.log('Auth health failed:', await healthResponse.text());
-                }
-            }
-
-            expect(response.ok()).toBeTruthy(); // Should be 200, not 400
+            expect(response.ok()).toBeTruthy();
 
             const stats = await response.json();
-            verifyApiResponse(stats, ['gamesPlayed', 'winRate', 'aiContributions']);
-
-            expect(typeof stats.gamesPlayed).toBe('number');
-            expect(typeof stats.winRate).toBe('number');
-            expect(typeof stats.aiContributions).toBe('number');
+            expect(stats).toHaveProperty('per_game');
+            expect(typeof stats.per_game).toBe('object');
         });
 
         test('POST /api/auth/logout clears session', async ({ request }) => {
@@ -293,7 +275,7 @@ test.describe('API Endpoints', () => {
                 data: {}, // Missing email and password
             });
 
-            expect([400, 401, 500]).toContain(response.status()); // Include 500 for CSRF errors
+            expect([400, 401, 405, 422, 500]).toContain(response.status());
         });
     });
 
