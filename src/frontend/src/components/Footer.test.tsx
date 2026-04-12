@@ -4,17 +4,10 @@ import { renderWithProviders } from '../test-utils';
 import Footer from './Footer';
 
 describe('Footer', () => {
-    it('renders copyright without duplicate nav links', () => {
+    it('footer_renders_all_links', () => {
         renderWithProviders(<Footer />);
-        expect(screen.queryByRole('link', { name: 'Home' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('link', { name: 'Games' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('link', { name: 'About' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('link', { name: 'Stats' })).not.toBeInTheDocument();
-    });
-
-    it('renders copyright text', () => {
-        renderWithProviders(<Footer />);
-        const year = new Date().getFullYear();
-        expect(screen.getByText(new RegExp(`${year}`))).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /about/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /support/i })).toBeInTheDocument();
+        expect(screen.getByText(/discord/i)).toBeInTheDocument();
     });
 });
