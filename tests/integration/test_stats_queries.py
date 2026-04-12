@@ -3,7 +3,9 @@ import pytest
 from sqlalchemy import text
 
 import persistence_service
+from db_models import GAME_TYPE_TO_MODEL
 from game_engine.ttt_engine import TicTacToeEngine
+from stats import _compute_leaderboard
 
 
 async def _create_and_end_game(session, user_id, outcome):
@@ -69,3 +71,37 @@ async def test_leaderboard_stats_private_excluded(seeded_db):
     )
     row = result.fetchone()
     assert row.cnt == 0
+
+
+@pytest.mark.asyncio
+async def test_leaderboard_pagination_returns_correct_slice(seeded_db):
+    result = await seeded_db.execute(
+        text("SELECT id FROM users WHERE stats_public = true ORDER BY id LIMIT 2")
+    )
+    rows = result.fetchall()
+    assert len(rows) >= 2, "Seed data must include at least 2 public users"
+    user_a, user_b = rows[0].id, rows[1].id
+
+    a_ids = []
+    for _ in range(3):
+        gid = await _create_and_end_game(seeded_db, user_a, "player_won")
+        a_ids.append(gid)
+    b_id = await _create_and_end_game(seeded_db, user_b, "player_won")
+
+    model = GAME_TYPE_TO_MODEL["tic_tac_toe"]
+
+    page1 = await _compute_leaderboard(seeded_db, "games_played", "tic_tac_toe", model, page=1, per_page=1)
+    page2 = await _compute_leaderboard(seeded_db, "games_played", "tic_tac_toe", model, page=2, per_page=1)
+
+    assert len(page1["entries"]) == 1
+    assert len(page2["entries"]) == 1
+    assert page1["entries"][0]["rank"] == 1
+    assert page2["entries"][0]["rank"] == 2
+    assert page1["entries"][0]["user_id"] != page2["entries"][0]["user_id"]
+    assert page1["page"] == 1
+    assert page2["page"] == 2
+
+    for gid in a_ids:
+        await seeded_db.execute(text(f"DELETE FROM tic_tac_toe_games WHERE id = '{gid}'"))
+    await seeded_db.execute(text(f"DELETE FROM tic_tac_toe_games WHERE id = '{b_id}'"))
+    await seeded_db.commit()

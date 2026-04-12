@@ -1,6 +1,6 @@
 # Test audit, live-game coverage, and regression discipline
 
-**Status: ready**
+**Status: implemented**
 
 ## Goal
 
