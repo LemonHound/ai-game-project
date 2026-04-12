@@ -26,26 +26,19 @@ Unless the user opts out: after **`gh pr create`**, run **`gh pr checks <pr> --w
 **`gh pr merge <pr> --auto --squash`** by default.
 
 **GitHub writes from agents:** Run **`gh pr create`**, **`gh pr edit`**, and **`gh pr merge`** only in a **local**
-terminal where `gh` is you (see **CONTRIBUTING.md §1e**). On **remote Cursor cloud agents**, skip those commands and use
-the **§1c handoff** block in CONTRIBUTING so a local session or the human applies the title, body, and merge.
+terminal where `gh` is you (see **CONTRIBUTING.md §1e**). On **sub-agents**, skip those commands and use the **§1c
+handoff** block in CONTRIBUTING so a local session or the human applies the title, body, and merge.
 
 ## Planning vs implementation
 
 If the user has not said whether the task is **planning** (spec/design) or **implementation**, ask once. Planning
 follows CONTRIBUTING’s design steps; implementation follows the finalized spec.
 
-## Where Cursor rules live
+## Sub-agents
 
-Project-scoped instructions for Cursor are in **`.cursor/rules/*.mdc`**. They narrow context (globs) and repeat only
-what must be fresh in every turn; long prose stays in CONTRIBUTING.
-
----
-
-## Cursor Cloud and agent VMs
-
-**GitHub CLI:** Cloud agents should use **`gh pr view` / `diff` / `checks`** only. For **`gh pr edit`**,
+**GitHub CLI:** Sub-agents should use **`gh pr view` / `diff` / `checks`** only. For **`gh pr edit`**,
 **`gh pr merge`**, or **`gh pr create`**, follow **CONTRIBUTING.md §1c handoff** and run writes **locally** (or on the
-GitHub website). See **§1e** for why **`ghs_`** / **`cursor`** cannot be relied on for mutations.
+GitHub website). See **§1e** for authentication constraints on sub-agents.
 
 ### Services overview
 
@@ -84,7 +77,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** (Running tests) and `package.json` sc
 - `npm run test:fast` invokes pytest via **`python3`**. Ensure `python3` is on PATH; on some VMs a `python` → `python3`
   symlink is added. If a fresh VM is missing it, recreate it.
 - Python packages may install to `~/.local/bin` — ensure it is on PATH.
-- Docker is needed for PostgreSQL. In Cloud Agent VMs, Docker may require `fuse-overlayfs` storage driver and
+- Docker is needed for PostgreSQL. In sub-agent environments, Docker may require `fuse-overlayfs` storage driver and
   `iptables-legacy` — see setup hints in the environment documentation.
 - The OTel console exporter may log `ValueError: I/O operation on closed file` after pytest runs. This is benign and
   does not indicate test failure.
