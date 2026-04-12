@@ -44,6 +44,15 @@ def test_chess_board_state_contains_fen_after_ai_move(auth_client):
     assert parts[1] in ("w", "b"), f"FEN active-color field must be 'w' or 'b', got: {parts[1]!r}"
 
 
+def test_chess_invalid_move_returns_422(auth_client):
+    auth_client.post("/api/game/chess/newgame", json={"player_starts": True})
+    response = auth_client.post(
+        "/api/game/chess/move",
+        json={"fromRow": 6, "fromCol": 4, "toRow": 7, "toCol": 4, "promotionPiece": None},
+    )
+    assert response.status_code == 422
+
+
 def test_completed_game_move_list_queryable(auth_client):
     """Verify a chess game record includes a queryable move_list field."""
     auth_client.post("/api/game/chess/newgame", json={"player_starts": True})

@@ -105,3 +105,46 @@ async def test_leaderboard_pagination_returns_correct_slice(seeded_db):
         await seeded_db.execute(text(f"DELETE FROM tic_tac_toe_games WHERE id = '{gid}'"))
     await seeded_db.execute(text(f"DELETE FROM tic_tac_toe_games WHERE id = '{b_id}'"))
     await seeded_db.commit()
+
+
+@pytest.mark.asyncio
+async def test_stats_cache_cleared_between_tests(seeded_db):
+    from stats import clear_caches, _build_user_stats
+    result = await seeded_db.execute(
+        text("SELECT id FROM users WHERE stats_public = true ORDER BY id LIMIT 1")
+    )
+    user_id = result.fetchone().id
+
+    gid = await _create_and_end_game(seeded_db, user_id, "player_won")
+
+    clear_caches()
+    stats = await _build_user_stats(seeded_db, user_id)
+    total_wins = sum(g.get("wins", 0) for g in stats.get("per_game", {}).values())
+    assert total_wins >= 1
+
+    await seeded_db.execute(text(f"DELETE FROM tic_tac_toe_games WHERE id = '{gid}'"))
+    await seeded_db.commit()
+
+
+@pytest.mark.asyncio
+async def test_leaderboard_ordering(seeded_db):
+    result = await seeded_db.execute(
+        text("SELECT id FROM users WHERE stats_public = true ORDER BY id LIMIT 2")
+    )
+    rows = result.fetchall()
+    assert len(rows) >= 2, "Seed data must include at least 2 public users"
+    user_a, user_b = rows[0].id, rows[1].id
+
+    a_ids = [await _create_and_end_game(seeded_db, user_a, "player_won") for _ in range(3)]
+    b_ids = [await _create_and_end_game(seeded_db, user_b, "player_won")]
+
+    model = GAME_TYPE_TO_MODEL["tic_tac_toe"]
+    page = await _compute_leaderboard(seeded_db, "games_played", "tic_tac_toe", model, page=1, per_page=2)
+
+    entries = page["entries"]
+    assert len(entries) >= 2
+    assert entries[0]["value"] >= entries[1]["value"], "Leaderboard must be ordered by value descending"
+
+    for gid in a_ids + b_ids:
+        await seeded_db.execute(text(f"DELETE FROM tic_tac_toe_games WHERE id = '{gid}'"))
+    await seeded_db.commit()

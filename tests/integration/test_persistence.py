@@ -8,6 +8,9 @@ from sqlalchemy import text
 
 import persistence_service
 from db_models import TicTacToeGame, ChessGame, Connect4Game, GAME_TYPE_TO_MODEL
+from game_engine.checkers_engine import CheckersEngine
+from game_engine.chess_engine import ChessEngine
+from game_engine.dab_engine import DaBEngine
 from game_engine.ttt_engine import TicTacToeEngine
 
 
@@ -77,4 +80,42 @@ async def test_game_roundtrip_connect4(seeded_db):
     await seeded_db.execute(
         text(f"DELETE FROM connect4_games WHERE id = '{game.id}'")
     )
+    await seeded_db.commit()
+
+
+@pytest.mark.asyncio
+async def test_game_roundtrip_chess(seeded_db):
+    state = ChessEngine().initial_state(player_starts=True)
+    game = await persistence_service.create_game(seeded_db, 1, "chess", state)
+    retrieved = await persistence_service.get_game(seeded_db, game.id, "chess")
+    assert retrieved.board_state == state
+    board = retrieved.board_state["board"]
+    piece_count = sum(1 for row in board for cell in row if cell is not None)
+    assert piece_count == 32
+    await seeded_db.execute(text(f"DELETE FROM chess_games WHERE id = '{game.id}'"))
+    await seeded_db.commit()
+
+
+@pytest.mark.asyncio
+async def test_game_roundtrip_checkers(seeded_db):
+    state = CheckersEngine().initial_state(player_starts=True)
+    game = await persistence_service.create_game(seeded_db, 1, "checkers", state)
+    retrieved = await persistence_service.get_game(seeded_db, game.id, "checkers")
+    assert retrieved.board_state == state
+    pieces = [p for p in retrieved.board_state["board"] if p not in ("_", None)]
+    assert len(pieces) == 24
+    await seeded_db.execute(text(f"DELETE FROM checkers_games WHERE id = '{game.id}'"))
+    await seeded_db.commit()
+
+
+@pytest.mark.asyncio
+async def test_game_roundtrip_dab(seeded_db):
+    state = DaBEngine().initial_state(player_starts=True)
+    game = await persistence_service.create_game(seeded_db, 1, "dots_and_boxes", state)
+    retrieved = await persistence_service.get_game(seeded_db, game.id, "dots_and_boxes")
+    assert retrieved.board_state == state
+    assert retrieved.board_state["grid_size"] == state["grid_size"]
+    assert retrieved.board_state["horizontal_lines"] == state["horizontal_lines"]
+    assert retrieved.board_state["vertical_lines"] == state["vertical_lines"]
+    await seeded_db.execute(text(f"DELETE FROM dots_and_boxes_games WHERE id = '{game.id}'"))
     await seeded_db.commit()
