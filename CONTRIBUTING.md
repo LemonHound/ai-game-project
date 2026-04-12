@@ -147,6 +147,12 @@ cross-game behavior), update the PR before or with the next push so reviewers an
   and dependency notes (e.g. “merge after X”) stay current. Link relevant **`features/*/adr.md`** files when the PR
   implements or supersedes an architectural decision.
 
+**Where to run `gh pr edit` (and other GitHub writes):** Only on a **machine where GitHub CLI is authenticated as you**
+(local Cursor workspace terminal, Git Bash on your PC, and so on). **Remote Cursor cloud agents** typically cannot
+mutate PRs (see **§1e**). If work runs on a cloud agent, **do not** keep retrying `gh pr edit` there; finish the branch,
+then apply the title/body using a **local** shell or hand the exact commands to the contributor (see **§1c handoff**
+below).
+
 Use the GitHub CLI from the PR branch, for example:
 
 ```bash
@@ -156,6 +162,25 @@ gh pr edit <number> --body-file path/to/pr-body.md
 
 If you only need a small fix, `gh pr edit <number> --body "..."` is fine. Do not leave stale review questions in the
 body once they are answered; replace them with the agreed outcome.
+
+### §1c handoff (cloud or read-only `gh`)
+
+When a session **cannot** run `gh pr edit` / `gh pr merge` / `gh pr create` successfully, output a block the contributor
+can paste into a **local** terminal (after writing `pr-body.md` or inlining the body):
+
+```text
+PR: <number>
+Proposed title: <one line>
+
+Proposed body (save to pr-body.md or pass with --body):
+--- begin ---
+<markdown>
+--- end ---
+
+Local commands:
+gh pr edit <number> --title "paste title here"
+gh pr edit <number> --body-file pr-body.md
+```
 
 ---
 
@@ -188,23 +213,25 @@ repo.
 
 ### GitHub CLI (`gh`)
 
-**Local Cursor / your PC:** In **Cursor’s integrated terminal** (or any terminal on the machine), run `gh auth login`
-and complete the browser or device flow. That stores the session where `gh` expects it (for example Windows Credential
-Manager and GitHub CLI config under `%AppData%`).
+**Default workflow:** Treat **GitHub mutations** (`gh pr create`, `gh pr edit`, `gh pr merge`, and write-style `gh api`
+calls) as **local-only**. Run them from **Cursor’s integrated terminal on your machine**, **Git Bash**, or any shell
+where `gh auth login` (or **`GH_TOKEN`**) identifies **your** account. User-level rules under **`~/.cursor`** (for
+example PAT handling or wrapper docs) exist **only on your PC**; they are **not** mounted into **remote Cursor cloud
+agent** VMs.
 
-**Cloud or background agents (Linux VM):** Browser login on your PC does **not** apply to that environment. The VM may
-show `gh auth status` as account **`cursor`** with a **`ghs_`** token; that integration can **read** PRs but often
-**cannot** mutate them (`gh pr edit`, `gh pr merge`, some `gh api` writes), which surfaces as **Resource not accessible
-by integration**.
+**Local auth:** Run `gh auth login` and complete the browser or device flow. That stores the session where `gh` expects
+it (for example Windows Credential Manager and GitHub CLI config). Optionally set a scoped PAT as **`GH_TOKEN`** in your
+**user** environment for that machine (`gh` prefers it over the stored OAuth token for API calls). **Never** commit a
+PAT to the repository.
 
-For **any** `gh` call that must act as **you** (or a bot user with repo write), set a **personal access token** in the
-**agent shell environment** as **`GH_TOKEN`** (GitHub CLI treats `GH_TOKEN` as higher precedence than `gh auth login`
-for API requests). Scope the PAT to the minimum needed (for PR edits: **pull requests** write on this repo; add
-**contents** if you also need merge or branch operations). Configure the value wherever Cursor exposes **secrets** or
-**environment variables** for cloud agents, or export it for the session before running `gh` — **never** commit a PAT to
-the repository.
+**Remote / cloud agents (Linux VM on Cursor infrastructure):** These environments use Cursor’s **integration** identity
+(`gh auth status` may show **`cursor`** with a **`ghs_`** token). That identity can **read** PRs and run **read-only**
+`gh` commands (`gh pr view`, `gh pr diff`, `gh pr checks`) but **often cannot mutate** PRs, which surfaces as **Resource
+not accessible by integration**. **Do not** depend on cloud agents to update PR bodies, titles, or merges. Instead:
+complete code and pushes on the remote branch, then use **§1c handoff** so a **local** session or the contributor
+applies `gh pr edit` / merge, or edit the PR on **github.com**.
 
-Verify the effective identity (after setting `GH_TOKEN`):
+Verify the effective identity before relying on writes:
 
 ```bash
 gh api user -q .login

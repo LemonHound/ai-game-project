@@ -25,6 +25,10 @@ Human-readable defaults for automation and coding agents. **Authoritative detail
 Unless the user opts out: after **`gh pr create`**, run **`gh pr checks <pr> --watch`**. When marking ready to land, use
 **`gh pr merge <pr> --auto --squash`** by default.
 
+**GitHub writes from agents:** Run **`gh pr create`**, **`gh pr edit`**, and **`gh pr merge`** only in a **local**
+terminal where `gh` is you (see **CONTRIBUTING.md §1e**). On **remote Cursor cloud agents**, skip those commands and use
+the **§1c handoff** block in CONTRIBUTING so a local session or the human applies the title, body, and merge.
+
 ## Planning vs implementation
 
 If the user has not said whether the task is **planning** (spec/design) or **implementation**, ask once. Planning
@@ -39,9 +43,9 @@ what must be fresh in every turn; long prose stays in CONTRIBUTING.
 
 ## Cursor Cloud and agent VMs
 
-**GitHub CLI in cloud agents:** `gh pr edit`, merge, and similar writes need a user-scoped token in the VM environment.
-See **[CONTRIBUTING.md](CONTRIBUTING.md) (section 1e — GitHub CLI)** for **`GH_TOKEN`** and verification with
-`gh api user`.
+**GitHub CLI:** Cloud agents should use **`gh pr view` / `diff` / `checks`** only. For **`gh pr edit`**,
+**`gh pr merge`**, or **`gh pr create`**, follow **CONTRIBUTING.md §1c handoff** and run writes **locally** (or on the
+GitHub website). See **§1e** for why **`ghs_`** / **`cursor`** cannot be relied on for mutations.
 
 ### Services overview
 
