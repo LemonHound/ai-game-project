@@ -25,6 +25,7 @@ email-validator
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-logging
 opentelemetry-instrumentation-sqlalchemy
 opentelemetry-exporter-gcp-trace
 opentelemetry-exporter-gcp-monitoring

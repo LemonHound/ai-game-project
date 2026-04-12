@@ -216,6 +216,7 @@ async def ttt_move(
     span.set_attribute("game.id", str(game.id))
 
     if not _ttt_engine.validate_move(game.board_state, request.position):
+        logger.warning("ttt_invalid_move", extra={"game_id": str(game.id)})
         raise HTTPException(status_code=422, detail="Invalid move")
 
     q = _ttt_move_queues.get(game.id)
@@ -701,6 +702,7 @@ async def checkers_move(
 
     move = {"from": request.from_pos, "to": request.to_pos}
     if not _checkers_engine.validate_move(game.board_state, move):
+        logger.warning("checkers_invalid_move", extra={"game_id": str(game.id)})
         raise HTTPException(status_code=422, detail="Invalid move")
 
     q = _checkers_move_queues.get(game.id)
@@ -962,6 +964,7 @@ async def dab_move(
 
     move = {"type": request.type, "row": request.row, "col": request.col}
     if not _dab_engine.validate_move(game.board_state, move):
+        logger.warning("dab_invalid_move", extra={"game_id": str(game.id)})
         raise HTTPException(status_code=422, detail="Invalid move")
 
     q = _dab_move_queues.get(game.id)

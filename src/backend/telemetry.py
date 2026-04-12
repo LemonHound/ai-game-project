@@ -3,6 +3,7 @@ import logging
 import os
 
 from opentelemetry import trace, metrics
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
@@ -49,3 +50,4 @@ def setup_telemetry() -> None:
         level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
+    LoggingInstrumentor().instrument(set_logging_format=True)
