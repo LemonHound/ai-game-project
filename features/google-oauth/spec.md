@@ -1,6 +1,6 @@
 # Google OAuth Spec
 
-**Status: in-progress** — partially implemented; see open bugs
+**Status: implemented**
 
 ## Background
 
@@ -61,6 +61,22 @@ Audit and fix the full Google OAuth flow end-to-end for the React SPA architectu
 - CSRF protection must apply to the OAuth flow
 - The flow must work across mobile browsers (some mobile browsers handle OAuth redirects differently)
 - Google OAuth users have no password — the Settings page must handle this (see profile-settings spec)
+
+## Audit
+
+Conducted against `src/backend/auth.py` and `src/backend/auth_service.py`.
+
+- **Callback compatibility**: The `GET /api/auth/google/callback` route was already compatible with the React
+  SPA flow. It exchanges the authorization code, sets an httpOnly session cookie, and redirects to the `state`
+  param (defaulting to `/`). No Jinja2 rendering was present.
+- **Account linking**: Was missing. When `find_user_by_email` returned an existing local-auth user, the
+  callback only called `update_last_login` and did not set `google_id` or update `auth_provider`. Fixed by
+  adding `update_google_link(user_id, google_id)` to `AuthService` and calling it from both the callback
+  route and the `POST /api/auth/google` (ID token) route when the found user's `auth_provider` is not
+  already `"google"`.
+- **Tests**: Added `tests/api_tests/test_google_oauth.py` covering the three testable error-path cases
+  (error param, missing code, and redirect to Google). Positive-path tests (real token exchange) require
+  live Google credentials and are covered by the E2E test cases below.
 
 ## Test Cases
 
