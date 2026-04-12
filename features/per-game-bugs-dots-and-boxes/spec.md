@@ -1,6 +1,6 @@
 # Dots and Boxes Bug Fixes
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 
