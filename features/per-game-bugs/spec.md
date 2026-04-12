@@ -1,13 +1,23 @@
 # Per-Game Bug Fixes
 
-**Status: ready** — implement after ux-game-standardization merges
+**Status: done** — split into per-game specs; see below
 
 ## Background
 
 Bugs filed in issues #96-#99 from March 28, 2026. Items made obsolete by `features/ux-game-standardization` (game-over
-overlay, move-shown-immediately) are excluded here. This spec covers only the remaining game-specific bugs.
+overlay, move-shown-immediately) are excluded here.
 
-**Implement after `ux-game-standardization` is merged.**
+This omnibus spec has been split into per-game implementation specs, each intended as its own PR:
+
+- [`features/per-game-bugs-connect4/spec.md`](../per-game-bugs-connect4/spec.md) — column click zone, hover preview
+- [`features/per-game-bugs-dots-and-boxes/spec.md`](../per-game-bugs-dots-and-boxes/spec.md) — box fill icon, button
+  alignment
+- [`features/per-game-bugs-checkers/spec.md`](../per-game-bugs-checkers/spec.md) — forced capture visual, turn indicator
+- [`features/per-game-bugs-chess/spec.md`](../per-game-bugs-chess/spec.md) — board orientation, piece images, FEN/SAN
+  migration, AN notation, layout
+
+The global min event interval (Bug 3 in Checkers) is resolved by the `ai-delay-config` spec. The Games Page label fixes
+(GamesPage.tsx) were already implemented.
 
 Formal cross-cutting decisions (move storage vs PGN export, global event interval, optimistic UI): **`adr.md`**.
 
