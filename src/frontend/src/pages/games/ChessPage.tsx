@@ -99,6 +99,7 @@ export default function ChessPage() {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [pendingResume, setPendingResume] = useState<{ sessionId: string; state: ChessGameState } | null>(null);
     const [showPromotionModal, setShowPromotionModal] = useState(false);
+    const [showGameOverOverlay, setShowGameOverOverlay] = useState(false);
     const [pendingPromotion, setPendingPromotion] = useState<{
         fromRow: number;
         fromCol: number;
@@ -245,6 +246,15 @@ export default function ChessPage() {
             moveListRef.current.scrollTop = moveListRef.current.scrollHeight;
         }
     }, [moveHistory]);
+
+    useEffect(() => {
+        if (phase !== 'terminal') {
+            setShowGameOverOverlay(false);
+            return;
+        }
+        const timer = setTimeout(() => setShowGameOverOverlay(true), 300);
+        return () => clearTimeout(timer);
+    }, [phase]);
 
     const handleResume = () => {
         if (!pendingResume) return;
@@ -569,38 +579,32 @@ export default function ChessPage() {
                                 />
                             )}
 
-                            {phase === 'terminal' && (
-                                <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
-                                    <div
-                                        className={`text-2xl font-bold ${playerResult === 'win' ? 'text-success' : playerResult === 'loss' ? 'text-error' : 'text-warning'}`}>
+                            {phase === 'terminal' && !showGameOverOverlay && (
+                                <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/90 backdrop-blur-sm'>
+                                    <p className='text-2xl font-bold'>
                                         {playerResult === 'win'
                                             ? 'You Win!'
                                             : playerResult === 'loss'
                                               ? 'You Lose'
-                                              : 'Draw'}
-                                    </div>
-                                    <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
-                                        <div className='flex items-center gap-2 w-full'>
-                                            <div className='flex-1 h-px bg-base-content/20' />
-                                            <span className='text-xs text-base-content/50 uppercase tracking-wider'>
-                                                Play Again
-                                            </span>
-                                            <div className='flex-1 h-px bg-base-content/20' />
-                                        </div>
-                                        <div className='flex gap-2 w-full'>
-                                            <button
-                                                className='btn btn-primary flex-1'
-                                                onClick={() => handleStartGame(true)}>
-                                                Play as White
-                                            </button>
-                                            <button
-                                                className='btn btn-secondary flex-1'
-                                                onClick={() => handleStartGame(false)}>
-                                                Play as Black
-                                            </button>
-                                        </div>
-                                    </div>
+                                              : 'Draw!'}
+                                    </p>
                                 </div>
+                            )}
+
+                            {phase === 'terminal' && showGameOverOverlay && (
+                                <GameStartOverlay
+                                    title={
+                                        playerResult === 'win'
+                                            ? 'You Win!'
+                                            : playerResult === 'loss'
+                                              ? 'You Lose'
+                                              : 'Draw!'
+                                    }
+                                    canResume={false}
+                                    onResume={() => {}}
+                                    optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
+                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                />
                             )}
 
                             {showPromotionModal && pendingPromotion && (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStatsPanel from '../../components/games/GameStatsPanel';
+import GameStartOverlay from '../../components/games/GameStartOverlay';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import TicTacToeBoard from '../../components/games/TicTacToeBoard';
@@ -51,6 +52,7 @@ export default function TicTacToePage() {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [pendingResume, setPendingResume] = useState<{ sessionId: string; state: TttGameState } | null>(null);
+    const [showGameOverOverlay, setShowGameOverOverlay] = useState(false);
 
     const esRef = useRef<EventSource | null>(null);
 
@@ -150,6 +152,15 @@ export default function TicTacToePage() {
     useEffect(() => {
         return () => closeSSE();
     }, [closeSSE]);
+
+    useEffect(() => {
+        if (phase !== 'terminal') {
+            setShowGameOverOverlay(false);
+            return;
+        }
+        const timer = setTimeout(() => setShowGameOverOverlay(true), 300);
+        return () => clearTimeout(timer);
+    }, [phase]);
 
     const handleResume = () => {
         if (!pendingResume) return;
@@ -328,32 +339,31 @@ export default function TicTacToePage() {
                     </div>
                 )}
 
-                {phase === 'resumeprompt' && (
-                    <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70 font-medium'>Game in progress</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={handleResume}>
-                                Continue Game
-                            </button>
-                            <button className='btn btn-neutral btn-wide' onClick={handleNewGame}>
-                                New Game
-                            </button>
-                        </div>
+                {(phase === 'newgame' || phase === 'resumeprompt') && (
+                    <GameStartOverlay
+                        canResume={phase === 'resumeprompt'}
+                        onResume={handleResume}
+                        optionA={{ label: 'Play as X', onClick: () => handleStartGame(true) }}
+                        optionB={{ label: 'Play as O', onClick: () => handleStartGame(false) }}
+                    />
+                )}
+
+                {phase === 'terminal' && !showGameOverOverlay && (
+                    <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/90 backdrop-blur-sm'>
+                        <p className='text-2xl font-bold'>
+                            {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
+                        </p>
                     </div>
                 )}
 
-                {phase === 'newgame' && (
-                    <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
-                        <p className='text-sm text-base-content/70'>Choose your side:</p>
-                        <div className='flex flex-col gap-3 w-full max-w-xs px-4'>
-                            <button className='btn btn-primary btn-wide' onClick={() => handleStartGame(true)}>
-                                Play as X — Go First
-                            </button>
-                            <button className='btn btn-secondary btn-wide' onClick={() => handleStartGame(false)}>
-                                Play as O — Go Second
-                            </button>
-                        </div>
-                    </div>
+                {phase === 'terminal' && showGameOverOverlay && (
+                    <GameStartOverlay
+                        title={playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
+                        canResume={false}
+                        onResume={() => {}}
+                        optionA={{ label: 'Play as X', onClick: () => handleStartGame(true) }}
+                        optionB={{ label: 'Play as O', onClick: () => handleStartGame(false) }}
+                    />
                 )}
             </div>
 
@@ -371,15 +381,6 @@ export default function TicTacToePage() {
                     optionB={{ label: 'Play as O', onClick: () => handleStartGame(false) }}
                     onResign={handleResign}
                 />
-            )}
-
-            {phase === 'terminal' && (
-                <div className='flex justify-center mt-4'>
-                    <NewGameButtons
-                        optionA={{ label: 'Play as X', onClick: () => handleStartGame(true) }}
-                        optionB={{ label: 'Play as O', onClick: () => handleStartGame(false) }}
-                    />
-                </div>
             )}
 
             <GameStatsPanel gameType='tic_tac_toe' />
