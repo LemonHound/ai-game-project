@@ -39,7 +39,7 @@ handoff** block in CONTRIBUTING so a local session or the human applies the titl
 ## Planning vs implementation
 
 If the user has not said whether the task is **planning** (spec/design) or **implementation**, ask once. Planning
-follows CONTRIBUTING’s design steps; implementation follows the finalized spec.
+follows CONTRIBUTING's design steps; implementation follows the finalized spec.
 
 ## Sub-agents
 
