@@ -1,6 +1,6 @@
 # Observability Spec (OpenTelemetry)
 
-**Status: in-progress** — partially implemented; see open bugs
+**Status: implemented**
 
 ## Goal
 
