@@ -500,10 +500,10 @@ Every valid move (player and AI) is recorded via `persistence_service.record_mov
 at row 1, col 2). Terminal state triggers `persistence_service.end_game()`. See the
 game-data-persistence spec for the full function signatures.
 
-**Open question — notation conversion location**: The move request arrives as
-`{orientation, row, col}` or similar. This must be converted to an `"h{r}{c}"` / `"v{r}{c}"` string
-before calling `record_move`. Decide during implementation: does this conversion live as a method on
-`DotsAndBoxesEngine` (preferred), or inline in the router?
+**Notation conversion**: The engine owns the notation format. `DaBEngine` exposes a
+`to_notation(move: dict) -> str` method that converts `{type, row, col}` to `"h{row}{col}"` or
+`"v{row}{col}"` (e.g. `"h12"` for the horizontal edge at row 1, col 2). The router calls
+`engine.to_notation(move)` before passing the string to `record_move`.
 
 ## Test Cases
 
