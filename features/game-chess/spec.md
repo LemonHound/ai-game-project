@@ -564,10 +564,10 @@ castling, `"e7e8q"` for promotion to queen). `board_state_after` is the full gam
 `apply_move`. Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence
 spec for the full function signatures.
 
-**Open question — notation conversion location**: The move request arrives as
-`{fromRow, fromCol, toRow, toCol, promotionPiece}`. This must be converted to a UCI string before
-calling `record_move`. Decide during implementation: does this conversion live as a method on
-`ChessEngine` (preferred — engine owns the format), or inline in the router?
+**Notation conversion**: The engine owns the notation format. `ChessEngine` exposes a
+`to_notation(move: dict) -> str` method that converts `{fromRow, fromCol, toRow, toCol, promotionPiece}`
+to a UCI string (e.g. `"e2e4"`, `"e1g1"` for castling, `"e7e8q"` for promotion). The router calls
+`engine.to_notation(move)` before passing the string to `record_move`.
 
 ## Legacy Cleanup
 

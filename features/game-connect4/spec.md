@@ -327,9 +327,10 @@ Every valid move (player and AI) is recorded via `persistence_service.record_mov
 Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence spec for the
 full function signatures.
 
-**Open question — notation conversion location**: The move request arrives as `{column: int}`. This
-must be converted to a `"c{col}"` string before calling `record_move`. Decide during implementation:
-does this conversion live as a method on `Connect4Engine` (preferred), or inline in the router?
+**Notation conversion**: The engine owns the notation format. `Connect4Engine` exposes a
+`to_notation(col: int) -> str` method that converts a column index to `"c{col}"` (e.g. `"c3"` for
+column 3). The router calls `engine.to_notation(move["col"])` before passing the string to
+`record_move`.
 
 ## Test Cases
 

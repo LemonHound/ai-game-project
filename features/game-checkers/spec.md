@@ -441,10 +441,10 @@ string for the move (e.g. `"b6d4"` for a jump from b6 to d4; multi-jump steps re
 Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence spec for the
 full function signatures.
 
-**Open question — notation conversion location**: The move request arrives as
-`{from_pos, to_pos}` (board position indices). This must be converted to an algebraic coordinate
-string before calling `record_move`. Decide during implementation: does this conversion live as a
-method on `CheckersEngine` (preferred — engine owns the format), or inline in the router?
+**Notation conversion**: The engine owns the notation format. `CheckersEngine` exposes a
+`to_notation(from_pos: int, to_pos: int) -> str` method that converts board position indices to an
+algebraic coordinate string (e.g. `"b6d4"` for a jump from b6 to d4). The router calls
+`engine.to_notation(move["from"], move["to"])` before passing the string to `record_move`.
 
 ## Test Cases
 

@@ -305,10 +305,9 @@ Every valid move (player and AI) is recorded via `persistence_service.record_mov
 Terminal state triggers `persistence_service.end_game()`. See the game-data-persistence spec for the
 full function signatures.
 
-**Open question — notation conversion location**: The move request arrives as `{row: int, col: int}`.
-This must be converted to an `"r{row}c{col}"` string before calling `record_move`. Decide during
-implementation: does this conversion live as a method on `TicTacToeEngine` (preferred), or inline in
-the router?
+**Notation conversion**: The engine owns the notation format. `TicTacToeEngine` exposes a
+`to_notation(position: int) -> str` method that converts a board position (0–8) to `"r{row}c{col}"`.
+The router calls `engine.to_notation(move["position"])` before passing the string to `record_move`.
 
 ## Test Cases
 
