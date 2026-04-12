@@ -1,6 +1,6 @@
 # Checkers Bug Fixes
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 

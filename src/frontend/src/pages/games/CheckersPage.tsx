@@ -520,6 +520,14 @@ export default function CheckersPage() {
                         </div>
                     </div>
 
+                    {phase === 'playing' && currentTurn === 'player' && (
+                        <div className='flex items-center justify-center gap-2 py-2 animate-pulse text-primary font-semibold text-sm'>
+                            <span>&#9650;</span>
+                            <span>{mustCapture !== null ? 'Your turn — capture required' : 'Your turn'}</span>
+                            <span>&#9650;</span>
+                        </div>
+                    )}
+
                     <PlayerCard
                         name={user.displayName || user.username}
                         avatarUrl={user.profilePicture}
