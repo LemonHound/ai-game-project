@@ -84,16 +84,10 @@ export default function DotsAndBoxesBoard({
                 <g key={`box-${r}-${c}`}>
                     <rect x={bx} y={by} width={bw} height={bh} fill={owner === 'player' ? PLAYER_FILL : AI_FILL} />
                     {owner === 'player' ? (
-                        <text
-                            x={iconCx}
-                            y={iconCy + 6}
-                            textAnchor='middle'
-                            fontSize={22}
-                            fontWeight='bold'
-                            fill={PLAYER_COLOR}
-                            opacity={0.7}>
-                            P
-                        </text>
+                        <g transform={`translate(${iconCx - 10}, ${iconCy - 10})`} opacity={0.7}>
+                            <circle cx={10} cy={5} r={4} fill={PLAYER_COLOR} />
+                            <path d='M2 20 C2 14 18 14 18 20' fill={PLAYER_COLOR} />
+                        </g>
                     ) : (
                         <g transform={`translate(${iconCx - 10}, ${iconCy - 10})`} opacity={0.7}>
                             <rect x={2} y={4} width={16} height={12} rx={3} fill={AI_COLOR} />

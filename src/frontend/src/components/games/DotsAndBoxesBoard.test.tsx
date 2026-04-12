@@ -40,7 +40,15 @@ describe('DotsAndBoxesBoard', () => {
                 boxes={{ '0,0': 'player' }}
             />
         );
-        const filledBoxes = container.querySelectorAll('rect[fill*="blue"], rect[class*="blue"]');
         expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('claimed box renders icon', () => {
+        const { container } = render(<DotsAndBoxesBoard {...defaultProps} boxes={{ '0,0': 'player', '1,1': 'ai' }} />);
+        const svgGroups = container.querySelectorAll('g[transform*="translate"]');
+        expect(svgGroups.length).toBeGreaterThan(0);
+        const hasCircle = container.querySelector('circle') !== null;
+        const hasRect = container.querySelector('g[transform] rect') !== null;
+        expect(hasCircle || hasRect).toBe(true);
     });
 });
