@@ -12,7 +12,7 @@ def test_auth_register_login_logout_flow(client):
             "password": "testpass123",
         },
     )
-    assert reg.status_code == 200
+    assert reg.status_code == 201
     assert "user" in reg.json()
 
     login_resp = client.post(
