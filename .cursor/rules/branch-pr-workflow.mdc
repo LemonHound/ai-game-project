@@ -16,3 +16,7 @@ See **[CONTRIBUTING.md](../../CONTRIBUTING.md)** and **`00-project-always.mdc`**
 - Post-merge deploy (Cloud Run): optional `gcloud` verification on a later pass — CONTRIBUTING.
 
 If `gh` is unavailable, say so and use the web UI equivalents.
+
+**Cloud / remote agent:** Do not rely on **`gh pr edit`** or **`gh pr merge`**; use **CONTRIBUTING.md §1c handoff** for
+the human or a **local** terminal to run writes. Read-only **`gh pr checks` / `view` / `diff`** on the remote agent is
+fine.

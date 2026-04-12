@@ -20,6 +20,11 @@ Unless the user opts out:
 1. After **`gh pr create`** (draft or not): **`gh pr checks <pr> --watch`** until required checks settle.
 2. When submitting / marking ready to merge: **`gh pr merge <pr> --auto --squash`** (same unless user says not to enable auto-merge).
 
+**Remote Cursor cloud agent:** Do **not** run **`gh pr edit`**, **`gh pr merge`**, or **`gh pr create`**; they usually fail
+(**`cursor`** / **`ghs_`**). Output **CONTRIBUTING.md §1c handoff** (proposed title, body, local `gh` commands). **Local**
+Cursor / contributor machine: run those **`gh`** writes (and user **`~/.cursor`** rules such as PAT helpers apply only
+there). Details: **CONTRIBUTING.md §1e**.
+
 ## Stack (short)
 
 - Backend: FastAPI, Python 3.11+, PostgreSQL via psycopg2.
