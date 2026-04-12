@@ -1,5 +1,4 @@
 """API tests for Google OAuth error-path handling."""
-import os
 
 
 def test_oauth_callback_redirects_to_root_on_error(client):
