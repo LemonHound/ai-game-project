@@ -82,10 +82,15 @@ _chess_move_queues: dict[UUID, asyncio.Queue] = {}
 
 _is_test_env = os.getenv("ENVIRONMENT") == "test"
 _TEST_DELAY = 0.05
+_DEFAULT_INTERVAL_MS = 2500
+_env_interval = os.getenv("GAME_SERVER_MIN_EVENT_INTERVAL_MS")
+_resolved_interval_ms = int(_env_interval) if _env_interval is not None else _DEFAULT_INTERVAL_MS
+_resolved_interval_source = "env" if _env_interval is not None else "default"
+logger.info("ai_delay_config", extra={"interval_ms": _resolved_interval_ms, "source": _resolved_interval_source})
 
 
-def _delay(seconds: float) -> float:
-    return _TEST_DELAY if _is_test_env else seconds
+def _delay() -> float:
+    return _TEST_DELAY if _is_test_env else _resolved_interval_ms / 1000
 
 
 def _resolve_strategy(default_strategy, request_headers):
@@ -738,7 +743,7 @@ async def checkers_events(
     async def _checkers_run_ai_turn(state: dict) -> tuple[dict, bool]:
         """Process AI's turn with timing delay. Returns (new_state, terminal)."""
         output_q.put_nowait('data: {"type": "status", "message": "Thinking..."}\n\n')
-        await asyncio.sleep(_delay(2.5))
+        await asyncio.sleep(_delay())
 
         with tracer.start_as_current_span("game.ai.move") as ai_span:
             ai_span.set_attribute("game.id", session_id)
@@ -771,7 +776,7 @@ async def checkers_events(
                 if state.get("must_capture") is None:
                     break
 
-                await asyncio.sleep(_delay(0.5))
+                await asyncio.sleep(_delay())
 
             compute_ms = (time.monotonic() - t0) * 1000
             ai_span.set_attribute("compute_duration_ms", compute_ms)
@@ -1031,7 +1036,7 @@ async def dab_events(
                     continue
 
                 output_q.put_nowait('data: {"type": "status", "message": "Thinking..."}\n\n')
-                await asyncio.sleep(_delay(0.5))
+                await asyncio.sleep(_delay())
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
                     ai_span.set_attribute("game.id", session_id)
@@ -1056,7 +1061,7 @@ async def dab_events(
                         state = ai_state
 
                         if state["current_turn"] == "ai":
-                            await asyncio.sleep(_delay(0.5))
+                            await asyncio.sleep(_delay())
 
                     compute_ms = (time.monotonic() - t0) * 1000
                     ai_span.set_attribute("compute_duration_ms", compute_ms)

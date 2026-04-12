@@ -251,8 +251,10 @@ class StatusBroadcaster:
     complete in under 2 seconds while still exercising the full SSE pipeline.
     """
 
-    MIN_INTERVAL = 0.05 if os.getenv("ENVIRONMENT") == "test" else 2.5
-    INITIAL_HOLD = 0.05 if os.getenv("ENVIRONMENT") == "test" else 0.5
+    _env_ms = os.getenv("GAME_SERVER_MIN_EVENT_INTERVAL_MS")
+    _interval_s = (int(_env_ms) / 1000) if _env_ms is not None else (0.05 if os.getenv("ENVIRONMENT") == "test" else 2.5)
+    MIN_INTERVAL = 0.05 if os.getenv("ENVIRONMENT") == "test" else _interval_s
+    INITIAL_HOLD = 0.05 if os.getenv("ENVIRONMENT") == "test" else min(_interval_s * 0.2, 0.5)
     HEARTBEAT_INTERVAL = 30.0
 
     def __init__(self) -> None:
