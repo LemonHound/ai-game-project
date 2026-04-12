@@ -64,13 +64,15 @@ regardless of where the build runs.
 **Tradeoff:** Requires a separate Cloud Build trigger or GH Actions workflow to rebuild the base
 image on dep changes. More infrastructure to maintain.
 
-## Recommendation
+## Decision
 
-Start with **option 1** (Docker layer caching) — it's a 3-line change to `cloudbuild.yaml` with
+**Implement option 1** (Docker layer caching) now — it's a 3-line change to `cloudbuild.yaml` with
 immediate savings and no architectural changes.
 
-**Option 2** (GH Actions build + Cloud Build deploy) is the most scalable approach once the
-project grows or build frequency increases enough to matter on cost.
+**Option 2** (GH Actions build + Cloud Build deploy) is the future direction once build frequency
+or cost warrants it. The `test-coverage-overhaul` spec documents a `repository_dispatch`-based
+post-deploy hook that would form the coordination point between GH Actions and Cloud Build in
+that model. Option 2 is not implemented in this feature — track it as a follow-on.
 
 ## Known Requirements
 
@@ -81,4 +83,9 @@ project grows or build frequency increases enough to matter on cost.
 
 ## Test Cases
 
-_To be defined during planning session._
+| Tier | Name | What it checks |
+|------|------|----------------|
+| Manual | Build time before/after | Record Cloud Build duration before the change and after the first cache-hit build; verify savings are > 1 minute |
+| Manual | Cache miss on dep change | Update `requirements.txt`, trigger a build; verify `pip install` runs in full (no stale cache) |
+| Manual | Cache hit on source-only change | Change a Python source file only, trigger build; verify `pip install` and `npm ci` steps are skipped |
+| Manual | Migration and deploy sequence intact | After caching change, verify the migration job still runs before the deploy step completes |
