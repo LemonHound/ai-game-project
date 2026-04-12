@@ -28,18 +28,21 @@ _TEST_USERS = [
         "email": "demo@aigamehub.com",
         "password_hash": "$2b$12$yRa5XdiD234Dvuavu0Cx0u5lJXaPsyufv9aG3QdIun9FIUx.t0cVS",
         "display_name": "Demo Player",
+        "stats_public": True,
     },
     {
         "username": "test",
         "email": "test@example.com",
         "password_hash": "$2b$12$ZzFtjWukLb1z7wJ8B8EM.uUijqU1b0LcUFqXhp2LH646KezufWtni",
         "display_name": "Test User",
+        "stats_public": True,
     },
     {
         "username": "player1",
         "email": "player1@example.com",
         "password_hash": "$2b$12$ZzFtjWukLb1z7wJ8B8EM.uUijqU1b0LcUFqXhp2LH646KezufWtni",
         "display_name": "Player One",
+        "stats_public": True,
     },
 ]
 
@@ -52,15 +55,16 @@ async def seed():
                 text("""
                     INSERT INTO users
                         (username, email, password_hash, display_name,
-                         auth_provider, email_verified)
+                         auth_provider, email_verified, stats_public)
                     VALUES
                         (:username, :email, :password_hash, :display_name,
-                         'local', true)
+                         'local', true, :stats_public)
                     ON CONFLICT (email) DO UPDATE SET
-                        password_hash = EXCLUDED.password_hash,
-                        display_name  = EXCLUDED.display_name,
+                        password_hash  = EXCLUDED.password_hash,
+                        display_name   = EXCLUDED.display_name,
                         email_verified = EXCLUDED.email_verified,
-                        auth_provider  = EXCLUDED.auth_provider
+                        auth_provider  = EXCLUDED.auth_provider,
+                        stats_public   = EXCLUDED.stats_public
                 """),
                 user,
             )

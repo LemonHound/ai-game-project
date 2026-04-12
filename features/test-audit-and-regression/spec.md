@@ -1,5 +1,7 @@
 # Test audit, live-game coverage, and regression discipline
 
+**Status: ready**
+
 ## Goal
 
 1. Audit current test coverage and document gaps.

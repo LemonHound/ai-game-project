@@ -1,6 +1,6 @@
 # Game: Tic-Tac-Toe
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 
@@ -66,8 +66,8 @@ process_ai_turn(engine, strategy, state, max_retries=5) → GameState
 emit(event: StatusEvent) → None     # called by game processor at full speed; non-blocking
 stream() → AsyncGenerator[StatusEvent]  # drives the SSE endpoint; enforces min_interval
 ```
-- `min_interval`: 2.5 seconds between sends to client
-- First status held for ~0.5s (prevents flash for near-instant AI responses)
+- `min_interval`: governed by `GAME_SERVER_MIN_EVENT_INTERVAL_MS` (default 2.5 s) — see `features/ai-delay-config/spec.md`
+- First status held for ~20% of `min_interval` (default ~0.5 s) to prevent flash for near-instant AI responses
 - Heartbeat event every 30s (client ignores; keeps stream alive through proxies)
 - Terminal event closes the stream
 

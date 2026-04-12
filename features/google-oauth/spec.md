@@ -1,6 +1,6 @@
 # Google OAuth Spec
 
-**Status: ready**
+**Status: in-progress** — partially implemented; see open bugs
 
 ## Background
 

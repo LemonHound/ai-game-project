@@ -1,6 +1,6 @@
 # Game Training Data
 
-**Status: needs implementation** — prior positions-table approach retired; move_list is the training record.
+**Status: ready** — prior positions-table approach retired; move_list is the canonical training record
 
 ## Background
 

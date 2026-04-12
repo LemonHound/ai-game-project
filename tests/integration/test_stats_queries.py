@@ -45,3 +45,27 @@ async def test_stats_query_exact_counts(seeded_db):
             text(f"DELETE FROM tic_tac_toe_games WHERE id = '{gid}'")
         )
     await seeded_db.commit()
+
+
+@pytest.mark.asyncio
+async def test_leaderboard_stats_public_default(seeded_db):
+    result = await seeded_db.execute(
+        text("SELECT stats_public FROM users WHERE email = 'demo@aigamehub.com'")
+    )
+    row = result.fetchone()
+    assert row is not None
+    assert row.stats_public is True
+
+
+@pytest.mark.asyncio
+async def test_leaderboard_stats_private_excluded(seeded_db):
+    result = await seeded_db.execute(
+        text("""
+            SELECT COUNT(*) as cnt
+            FROM users u
+            JOIN tic_tac_toe_games g ON g.user_id = u.id
+            WHERE u.stats_public = false AND g.game_ended = true
+        """)
+    )
+    row = result.fetchone()
+    assert row.cnt == 0
