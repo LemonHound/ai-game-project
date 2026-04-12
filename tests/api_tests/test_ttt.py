@@ -44,3 +44,16 @@ def test_ttt_move_enqueues_successfully(auth_client):
         "/api/game/tic-tac-toe/move", json={"position": 4}
     )
     assert response.status_code == 202
+
+
+def test_ttt_invalid_move_returns_422(auth_client):
+    response = auth_client.post(
+        "/api/game/tic-tac-toe/newgame", json={"player_starts": False}
+    )
+    assert response.status_code == 200
+    board = response.json()["state"]["board"]
+    occupied = next(i for i, cell in enumerate(board) if cell is not None)
+    response = auth_client.post(
+        "/api/game/tic-tac-toe/move", json={"position": occupied}
+    )
+    assert response.status_code == 422

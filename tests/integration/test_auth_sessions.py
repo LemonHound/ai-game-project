@@ -79,3 +79,48 @@ async def test_auth_delete_session_removes_access(seeded_db):
         {"sid": session_id},
     )
     assert result.fetchone() is None
+
+
+@pytest.mark.asyncio
+async def test_session_expiry_cleanup(seeded_db):
+    result = await seeded_db.execute(
+        text("SELECT id FROM users WHERE email = 'test@example.com'")
+    )
+    user = result.fetchone()
+
+    expired_sid = str(uuid4())
+    active_sid = str(uuid4())
+    past = datetime.now() - timedelta(days=1)
+    future = datetime.now() + timedelta(days=7)
+
+    await seeded_db.execute(
+        text(
+            "INSERT INTO user_sessions (session_id, user_id, expires_at) VALUES"
+            " (:exp_sid, :uid, :past), (:act_sid, :uid, :future)"
+        ),
+        {"exp_sid": expired_sid, "act_sid": active_sid, "uid": user.id, "past": past, "future": future},
+    )
+    await seeded_db.commit()
+
+    await seeded_db.execute(
+        text("DELETE FROM user_sessions WHERE expires_at < NOW()")
+    )
+    await seeded_db.commit()
+
+    result = await seeded_db.execute(
+        text("SELECT 1 FROM user_sessions WHERE session_id = :sid"),
+        {"sid": expired_sid},
+    )
+    assert result.fetchone() is None, "Expired session must be removed by cleanup"
+
+    result = await seeded_db.execute(
+        text("SELECT 1 FROM user_sessions WHERE session_id = :sid"),
+        {"sid": active_sid},
+    )
+    assert result.fetchone() is not None, "Active session must not be removed by cleanup"
+
+    await seeded_db.execute(
+        text("DELETE FROM user_sessions WHERE session_id = :sid"),
+        {"sid": active_sid},
+    )
+    await seeded_db.commit()
