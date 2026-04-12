@@ -31,6 +31,19 @@ def test_chess_resume(auth_client):
     assert data["id"] is not None
 
 
+def test_chess_board_state_contains_fen_after_ai_move(auth_client):
+    response = auth_client.post(
+        "/api/game/chess/newgame", json={"player_starts": False}
+    )
+    assert response.status_code == 200
+    state = response.json()["state"]
+    fen = state.get("fen")
+    assert fen is not None, "board_state must contain a 'fen' field after AI moves"
+    parts = fen.split(" ")
+    assert len(parts) == 6, f"FEN must have 6 space-separated fields, got: {fen!r}"
+    assert parts[1] in ("w", "b"), f"FEN active-color field must be 'w' or 'b', got: {parts[1]!r}"
+
+
 def test_completed_game_move_list_queryable(auth_client):
     """Verify a chess game record includes a queryable move_list field."""
     auth_client.post("/api/game/chess/newgame", json={"player_starts": True})
