@@ -6,6 +6,13 @@ Human-readable defaults for automation and coding agents. **Authoritative detail
 
 - **Spec-first:** Non-trivial work is driven by `features/<name>/spec.md` (see CONTRIBUTING). Do not ship behavior that
   is not reflected in the spec and its **Test Cases** section.
+- **Spec status is mandatory and must be kept current.** Every `features/<name>/spec.md` must have a `**Status: <value>**`
+  line on line 3 (immediately after the title and blank line). Valid values and their meaning:
+  - `draft` — needs design or planning; not ready to implement
+  - `ready` — fully designed, no open questions; ready to implement but not yet started
+  - `in-progress` — implementation is underway or partially complete (including specs with known bugs/gaps)
+  - `implemented` / `done` — all spec requirements are met in code and verified
+  Update the status whenever you make a spec change, open a PR, land an implementation, or discover a gap.
 - **ADR when it matters:** If the change encodes a significant, long-lived architectural or product decision, add or
   update `adr.md` in the same feature folder (see CONTRIBUTING for the bar).
 - **Code locations:** Backend in `src/backend/`, frontend in `src/frontend/src/`, shared styles in

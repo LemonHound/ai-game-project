@@ -1,6 +1,6 @@
 # Profile & Settings Spec
 
-**Status: ready** (profile stats section depends on game-statistics)
+**Status: in-progress** — partially implemented; see open bugs
 
 ## Background
 

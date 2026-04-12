@@ -1,6 +1,6 @@
 # Game: Checkers
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 
@@ -33,8 +33,8 @@ Transport is resolved: SSE, not WebSocket.
   the server derives the active game from the authenticated user + game type.
 - **Multi-jump (interactive)**: Player submits each individual jump step as a separate POST. The server
   sets `must_capture` to indicate the piece that must continue jumping. The SSE stream emits a move event
-  after each step. AI multi-jump chains are handled internally and emitted step-by-step with a 400ms delay
-  between steps.
+  after each step. AI multi-jump chains are handled internally and emitted step-by-step with a delay
+  between steps governed by `GAME_SERVER_MIN_EVENT_INTERVAL_MS` — see `features/ai-delay-config/spec.md`.
 - **Move selection**: Tap piece to select; valid destinations highlight. No drag-and-drop.
 - **Legacy endpoints retired**: `/api/game/checkers/start` and the existing `/api/game/checkers/move`
   (non-SSE) are removed. Additionally, the generic `POST /game/{game_id}/start` and
@@ -135,14 +135,15 @@ The client maps `player_symbol`/`ai_symbol` to determine which pieces belong to 
 
 Implements `AIStrategy`. Wraps `_get_ai_move_chain` from `checkers.py` but returns only the **first move**
 in the chain as `(move, None)` — the heuristic has no eval score. The SSE handler drives the multi-jump
-loop, emitting chain moves directly (bypassing `StatusBroadcaster`) with a 400ms sleep between steps:
+loop, emitting chain moves directly (bypassing `StatusBroadcaster`) with a delay between steps
+governed by `GAME_SERVER_MIN_EVENT_INTERVAL_MS` — see `features/ai-delay-config/spec.md`:
 
 ```
 while current_turn == "ai":
     move, _ = strategy.generate_move(state)   # one step
     state = engine.apply_move(state, move)
-    yield move_event_sse_directly             # NOT via broadcaster; 400ms pacing
-    await asyncio.sleep(0.4)
+    yield move_event_sse_directly             # NOT via broadcaster; delay from env var
+    await asyncio.sleep(_delay(...))
     if state["must_capture"] is None:
         break                                 # AI chain complete
 ```

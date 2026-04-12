@@ -1,5 +1,7 @@
 # UX Game Standardization
 
+**Status: ready**
+
 ## Goal
 
 Standardize the player experience loop across all five games. The shared component infrastructure (`GameStartOverlay`, `GameStatsPanel`, `NewGameButtons`) is already in place, but individual game pages have diverged in important behavioral patterns.

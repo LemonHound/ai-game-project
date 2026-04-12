@@ -1,6 +1,6 @@
 # SEO Spec
 
-**Status: ready**
+**Status: implemented**
 
 ## Priority: Low
 

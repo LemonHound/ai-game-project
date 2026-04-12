@@ -1,6 +1,6 @@
 # WebSocket Feature Spec
 
-**Status: finalized**
+**Status: draft** — scope and design are early-stage; no implementation has begun
 
 ## Background
 
