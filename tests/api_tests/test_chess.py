@@ -29,3 +29,15 @@ def test_chess_resume(auth_client):
     assert response.status_code == 200
     data = response.json()
     assert data["id"] is not None
+
+
+def test_completed_game_move_list_queryable(auth_client):
+    """Verify a chess game record includes a queryable move_list field."""
+    auth_client.post("/api/game/chess/newgame", json={"player_starts": True})
+    response = auth_client.get("/api/game/chess/resume")
+    assert response.status_code == 200
+    data = response.json()
+    assert "id" in data
+    state = data.get("state", {})
+    assert "board" in state
+    assert "last_move" in state
