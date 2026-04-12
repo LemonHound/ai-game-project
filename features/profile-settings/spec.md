@@ -1,6 +1,6 @@
 # Profile & Settings Spec
 
-**Status: in-progress** — partially implemented; see open bugs
+**Status: implemented**
 
 ## Background
 

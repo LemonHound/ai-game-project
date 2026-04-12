@@ -235,6 +235,9 @@ async def login(request: LoginRequest, response: Response):
         if not user:
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
+        if not user.get("is_active", True):
+            raise HTTPException(status_code=401, detail="Account is deactivated")
+
         if user["auth_provider"] == "local" and user.get("password_hash"):
             if not await auth_service.verify_password(request.password, user["password_hash"]):
                 raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -284,6 +287,9 @@ class SettingsRequest(BaseModel):
     """Request body for the /settings endpoint."""
 
     statsPublic: Optional[bool] = None
+    display_name: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
 
 
 @router.patch("/settings")
@@ -291,16 +297,79 @@ async def update_settings(
     request: SettingsRequest,
     sessionId: Optional[str] = Cookie(None),
 ):
-    """Update user account settings.
-
-    Currently supports toggling stats_public.
+    """Update user account settings including display name, password, and stats visibility.
 
     Args:
-        request: SettingsRequest with optional statsPublic boolean.
+        request: SettingsRequest with optional statsPublic, display_name, current_password,
+            and new_password fields.
         sessionId: Session cookie for authentication.
 
     Returns:
-        dict: Updated settings values.
+        dict: Updated statsPublic and displayName values.
+
+    Raises:
+        HTTPException 400: If only one of current_password or new_password is provided.
+        HTTPException 401: If not authenticated or current_password is incorrect.
+        HTTPException 403: If a Google OAuth user attempts a password change.
+    """
+    if not sessionId:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    user = await auth_service.get_user_by_session(sessionId)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    if bool(request.current_password) != bool(request.new_password):
+        raise HTTPException(
+            status_code=400,
+            detail="Both current_password and new_password are required to change password",
+        )
+
+    updates = {}
+
+    if request.statsPublic is not None:
+        updates["stats_public"] = request.statsPublic
+
+    if request.display_name is not None:
+        updates["display_name"] = request.display_name
+
+    if request.new_password:
+        if user.get("auth_provider") == "google":
+            raise HTTPException(
+                status_code=403, detail="Google OAuth users cannot set a password"
+            )
+        if not await auth_service.verify_password(request.current_password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+        updates["password_hash"] = await auth_service.hash_password(request.new_password)
+
+    if updates:
+        set_clauses = ", ".join(f"{k} = :{k}" for k in updates)
+        params = {**updates, "user_id": user["id"]}
+        async with get_session() as session:
+            await session.execute(
+                text(f"UPDATE users SET {set_clauses} WHERE id = :user_id"),
+                params,
+            )
+            await session.commit()
+
+    return {
+        "statsPublic": updates.get("stats_public", user.get("stats_public", False)),
+        "displayName": updates.get("display_name", user.get("display_name", "")),
+    }
+
+
+@router.delete("/account")
+async def delete_account(
+    response: Response,
+    sessionId: Optional[str] = Cookie(None),
+):
+    """Soft-delete the current user's account by setting is_active = false.
+
+    Args:
+        response: FastAPI Response used to clear the session cookie.
+        sessionId: Session cookie for authentication.
+
+    Returns:
+        dict: {"message": "Account deactivated."}
 
     Raises:
         HTTPException 401: If not authenticated.
@@ -311,21 +380,16 @@ async def update_settings(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
 
-    updates = {}
-    if request.statsPublic is not None:
-        updates["stats_public"] = request.statsPublic
+    async with get_session() as session:
+        await session.execute(
+            text("UPDATE users SET is_active = false WHERE id = :user_id"),
+            {"user_id": user["id"]},
+        )
+        await session.commit()
 
-    if updates:
-        set_clauses = ", ".join(f"{k} = :{k}" for k in updates)
-        updates["user_id"] = user["id"]
-        async with get_session() as session:
-            await session.execute(
-                text(f"UPDATE users SET {set_clauses} WHERE id = :user_id"),
-                updates,
-            )
-            await session.commit()
-
-    return {"statsPublic": updates.get("stats_public", user.get("stats_public", False))}
+    await auth_service.delete_sessions_by_user_id(user["id"])
+    delete_session_cookie(response)
+    return {"message": "Account deactivated."}
 
 
 @router.get("/health")
