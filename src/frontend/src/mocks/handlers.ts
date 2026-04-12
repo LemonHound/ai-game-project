@@ -100,10 +100,13 @@ export const handlers = [
         return HttpResponse.json({
             games_played: 1234,
             moves_analyzed: 56789,
+            registered_players: 100,
             unique_players: 42,
-            ai_win_rate: 65.5,
-            training_moves: 100000,
+            ai_win_rate: 0.655,
+            player_win_rate: 0.245,
+            avg_moves_per_game: 28.5,
             days_running: 30,
+            monthly_cost_usd: 20,
         });
     }),
 

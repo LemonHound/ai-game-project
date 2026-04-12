@@ -1,10 +1,11 @@
 """About page stats endpoint."""
 import logging
+import os
 import time
 from datetime import date
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select, union_all
+from sqlalchemy import func, select, text, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import db_dependency
@@ -21,9 +22,20 @@ _CACHE_TTL = 60
 
 
 async def _query_stats(db: AsyncSession) -> dict:
+    """Query aggregated platform statistics from the database.
+
+    Args:
+        db: The async database session.
+
+    Returns:
+        A dict with platform statistics including games played, moves analyzed,
+        registered and unique players, win rates, average moves per game,
+        days running, and monthly cost.
+    """
     games_played = 0
     moves_analyzed = 0
     ai_wins = 0
+    player_wins = 0
     decided_games = 0
 
     for model in GAME_TYPE_TO_MODEL.values():
@@ -39,6 +51,9 @@ async def _query_stats(db: AsyncSession) -> dict:
                     .filter(model.ai_won.is_(True))
                     .label("ai_wins"),
                     func.count()
+                    .filter(model.player_won.is_(True))
+                    .label("player_wins"),
+                    func.count()
                     .filter(
                         model.game_ended.is_(True),
                         model.is_draw.is_(False),
@@ -50,6 +65,7 @@ async def _query_stats(db: AsyncSession) -> dict:
         games_played += row.played
         moves_analyzed += row.moves
         ai_wins += row.ai_wins
+        player_wins += row.player_wins
         decided_games += row.decided
 
     unique_players_q = union_all(
@@ -64,15 +80,25 @@ async def _query_stats(db: AsyncSession) -> dict:
         )
     ).scalar_one()
 
+    registered_players = (
+        await db.execute(text("SELECT COUNT(*) FROM users WHERE is_active = true"))
+    ).scalar_one()
+
     ai_win_rate = round(ai_wins / decided_games, 3) if decided_games > 0 else 0.0
+    player_win_rate = round(player_wins / decided_games, 3) if decided_games > 0 else 0.0
+    avg_moves_per_game = round(moves_analyzed / games_played, 1) if games_played > 0 else 0.0
+    monthly_cost_usd = int(os.getenv("MONTHLY_COST_ESTIMATE", "20"))
 
     return {
         "games_played": games_played,
         "moves_analyzed": moves_analyzed,
+        "registered_players": registered_players,
         "unique_players": unique_players,
         "ai_win_rate": ai_win_rate,
-        "training_moves": moves_analyzed,
+        "player_win_rate": player_win_rate,
+        "avg_moves_per_game": avg_moves_per_game,
         "days_running": (date.today() - LAUNCH_DATE).days,
+        "monthly_cost_usd": monthly_cost_usd,
     }
 
 

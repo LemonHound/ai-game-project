@@ -1,52 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchAboutStats } from '../api/about';
 import AboutPlatformStats from '../components/AboutPlatformStats';
 import PageMeta from '../components/PageMeta';
 import { StatGridSkeleton } from '../components/Skeleton';
-import { useCountUp } from '../hooks/useCountUp';
 
 const DONATE_URLS = {
-    buyMeACoffee: 'https://buymeacoffee.com/',
-    patreon: 'https://patreon.com/',
+    buyMeACoffee: 'https://buymeacoffee.com/aigamehub',
+    patreon: 'https://www.patreon.com/cw/AIGameHub',
 };
 
 const TEAM_MEMBERS = [
     {
-        name: 'Member One',
-        role: 'Full-Stack Developer',
-        bio: 'Passionate about game AI and building things people enjoy playing.',
-        photo: 'https://placehold.co/128x128/374151/e5e7eb?text=M1',
-        github: 'https://github.com/',
-        linkedin: 'https://linkedin.com/',
+        name: 'Kevin Zookski',
+        role: 'Architect & Engineer',
+        bio: 'Kevin has held roles across every layer of the stack over his career — product, design, frontend, backend, and database. He designed and built AI Game Hub from the ground up.',
+        initials: 'KZ',
+        // TODO: Brian to update
     },
     {
-        name: 'Member Two',
-        role: 'AI & Game Design',
-        bio: 'Loves exploring adaptive algorithms and making classic games feel fresh.',
-        photo: 'https://placehold.co/128x128/374151/e5e7eb?text=M2',
-        github: 'https://github.com/',
-        linkedin: 'https://linkedin.com/',
+        name: 'Brian Waskevich',
+        role: 'ML & Data',
+        bio: 'Brian has taken sole ownership of the ML models, training pipeline, and the database schema designed to let the AI adapt quickly to different playstyles.',
+        initials: 'BW',
+        // TODO: Brian to update — add social links when ready
     },
 ];
-
-function seededRandom(seed: number): number {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-}
-
-function PlaceholderStatCard({ value, label }: { value: number; label: string }) {
-    const animated = useCountUp(value);
-    return (
-        <div className='card bg-base-200 shadow-sm'>
-            <div className='card-body items-center p-4 text-center'>
-                <span className='text-3xl font-bold text-primary'>{animated.toLocaleString()}</span>
-                <span className='text-sm opacity-70'>{label}</span>
-            </div>
-        </div>
-    );
-}
 
 /** Renders the About page with live platform stats, team section, and donation links. */
 export default function AboutPage() {
@@ -59,14 +38,6 @@ export default function AboutPage() {
         queryFn: fetchAboutStats,
         staleTime: 60_000,
     });
-
-    const placeholders = useMemo(() => {
-        const seed = Date.now();
-        return {
-            aiIterations: Math.floor(seededRandom(seed) * 8999) + 1000,
-            bugsSquashed: Math.floor(seededRandom(seed + 1) * 450) + 50,
-        };
-    }, []);
 
     return (
         <div className='container mx-auto max-w-5xl px-4 py-10'>
@@ -94,20 +65,16 @@ export default function AboutPage() {
                 {isLoading && <StatGridSkeleton count={8} />}
                 {isError && <p className='text-error'>Could not load platform statistics.</p>}
                 {stats && (
-                    <div className='space-y-4'>
-                        <AboutPlatformStats
-                            gamesPlayed={stats.games_played}
-                            movesAnalyzed={stats.moves_analyzed}
-                            uniquePlayers={stats.unique_players}
-                            aiWinRate={stats.ai_win_rate}
-                            trainingMoves={stats.training_moves}
-                            daysRunning={stats.days_running}
-                        />
-                        <div className='grid grid-cols-2 gap-4 md:grid-cols-4'>
-                            <PlaceholderStatCard value={placeholders.aiIterations} label='AI Iterations' />
-                            <PlaceholderStatCard value={placeholders.bugsSquashed} label='Bugs Squashed' />
-                        </div>
-                    </div>
+                    <AboutPlatformStats
+                        gamesPlayed={stats.games_played}
+                        movesAnalyzed={stats.moves_analyzed}
+                        registeredPlayers={stats.registered_players}
+                        uniquePlayers={stats.unique_players}
+                        aiWinRate={stats.ai_win_rate}
+                        playerWinRate={stats.player_win_rate}
+                        avgMovesPerGame={stats.avg_moves_per_game}
+                        daysRunning={stats.days_running}
+                    />
                 )}
             </section>
 
@@ -117,31 +84,15 @@ export default function AboutPage() {
                     {TEAM_MEMBERS.map(member => (
                         <div key={member.name} className='card bg-base-200 shadow-sm'>
                             <div className='card-body flex-row items-center gap-4'>
-                                <div className='avatar'>
-                                    <div className='w-20 rounded-full'>
-                                        <img src={member.photo} alt={member.name} />
+                                <div className='avatar placeholder'>
+                                    <div className='w-20 rounded-full bg-neutral text-neutral-content'>
+                                        <span className='text-2xl'>{member.initials}</span>
                                     </div>
                                 </div>
                                 <div className='flex-1'>
                                     <h3 className='text-lg font-bold'>{member.name}</h3>
                                     <p className='text-sm opacity-60'>{member.role}</p>
                                     <p className='mt-1 text-sm'>{member.bio}</p>
-                                    <div className='mt-2 flex gap-3'>
-                                        <a
-                                            href={member.github}
-                                            target='_blank'
-                                            rel='noopener noreferrer'
-                                            className='link link-hover text-sm opacity-70'>
-                                            GitHub
-                                        </a>
-                                        <a
-                                            href={member.linkedin}
-                                            target='_blank'
-                                            rel='noopener noreferrer'
-                                            className='link link-hover text-sm opacity-70'>
-                                            LinkedIn
-                                        </a>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -153,6 +104,12 @@ export default function AboutPage() {
                 <p className='mb-3 text-sm opacity-60'>
                     If you are enjoying the games, contributions help keep the servers running.
                 </p>
+                {stats && (
+                    <p className='mb-3 text-sm opacity-70'>
+                        Hosting and AI model costs run ~${stats.monthly_cost_usd}/month. Contributions of any size help
+                        keep the games running.
+                    </p>
+                )}
                 <div className='flex gap-3'>
                     <a
                         href={DONATE_URLS.buyMeACoffee}
