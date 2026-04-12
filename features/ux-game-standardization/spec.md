@@ -1,5 +1,7 @@
 # UX Game Standardization
 
+**Status: implemented**
+
 ## Goal
 
 Standardize the player experience loop across all five games. The shared component infrastructure (`GameStartOverlay`, `GameStatsPanel`, `NewGameButtons`) is already in place, but individual game pages have diverged in important behavioral patterns.
@@ -57,11 +59,12 @@ This means the `GameStartOverlay` component serves both start and end-of-game, d
 ## Scope
 
 Files that will change:
-- `src/frontend/src/pages/games/CheckersPage.tsx` — optimistic move display
-- `src/frontend/src/pages/games/ChessPage.tsx` — optimistic move display, game-over overlay
-- `src/frontend/src/pages/games/Connect4Page.tsx` — optimistic move display
-- `src/frontend/src/pages/games/DotsAndBoxesPage.tsx` — optimistic move display
-- `src/frontend/src/components/games/GameStartOverlay.tsx` — may need minor adjustments if game-over reuse requires a prop change (e.g., a title/context prop)
+- `src/frontend/src/pages/games/TicTacToePage.tsx` — replace custom newgame/resumeprompt overlays with `GameStartOverlay`; add game-over overlay inside board div
+- `src/frontend/src/pages/games/CheckersPage.tsx` — optimistic move display, game-over overlay
+- `src/frontend/src/pages/games/ChessPage.tsx` — game-over overlay (optimistic already implemented)
+- `src/frontend/src/pages/games/Connect4Page.tsx` — game-over overlay (optimistic already implemented)
+- `src/frontend/src/pages/games/DotsAndBoxesPage.tsx` — optimistic move display, game-over overlay
+- `src/frontend/src/components/games/GameStartOverlay.tsx` — added optional `title` prop for result text display
 
 Files that should NOT change:
 - `GameStatsPanel.tsx` — confirmed universal, no changes

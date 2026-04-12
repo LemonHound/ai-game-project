@@ -3,14 +3,17 @@ interface GameStartOverlayProps {
     onResume: () => void;
     optionA: { label: string; onClick: () => void };
     optionB: { label: string; onClick: () => void };
+    title?: string;
 }
 
 /**
- * Renders an overlay with resume and new game options shown before a game starts.
+ * Renders an overlay with resume and new game options shown before or after a game.
+ * Pass `title` to display a result heading (e.g. "You Win!") at the top.
  */
-export default function GameStartOverlay({ canResume, onResume, optionA, optionB }: GameStartOverlayProps) {
+export default function GameStartOverlay({ canResume, onResume, optionA, optionB, title }: GameStartOverlayProps) {
     return (
         <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
+            {title && <p className='text-2xl font-bold'>{title}</p>}
             <button className='btn btn-wide' disabled={!canResume} onClick={canResume ? onResume : undefined}>
                 Continue Game
             </button>

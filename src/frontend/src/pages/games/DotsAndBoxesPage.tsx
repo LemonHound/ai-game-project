@@ -57,6 +57,7 @@ export default function DotsAndBoxesPage() {
         sessionId: string;
         state: DaBGameState;
     } | null>(null);
+    const [showGameOverOverlay, setShowGameOverOverlay] = useState(false);
 
     const esRef = useRef<EventSource | null>(null);
 
@@ -180,6 +181,15 @@ export default function DotsAndBoxesPage() {
         return () => closeSSE();
     }, [closeSSE]);
 
+    useEffect(() => {
+        if (phase !== 'terminal') {
+            setShowGameOverOverlay(false);
+            return;
+        }
+        const timer = setTimeout(() => setShowGameOverOverlay(true), 300);
+        return () => clearTimeout(timer);
+    }, [phase]);
+
     const handleResume = () => {
         if (!pendingResume) return;
         const { sessionId: sid, state } = pendingResume;
@@ -246,6 +256,13 @@ export default function DotsAndBoxesPage() {
         if (type === 'horizontal' && horizontalLines[key]) return;
         if (type === 'vertical' && verticalLines[key]) return;
 
+        const prevHorizontal = horizontalLines;
+        const prevVertical = verticalLines;
+        if (type === 'horizontal') {
+            setHorizontalLines(prev => ({ ...prev, [key]: 'player' }));
+        } else {
+            setVerticalLines(prev => ({ ...prev, [key]: 'player' }));
+        }
         setLastLine({ type: type === 'horizontal' ? 'h' : 'v', row, col });
         setBoardLocked(true);
         setStatusText('');
@@ -254,7 +271,11 @@ export default function DotsAndBoxesPage() {
         } catch (err: unknown) {
             const status = (err as { status?: number }).status;
             if (status === 401) setShowAuthModal(true);
-            else setBoardLocked(false);
+            else {
+                setHorizontalLines(prevHorizontal);
+                setVerticalLines(prevVertical);
+                setBoardLocked(false);
+            }
         }
     };
 
@@ -367,29 +388,22 @@ export default function DotsAndBoxesPage() {
                     />
                 )}
 
-                {phase === 'terminal' && (
-                    <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 rounded-lg bg-base-100/90 backdrop-blur-sm'>
+                {phase === 'terminal' && !showGameOverOverlay && (
+                    <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/90 backdrop-blur-sm'>
                         <p className='text-2xl font-bold'>
                             {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
                         </p>
-                        <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
-                            <div className='flex items-center gap-2 w-full'>
-                                <div className='flex-1 h-px bg-base-content/20' />
-                                <span className='text-xs text-base-content/50 uppercase tracking-wider'>
-                                    Play Again
-                                </span>
-                                <div className='flex-1 h-px bg-base-content/20' />
-                            </div>
-                            <div className='flex gap-2 w-full'>
-                                <button className='btn btn-primary flex-1' onClick={() => handleStartGame(true)}>
-                                    Go First
-                                </button>
-                                <button className='btn btn-secondary flex-1' onClick={() => handleStartGame(false)}>
-                                    Go Second
-                                </button>
-                            </div>
-                        </div>
                     </div>
+                )}
+
+                {phase === 'terminal' && showGameOverOverlay && (
+                    <GameStartOverlay
+                        title={playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
+                        canResume={false}
+                        onResume={() => {}}
+                        optionA={{ label: 'Go First', onClick: () => handleStartGame(true) }}
+                        optionB={{ label: 'Go Second', onClick: () => handleStartGame(false) }}
+                    />
                 )}
             </div>
 
