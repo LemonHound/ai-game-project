@@ -97,6 +97,23 @@ class TestMovesToPgn:
         assert "5. O-O Be7" in pgn
 
 
+def test_chess_pgn_regenerated_from_moves():
+    moves = ["e4", "e5", "Nf3", "Nc6", "Bb5"]
+    pgn = moves_to_pgn(
+        moves,
+        white_name="Alice",
+        black_name="AI",
+        result="*",
+        game_date=FIXED_DATE,
+    )
+    assert '[White "Alice"]' in pgn
+    assert '[Black "AI"]' in pgn
+    assert "1. e4 e5" in pgn
+    assert "2. Nf3 Nc6" in pgn
+    assert "3. Bb5" in pgn
+    assert "[Result" in pgn
+
+
 class TestOutcomeToPgnResult:
     def test_player_won_as_white(self):
         assert outcome_to_pgn_result("player_won", "white") == "1-0"

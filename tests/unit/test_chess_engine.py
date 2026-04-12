@@ -131,3 +131,16 @@ def test_chess_ai_returns_legal_move(engine, fresh_state):
     assert engine.validate_move(ai_state, move) is True
     assert eval_ is not None
     assert -1.0 <= eval_ <= 1.0
+
+
+def test_chess_move_stores_fen(engine, fresh_state):
+    import re
+
+    move = {"fromRow": 6, "fromCol": 4, "toRow": 4, "toCol": 4}
+    new_state = engine.apply_move(fresh_state, move)
+    fen = new_state.get("fen")
+    assert fen is not None, "state['fen'] must be set after apply_move"
+    parts = fen.split(" ")
+    assert len(parts) == 6, f"FEN must have 6 space-separated fields, got: {fen}"
+    assert parts[1] in ("w", "b"), f"Active color must be 'w' or 'b', got: {parts[1]}"
+    assert re.match(r"^[KQRBNPkqrbnp1-8/]+$", parts[0]), f"Piece placement invalid: {parts[0]}"
