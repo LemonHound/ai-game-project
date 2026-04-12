@@ -1206,7 +1206,7 @@ async def chess_newgame(
         ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, strategy, state)
         lm = ai_state.get("last_move") or {}
         await persistence_service.record_move(
-            db, game.id, "chess", _chess_uci(lm), ai_state, lm.get("notation", "")
+            db, game.id, "chess", lm.get("notation", ""), ai_state
         )
         state = ai_state
 
@@ -1303,7 +1303,7 @@ async def chess_events(
                 player_state = _chess_engine.apply_move(state, msg)
                 player_lm = player_state.get("last_move") or {}
                 await persistence_service.record_move(
-                    db, sid, "chess", _chess_uci(player_lm), player_state, player_lm.get("notation", "")
+                    db, sid, "chess", player_lm.get("notation", ""), player_state
                 )
 
                 is_terminal, outcome = _chess_engine.is_terminal(player_state)
@@ -1319,7 +1319,7 @@ async def chess_events(
                 if hasattr(_chess_strategy, "set_move_history"):
                     fresh_record = await persistence_service.get_game(db, sid, "chess")
                     _chess_strategy.set_move_history(
-                        fresh_record.move_list_algebraic if fresh_record else []
+                        fresh_record.move_list if fresh_record else []
                     )
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
@@ -1332,7 +1332,7 @@ async def chess_events(
 
                 ai_lm = ai_state.get("last_move") or {}
                 await persistence_service.record_move(
-                    db, sid, "chess", _chess_uci(ai_lm), ai_state, ai_lm.get("notation", "")
+                    db, sid, "chess", ai_lm.get("notation", ""), ai_state
                 )
 
                 is_terminal, outcome = _chess_engine.is_terminal(ai_state)

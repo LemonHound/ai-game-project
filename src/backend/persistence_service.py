@@ -125,7 +125,7 @@ async def record_move(
     a new row.
 
     Move notation format by game type:
-        chess: UCI string, e.g. "e2e4" or "e7e8q" for promotion.
+        chess: SAN string, e.g. "e4", "Nf3", "O-O", "exd5", "e8=Q".
         tic_tac_toe: "r{row}c{col}", e.g. "r1c2".
         connect4: "c{col}", e.g. "c3".
         checkers: algebraic from+to, e.g. "b6d4".
@@ -137,8 +137,8 @@ async def record_move(
         game_type: One of "chess", "tic_tac_toe", "checkers", "connect4", "dots_and_boxes".
         move_notation: Move in the standard notation for this game type (see above).
         board_state_after: Full board state dict after the move. Overwrites board_state.
-        algebraic_notation: Standard algebraic notation for chess moves (e.g. "Nf3").
-            Only used for chess — stored in move_list_algebraic. Ignored for other game types.
+        algebraic_notation: Deprecated. SAN is now stored directly in move_list for chess.
+            Retained for backward compatibility; still written to move_list_algebraic if provided.
 
     Raises:
         KeyError: If game_type is not in GAME_TYPE_TO_MODEL.
