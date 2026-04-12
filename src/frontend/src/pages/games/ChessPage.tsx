@@ -342,6 +342,7 @@ export default function ChessPage() {
         promotionPiece: string | null
     ) => {
         const movingPiece = board[fromRow][fromCol];
+        const prevBoard = board.map(r => [...r]);
         setSelectedSquare(null);
         setLegalDestinations([]);
         setBoardLocked(true);
@@ -374,8 +375,14 @@ export default function ChessPage() {
             await chessMove(fromRow, fromCol, toRow, toCol, promotionPiece ?? undefined);
         } catch (err) {
             const status = (err as { status?: number }).status;
-            if (status === 401) setShowAuthModal(true);
-            else setBoardLocked(false);
+            if (status === 401) {
+                setShowAuthModal(true);
+            } else {
+                setBoard(prevBoard);
+                setLastMove(null);
+                setStatusText('Move rejected — please try again.');
+                setBoardLocked(false);
+            }
         }
     };
 

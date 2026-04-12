@@ -55,4 +55,24 @@ describe('ChessBoard', () => {
         const { container } = render(<ChessBoard {...defaultProps} />);
         expect(container.querySelector('[class*="border-amber"]')).toBeInTheDocument();
     });
+
+    it('renders piece images not letters', () => {
+        const { container } = render(<ChessBoard {...defaultProps} />);
+        const imgs = container.querySelectorAll('img[src*="/images/"]');
+        expect(imgs.length).toBeGreaterThan(0);
+        const pieceLetters = container.querySelectorAll('[class*="piece-letter"]');
+        expect(pieceLetters.length).toBe(0);
+    });
+
+    it('flips board for black player', () => {
+        const { container: whiteContainer } = render(<ChessBoard {...defaultProps} playerColor='white' />);
+        const { container: blackContainer } = render(<ChessBoard {...defaultProps} playerColor='black' />);
+        const whiteSquares = whiteContainer.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        const blackSquares = blackContainer.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        expect(whiteSquares.length).toBeGreaterThanOrEqual(64);
+        expect(blackSquares.length).toBeGreaterThanOrEqual(64);
+        const whiteFirstImg = whiteContainer.querySelector('img');
+        const blackFirstImg = blackContainer.querySelector('img');
+        expect(whiteFirstImg?.getAttribute('alt')).not.toBe(blackFirstImg?.getAttribute('alt'));
+    });
 });
