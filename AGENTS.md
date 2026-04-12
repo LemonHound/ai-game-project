@@ -25,12 +25,20 @@ Human-readable defaults for automation and coding agents. **Authoritative detail
 - Run **`npm run test:fast`** locally before every push (covers Vitest, pytest unit, ESLint, Prettier). Add tiers from
   CONTRIBUTING when appropriate. **Do not** push untested and rely on CI for format/lint/tests; **`--no-verify`** only
   if the user explicitly allows it.
+- **Format before every commit**: run `node_modules/.bin/prettier --write <changed files>` from the **main project
+  directory** (worktrees do not have their own `node_modules`). The CI `format:check` glob covers
+  `src/**/*.{ts,tsx,js,css,html}`, `tests/**/*.js`, and `*.{js,mjs,ts,json,md}` — including top-level markdown. Fix all
+  Prettier failures locally; do not push a commit that will fail `npm run format:check`.
 - CI gate on GitHub: **Test Summary**.
 
 ## Pull requests
 
 Unless the user opts out: after **`gh pr create`**, run **`gh pr checks <pr> --watch`**. When marking ready to land, use
 **`gh pr merge <pr> --auto --squash`** by default.
+
+**Do not start the next spec until the current PR has passed CI and merged cleanly to main.** Opening multiple spec PRs
+simultaneously causes cascading merge conflicts. Watch CI to completion, resolve any failures, and confirm the merge
+before moving on.
 
 **GitHub writes from agents:** Run **`gh pr create`**, **`gh pr edit`**, and **`gh pr merge`** only in a **local**
 terminal where `gh` is you (see **CONTRIBUTING.md §1e**). On **sub-agents**, skip those commands and use the **§1c
