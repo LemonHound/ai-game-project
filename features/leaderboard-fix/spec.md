@@ -1,5 +1,7 @@
 # Leaderboard Fix
 
+**Status: implemented**
+
 ## Problem
 
 The leaderboard page shows "No entries yet. Play some games!" for every game/board-type combination, even for users who have played games.
