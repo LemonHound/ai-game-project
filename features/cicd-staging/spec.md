@@ -1,6 +1,6 @@
 # CI/CD Staging Environment Spec
 
-**Status: ready**
+**Status: ready** (pending resolution of open questions below before implementation)
 
 ## Background
 
@@ -31,35 +31,55 @@ Automated tests run against staging. The same image is promoted to production on
 - Image promotion from staging to production (same artifact, no second build)
 - Staging URL must be accessible for manual testing but should not be treated as public-facing
 - There must be a documented rollback mechanism if issues are discovered after production promotion
-- The CONTRIBUTING.md branch hygiene and push workflow must be updated to reflect the new pipeline steps
+- The CLAUDE.md branch hygiene and push workflow must be updated to reflect the new pipeline steps
+
+## Resolved Questions
+
+- **GCP project**: Same GCP project as production. Separate GCP project adds IAM and billing
+  complexity with no isolation benefit at this scale.
+- **Staging service**: Separate Cloud Run service (`game-ai-website-staging`). Shares the same
+  Artifact Registry; no second image build.
+- **Branch strategy**: Only merges to `main` trigger a staging deploy. No separate staging branch.
+  `main` always represents staging-eligible code.
+- **Promotion**: Automatic — staging tests pass → same image promoted to production with no human
+  gate. Manual approval is added only if false-positive staging failures become a recurring problem.
+- **Staging scale-to-zero**: Yes. Staging Cloud Run scales to zero when idle.
 
 ## Open Questions
 
-### Environment Isolation
-- **Decided:** same GCP project, separate Cloud Run service for staging (no separate GCP project)
-- Staging DB strategy: separate Cloud SQL instance, same instance with a separate database, or schema isolation?
-- How are staging secrets managed in GCP Secret Manager (separate secret names/versions vs. environment
-  variable override)?
+These must be resolved before implementation begins.
 
-### Test Strategy for Staging
-- What test suite runs against staging? All existing E2E? Only smoke tests? New staging-specific tests?
-- How are staging-specific test fixtures or seed data managed?
-- Who is responsible for keeping staging data clean between runs?
+### Database
 
-### Promotion Workflow
-- Automatic promotion on test pass, or manual approval step before production?
-- What constitutes a "blocking" failure vs. a warning?
-- How is the deploy-to-production step triggered in Cloud Build (separate trigger, same trigger with stages)?
+- Staging DB strategy: separate Cloud SQL instance, or same instance with a dedicated staging
+  database? (Separate instance provides stronger isolation; same instance is cheaper. Consider
+  whether staging migrations could affect production if misconfigured.)
+- Does the staging deploy run migrations against the staging DB before promoting to production,
+  validating that migrations are safe?
 
-### Branch Strategy
-- Does every branch merge get a staging deploy, or only `main`?
-- Is there a separate staging branch, or does `main` always represent staging-eligible code?
+### Secrets
 
-### Cost & Operations
-- What are the cost implications of a persistent staging Cloud Run service + Cloud SQL instance?
-- Should staging scale to zero when not in use?
-- Who gets notified on staging test failures?
+- Staging secrets in GCP Secret Manager: (a) separate secret names with `-staging` suffix,
+  (b) same secrets with a staging-specific version label, or (c) environment variable overrides
+  in the Cloud Run staging service definition. Choose before implementation.
+
+### Test Suite
+
+- Which tests run against staging? All existing E2E/smoke suite, or a dedicated staging-only subset?
+- How are staging-specific seed data fixtures managed and reset between test runs?
+- Who is notified on staging test failures (Slack alert, GH check, or both)?
+
+### Cost
+
+- Estimate the monthly cost of a persistent Cloud SQL staging instance vs. ephemeral
+  (created/destroyed per deploy). The pipeline architecture differs depending on this choice.
 
 ## Test Cases
 
-_To be defined during planning session._
+| Tier | Name | What it checks |
+|------|------|----------------|
+| Manual | Staging deploy on merge to main | Merge a PR; verify Cloud Build deploys to staging, not production |
+| Manual | Staging tests block production | Break a staging test; verify production deploy does not proceed |
+| Manual | Image promotion (no rebuild) | Verify the same image SHA deployed to staging is promoted to production |
+| Manual | Staging scale-to-zero | Leave staging idle; verify it scales to zero; verify next deploy spins it back up |
+| Manual | Rollback mechanism | Trigger a rollback; verify the previous image version is deployed to production |
