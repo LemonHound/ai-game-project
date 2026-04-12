@@ -7,8 +7,11 @@
 3. Keep **documentation** the source of truth for how we add features, fix bugs, and maintain tests for the life of the
    project.
 
-This spec is **test and process documentation only** (no application source changes in its own PR). Bug reports live in
-**GitHub Issues**, not in the repository as standalone “bug files.”
+This spec is **test and process documentation first**: land policy in **`spec.md`** and **`CONTRIBUTING.md`** without
+touching application code under `src/backend/` or `src/frontend/src/`. **Exception (one-time):** extending the smoke
+route list in `tests/smoke/routes.spec.js` to match **live games** shipped before this policy is acceptable in the same
+PR as the docs; after that, keep doc-only PRs free of test file edits and put smoke or E2E changes in implementation PRs.
+Bug reports live in **GitHub Issues**, not in the repository as standalone “bug files.”
 
 ---
 
@@ -171,7 +174,8 @@ slug; consistency matters more than a rigid prefix.
 - Leaderboard public/private and pagination behaviors have integration (or equivalent) tests.
 - Chess persistence asserts FEN (or documented equivalent) at API level.
 - **CONTRIBUTING.md** describes live games, bug-vs-feature, GitHub Issues, and regression tests alongside existing
-  workflow (see PR #159 if not yet on `main`).
+  workflow.
+- Smoke route checks cover every **live** game slug at `/game/{id}` (see `tests/smoke/routes.spec.js`).
 - No test files deleted without replacement coverage and rationale in commit message.
 
 ---
@@ -180,6 +184,7 @@ slug; consistency matters more than a rigid prefix.
 
 | Tier        | Test name / file                    | Scenario                                                    |
 | ----------- | ----------------------------------- | ----------------------------------------------------------- |
+| Smoke       | `tests/smoke/routes.spec.js`        | Each live game route loads (no 404 / error title)           |
 | E2E         | `tests/e2e/checkers.spec.ts`        | Live game flow: auth gate, start, move, game over, new game |
 | E2E         | `tests/e2e/chess.spec.ts`           | Same for chess                                              |
 | E2E         | `tests/e2e/connect4.spec.ts`        | Same for Connect4                                           |
@@ -195,6 +200,8 @@ slug; consistency matters more than a rigid prefix.
 - **Replacing** `features/test-coverage-overhaul/spec.md` — complementary, not duplicate.
 - **Slash commands or repo-local “/bug” skills** as the bug intake path — GitHub Issues are authoritative.
 - **Broad rewrite** of all Playwright JS specs beyond what is listed in Part 2.
+- **Doc-only PRs that also edit tests** after the one-time smoke list alignment above; ship test changes with the
+  implementation PR that needs them.
 
 ---
 
