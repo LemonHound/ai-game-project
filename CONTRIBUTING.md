@@ -4,8 +4,7 @@ This guide covers **how we develop and document** the project (specs, ADRs, test
 how-to** for running the app, extending game AI, reading database fields, and validating changes. Use the sections you
 need; maintainers and reviewers should skim **Development workflow** and **Branch hygiene** at least once.
 
-For **Cursor** and other coding agents, see **[AGENTS.md](AGENTS.md)** and the rules under **`.cursor/rules/`** — they
-repeat only what must stay top-of-mind in each turn; this file remains the full reference.
+For coding agents, see **[AGENTS.md](AGENTS.md)** — it repeats only what must stay top-of-mind in each turn; this file remains the full reference.
 
 ---
 
@@ -117,9 +116,8 @@ Transitive packages belong in the lockfile only, not in `requirements.in`. Renov
 
 ---
 
-## AI-assisted development (Cursor)
+## AI-assisted development
 
-- **Project rules:** `.cursor/rules/*.mdc` — scoped instructions (always-on, glob-based, or attach manually with `@`).
 - **Short agent defaults:** [AGENTS.md](AGENTS.md)
 - **Full human workflow:** this document.
 
@@ -176,8 +174,8 @@ cross-game behavior), update the PR before or with the next push so reviewers an
   implements or supersedes an architectural decision.
 
 **Where to run `gh pr edit` (and other GitHub writes):** Only on a **machine where GitHub CLI is authenticated as you**
-(local Cursor workspace terminal, Git Bash on your PC, and so on). **Remote Cursor cloud agents** typically cannot
-mutate PRs (see **§1e**). If work runs on a cloud agent, **do not** keep retrying `gh pr edit` there; finish the branch,
+(your local terminal, Git Bash, and so on). **Sub-agents** typically cannot
+mutate PRs (see **§1e**). If work runs in a sub-agent, **do not** keep retrying `gh pr edit` there; finish the branch,
 then apply the title/body using a **local** shell or hand the exact commands to the contributor (see **§1c handoff**
 below).
 
@@ -191,7 +189,7 @@ gh pr edit <number> --body-file path/to/pr-body.md
 If you only need a small fix, `gh pr edit <number> --body "..."` is fine. Do not leave stale review questions in the
 body once they are answered; replace them with the agreed outcome.
 
-### §1c handoff (cloud or read-only `gh`)
+### §1c handoff (sub-agent or read-only `gh`)
 
 When a session **cannot** run `gh pr edit` / `gh pr merge` / `gh pr create` successfully, output a block the contributor
 can paste into a **local** terminal (after writing `pr-body.md` or inlining the body):
@@ -232,32 +230,27 @@ prefer a **short ADR** over losing the rationale in a closed PR thread.
 
 ---
 
-## 1e. Cursor agents and authentication (GitHub / GCP)
+## 1e. Sub-agents and authentication (GitHub / GCP)
 
-Remote or integrated **Cursor** sessions may use a shell where `gh` / `gcloud` are **not** logged in the same way as
-your day-to-day terminal. If a command fails with **permission**, **401/403**, **Resource not accessible by
-integration**, or **not authenticated**, do **not** ask the user to paste tokens into chat or commit secrets to the
-repo.
+Sub-agents share the local machine context but may not inherit all shell auth state from the parent session. If a
+command fails with **permission**, **401/403**, **Resource not accessible by integration**, or **not authenticated**,
+do **not** ask the user to paste tokens into chat or commit secrets to the repo.
 
 ### GitHub CLI (`gh`)
 
 **Default workflow:** Treat **GitHub mutations** (`gh pr create`, `gh pr edit`, `gh pr merge`, and write-style `gh api`
-calls) as **local-only**. Run them from **Cursor’s integrated terminal on your machine**, **Git Bash**, or any shell
-where `gh auth login` (or **`GH_TOKEN`**) identifies **your** account. User-level rules under **`~/.cursor`** (for
-example PAT handling or wrapper docs) exist **only on your PC**; they are **not** mounted into **remote Cursor cloud
-agent** VMs.
+calls) as **local-only**. Run them from your **local terminal** or **Git Bash** where `gh auth login` (or
+**`GH_TOKEN`**) identifies **your** account.
 
 **Local auth:** Run `gh auth login` and complete the browser or device flow. That stores the session where `gh` expects
 it (for example Windows Credential Manager and GitHub CLI config). Optionally set a scoped PAT as **`GH_TOKEN`** in your
 **user** environment for that machine (`gh` prefers it over the stored OAuth token for API calls). **Never** commit a
 PAT to the repository.
 
-**Remote / cloud agents (Linux VM on Cursor infrastructure):** These environments use Cursor’s **integration** identity
-(`gh auth status` may show **`cursor`** with a **`ghs_`** token). That identity can **read** PRs and run **read-only**
-`gh` commands (`gh pr view`, `gh pr diff`, `gh pr checks`) but **often cannot mutate** PRs, which surfaces as **Resource
-not accessible by integration**. **Do not** depend on cloud agents to update PR bodies, titles, or merges. Instead:
-complete code and pushes on the remote branch, then use **§1c handoff** so a **local** session or the contributor
-applies `gh pr edit` / merge, or edit the PR on **github.com**.
+**Sub-agents:** Prefer read-only `gh` commands (`gh pr view`, `gh pr diff`, `gh pr checks`). Mutations (`gh pr create`,
+`gh pr edit`, `gh pr merge`) should run in the main session. If a sub-agent cannot mutate PRs, complete code and
+pushes on the branch, then use **§1c handoff** so the main session or the contributor applies the change, or edit the
+PR on **github.com**.
 
 Verify the effective identity before relying on writes:
 
@@ -276,9 +269,8 @@ Projects.
 - Run `gcloud auth login` and, when tools need application default credentials, `gcloud auth application-default login`,
   from a terminal on the user’s machine so ADC and tokens are stored locally.
 
-After the user confirms they completed login, **re-run** the failing command. If the agent environment still cannot see
-those credentials (common for **cloud-only** agents), say so clearly: the user may need **GCP secrets or ADC**
-configured for that environment, not only local Windows auth.
+After the user confirms they completed login, **re-run** the failing command. If a sub-agent still cannot see those
+credentials, say so clearly: the user may need to verify that **GCP secrets or ADC** are accessible in that context.
 
 ---
 
