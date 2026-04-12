@@ -453,6 +453,8 @@ async def google_auth(request: GoogleAuthRequest, response: Response):
                     display_name=idinfo.get("name", ""),
                     profile_picture=idinfo.get("picture", ""),
                 )
+            elif user.get("auth_provider") != "google":
+                await auth_service.update_google_link(user["id"], google_id)
 
             session_id = await auth_service.create_session(user["id"])
             set_session_cookie(response, session_id, max_age=30 * 24 * 60 * 60)
@@ -565,6 +567,8 @@ async def google_callback(code: str = None, error: str = None, state: str = "/")
                     profile_picture=google_user.get("picture", ""),
                 )
             else:
+                if user.get("auth_provider") != "google":
+                    await auth_service.update_google_link(user["id"], google_user["id"])
                 await auth_service.update_last_login(user["id"])
 
             session_id = await auth_service.create_session(user["id"])

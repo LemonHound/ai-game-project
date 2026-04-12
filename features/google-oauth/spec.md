@@ -1,6 +1,6 @@
 # Google OAuth Spec
 
-**Status: in-progress** — partially implemented; see open bugs
+**Status: implemented**
 
 ## Background
 
@@ -52,6 +52,20 @@ Audit and fix the full Google OAuth flow end-to-end for the React SPA architectu
   existing account, and the user retains their game history. No duplicate accounts are created.
 - **Client ID / secret rotation**: The Google OAuth client ID and secret live in GCP Secret Manager.
   No rotation concerns specific to this feature — normal Secret Manager versioning handles rotation.
+
+## Audit
+
+Conducted against `src/backend/auth.py` and `src/backend/auth_service.py`.
+
+- **Callback compatibility**: The `GET /api/auth/google/callback` route was already compatible with the
+  React SPA flow. It exchanges the authorization code, sets an httpOnly session cookie, and redirects to
+  the `state` param (defaulting to `/`). No Jinja2 rendering was present.
+- **Account linking**: Was missing. When `find_user_by_email` returned an existing local-auth user,
+  neither OAuth handler updated `google_id` or `auth_provider`. Fixed by adding `update_google_link`
+  to `AuthService` and calling it from both handlers when the found user's `auth_provider` is not
+  already `"google"`.
+- **Tests**: Added `tests/api_tests/test_google_oauth.py` covering the three testable error-path cases.
+  Positive-path tests require live Google credentials and are covered by the E2E test cases below.
 
 ## Known Requirements
 

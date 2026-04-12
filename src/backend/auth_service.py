@@ -276,6 +276,29 @@ class AuthService:
             )
             await session.commit()
 
+    async def update_google_link(self, user_id: int, google_id: str) -> None:
+        """Link a Google identity to an existing local user account.
+
+        Sets google_id, auth_provider='google', and email_verified=True for the
+        given user. Used when a local-auth user signs in with Google for the first time.
+
+        Args:
+            user_id: ID of the existing user to update.
+            google_id: Google account subject identifier (sub field).
+        """
+        async with get_session() as session:
+            await session.execute(
+                text("""
+                    UPDATE users
+                    SET google_id = :google_id,
+                        auth_provider = 'google',
+                        email_verified = true
+                    WHERE id = :user_id
+                """),
+                {"google_id": google_id, "user_id": user_id},
+            )
+            await session.commit()
+
     async def check_database(self) -> str:
         """Test database connectivity with a lightweight query.
 
