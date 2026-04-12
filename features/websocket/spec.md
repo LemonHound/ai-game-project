@@ -63,7 +63,7 @@ API router, since WebSocket endpoints cannot use FastAPI dependency injection th
 | type | payload | when |
 |------|---------|------|
 | `player_input` | `{action: "up"|"down"|"none"}` | on player input change (key/button press and release) |
-| `start_game` | `{difficulty: "easy"\|"medium"\|"hard"}` | once, after connection established |
+| `start_game` | `{}` | once, after connection established |
 
 ### Connection Lifecycle
 
