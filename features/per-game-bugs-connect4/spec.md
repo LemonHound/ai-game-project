@@ -1,6 +1,6 @@
 # Connect 4 Bug Fixes
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 
