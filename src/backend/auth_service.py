@@ -130,7 +130,7 @@ class AuthService:
                 text("""
                     SELECT id, username, email, display_name, profile_picture,
                            auth_provider, email_verified, password_hash,
-                           created_at, last_login
+                           created_at, last_login, is_active
                     FROM users WHERE username = :username
                 """),
                 {"username": username},
@@ -154,7 +154,7 @@ class AuthService:
                 text("""
                     SELECT u.id, u.username, u.email, u.display_name,
                            u.profile_picture, u.auth_provider, u.email_verified,
-                           u.last_login, u.password_hash, u.stats_public
+                           u.last_login, u.password_hash, u.stats_public, u.is_active
                     FROM users u
                     JOIN user_sessions s ON u.id = s.user_id
                     WHERE s.session_id = :session_id AND s.expires_at > NOW()
@@ -180,7 +180,7 @@ class AuthService:
                 text("""
                     SELECT id, username, email, display_name, profile_picture,
                            auth_provider, email_verified, password_hash,
-                           created_at, last_login
+                           created_at, last_login, is_active
                     FROM users WHERE email = :email
                 """),
                 {"email": email},
@@ -260,6 +260,19 @@ class AuthService:
             await session.execute(
                 text("DELETE FROM user_sessions WHERE session_id = :session_id"),
                 {"session_id": session_id},
+            )
+            await session.commit()
+
+    async def delete_sessions_by_user_id(self, user_id: int) -> None:
+        """Delete all sessions for a user (used when deactivating an account).
+
+        Args:
+            user_id: ID of the user whose sessions should be deleted.
+        """
+        async with get_session() as session:
+            await session.execute(
+                text("DELETE FROM user_sessions WHERE user_id = :user_id"),
+                {"user_id": user_id},
             )
             await session.commit()
 
