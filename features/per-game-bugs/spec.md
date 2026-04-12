@@ -1,5 +1,7 @@
 # Per-Game Bug Fixes
 
+**Status: ready** — implement after ux-game-standardization merges
+
 ## Background
 
 Bugs filed in issues #96-#99 from March 28, 2026. Items made obsolete by `features/ux-game-standardization` (game-over

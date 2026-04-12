@@ -1,6 +1,6 @@
 # Game: Dots and Boxes
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 
@@ -209,7 +209,7 @@ the first AI move in a turn sequence; consecutive chain moves emit no status.
 | Condition | Message |
 |---|---|
 | AI turn begins | `"Thinking..."` (direct yield, no rate-limiting) |
-| AI move ready (first and subsequent chain moves) | `move` event (direct yield, 500ms between each) |
+| AI move ready (first and subsequent chain moves) | `move` event (direct yield, delay governed by `GAME_SERVER_MIN_EVENT_INTERVAL_MS`) |
 
 `StatusBroadcaster` is **not instantiated** for Dots and Boxes — the SSE handler yields all events
 directly.
@@ -222,9 +222,10 @@ After any move event is emitted, the handler checks the resulting state:
 the SSE handler does nothing further — the board unlocks and waits for the next player POST.
 
 **AI extra-turn chain:** After an AI move is applied and emitted, if `current_turn == "ai"` and not
-terminal, the handler immediately applies the next AI move, waits 500ms, then emits another move event.
+terminal, the handler immediately applies the next AI move, waits `GAME_SERVER_MIN_EVENT_INTERVAL_MS`
+(see `features/ai-delay-config/spec.md`), then emits another move event.
 This loop continues until `current_turn != "ai"` or the game is terminal. Each AI move in the chain is
-a separate SSE move event. The 500ms delay allows the player to observe each line being drawn.
+a separate SSE move event. The delay allows the player to observe each line being drawn.
 
 Pseudocode for the SSE handler's AI processing loop:
 

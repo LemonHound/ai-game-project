@@ -1,6 +1,6 @@
 # CI/CD Staging Environment Spec
 
-**Status: ready** (pending resolution of open questions below before implementation)
+**Status: draft** — open questions below must be resolved before implementation can begin
 
 ## Background
 

@@ -1,6 +1,6 @@
 # Game Statistics Spec
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 

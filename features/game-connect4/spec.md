@@ -1,6 +1,6 @@
 # Game: Connect 4
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 
@@ -98,7 +98,8 @@ Implements `AIStrategy`. Wraps the win/block/center/random heuristic from the ex
 ### Shared Infrastructure (unchanged)
 
 `MoveProcessor`, `StatusBroadcaster`, and `GameEngine`/`AIStrategy` ABCs from `game_engine/base.py` are
-reused without modification.
+reused without modification. `StatusBroadcaster` timing is governed by `GAME_SERVER_MIN_EVENT_INTERVAL_MS`
+— see `features/ai-delay-config/spec.md`.
 
 ### Legacy Generic Endpoints
 

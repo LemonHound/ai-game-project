@@ -1,5 +1,7 @@
 # Nightly E2E Fix
 
+**Status: implemented**
+
 ## Problem
 
 The nightly cross-browser E2E job (`nightly-e2e.yml`) has failed every night for at least 5 days. Two distinct root causes:

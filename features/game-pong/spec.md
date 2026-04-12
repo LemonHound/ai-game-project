@@ -1,6 +1,6 @@
 # Game: Pong
 
-**Status: finalized — depends on websocket (finalized)**
+**Status: draft** — depends on websocket (draft); no implementation has begun
 
 ## Background
 

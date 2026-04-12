@@ -1,6 +1,6 @@
 # Feature: PlayerCard
 
-**Status: ready**
+**Status: implemented**
 
 ## Background
 
