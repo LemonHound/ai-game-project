@@ -30,29 +30,29 @@ test.describe('Chess — full game flows', () => {
     });
 
     test('test_chess_player_move_reflected_in_ui', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/chess/newgame'));
         await page.locator('button:has-text("Play as White")').click();
 
         const board = page.locator('.border-amber-900').first();
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         // Click e2 pawn (row 6 col 4 = square 52 from top-left) then e4 (row 4 col 4 = square 36)
         const squares = board.locator('> div > div');
         await squares.nth(52).click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(300);
         await squares.nth(36).click();
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(1500);
 
         // Board should still be visible after the move
         await expect(board).toBeVisible({ timeout: 3000 });
     });
 
     test('test_chess_game_over_overlay_available', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/chess/newgame'));
         await page.locator('button:has-text("Play as White")').click();
 
         const board = page.locator('.border-amber-900').first();
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         const squares = board.locator('> div > div');
 
@@ -66,9 +66,9 @@ test.describe('Chess — full game flows', () => {
 
         for (const [from, to] of moves) {
             await squares.nth(from).click();
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(300);
             await squares.nth(to).click();
-            await page.waitForTimeout(3500);
+            await page.waitForTimeout(1500);
 
             const gameOverText = page.locator('p:has-text("You Win!"), p:has-text("You Lose"), p:has-text("Draw!")');
             if ((await gameOverText.count()) > 0) break;
@@ -87,10 +87,10 @@ test.describe('Chess — full game flows', () => {
     });
 
     test('test_chess_resume_after_page_refresh', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/chess/newgame'));
         await page.locator('button:has-text("Play as White")').click();
         const board = page.locator('.border-amber-900').first();
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         await page.reload();
         await page.waitForLoadState('networkidle');

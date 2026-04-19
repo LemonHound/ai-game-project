@@ -30,28 +30,28 @@ test.describe('Dots and Boxes — full game flows', () => {
     });
 
     test('test_dab_player_edge_click_reflected_in_ui', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/dots-and-boxes/newgame'));
         await page.locator('button:has-text("Go First")').click();
 
         const board = page.locator('[aria-label="Dots and Boxes board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         // Click first interactive edge (SVG rect with cursor:pointer)
         const edges = board.locator('rect[style*="cursor: pointer"]');
         if ((await edges.count()) > 0) {
             await edges.first().click();
-            await page.waitForTimeout(3000);
+            await page.waitForTimeout(1500);
         }
 
         await expect(board).toBeVisible({ timeout: 3000 });
     });
 
     test('test_dab_game_over_overlay_available', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/dots-and-boxes/newgame'));
         await page.locator('button:has-text("Go First")').click();
 
         const board = page.locator('[aria-label="Dots and Boxes board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         // Click several edges; if the game ends, the overlay should appear
         const edges = board.locator('rect[style*="cursor: pointer"]');
@@ -62,7 +62,7 @@ test.describe('Dots and Boxes — full game flows', () => {
             const currentEdges = board.locator('rect[style*="cursor: pointer"]');
             if ((await currentEdges.count()) === 0) break;
             await currentEdges.first().click();
-            await page.waitForTimeout(2500);
+            await page.waitForTimeout(1500);
 
             const gameOverText = page.locator('p:has-text("You Win!"), p:has-text("You Lose"), p:has-text("Draw!")');
             if ((await gameOverText.count()) > 0) break;
@@ -81,10 +81,10 @@ test.describe('Dots and Boxes — full game flows', () => {
     });
 
     test('test_dab_resume_after_page_refresh', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/dots-and-boxes/newgame'));
         await page.locator('button:has-text("Go First")').click();
         const board = page.locator('[aria-label="Dots and Boxes board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         await page.reload();
         await page.waitForLoadState('networkidle');

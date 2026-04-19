@@ -90,6 +90,7 @@ module.exports = defineConfig({
             timeout: 120 * 1000,
             env: {
                 NODE_ENV: 'test',
+                ENVIRONMENT: 'test',
                 PORT: '8000',
             },
         };

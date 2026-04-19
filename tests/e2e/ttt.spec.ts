@@ -39,22 +39,22 @@ test.describe('TTT — full game flows', () => {
     });
 
     test('test_ttt_full_game_player_wins', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/tic-tac-toe/newgame'));
         await page.locator('button:has-text("Play as X")').click();
 
         const board = page.locator('[aria-label="Tic-Tac-Toe board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000); // wait for game init API response + board unlock
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         const cells = board.locator('button');
 
         await cells.nth(0).click();
-        await page.waitForTimeout(3500);
+        await page.waitForTimeout(1500);
 
         await cells.nth(1).click();
-        await page.waitForTimeout(3500);
+        await page.waitForTimeout(1500);
 
         await cells.nth(2).click();
-        await page.waitForTimeout(3500);
+        await page.waitForTimeout(1500);
 
         const banner = page.locator('.alert');
         const stillPlaying = (await board.isVisible()) && !(await banner.isVisible());
@@ -75,13 +75,13 @@ test.describe('TTT — full game flows', () => {
     });
 
     test('test_ttt_resume_after_page_refresh', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/tic-tac-toe/newgame'));
         await page.locator('button:has-text("Play as X")').click();
         const board = page.locator('[aria-label="Tic-Tac-Toe board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000); // wait for game init + board unlock
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         await page.locator('[aria-label="Tic-Tac-Toe board"] button').first().click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(500);
 
         await page.reload();
         await page.waitForLoadState('networkidle');
