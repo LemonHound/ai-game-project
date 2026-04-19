@@ -48,6 +48,7 @@ jobs:
           DB_USER=testuser
           DB_PASSWORD=testpassword
           NODE_ENV=test
+          ENVIRONMENT=test
           PORT=8000
           WEBSITE_URL=http://localhost:8000
           DOTENV

@@ -30,29 +30,29 @@ test.describe('Connect 4 — full game flows', () => {
     });
 
     test('test_connect4_player_drop_reflected_in_ui', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/connect4/newgame'));
         await page.locator('button:has-text("Play as Red")').click();
 
         const board = page.locator('[aria-label="Connect 4 board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         await page.locator('[aria-label="Column 4"]').click();
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(1500);
 
         await expect(board).toBeVisible({ timeout: 3000 });
     });
 
     test('test_connect4_game_over_overlay_available', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/connect4/newgame'));
         await page.locator('button:has-text("Play as Red")').click();
 
         const board = page.locator('[aria-label="Connect 4 board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         // Drop 4 in column 1 — vertical win if AI does not block
         for (let i = 0; i < 4; i++) {
             await page.locator('[aria-label="Column 1"]').click();
-            await page.waitForTimeout(3500);
+            await page.waitForTimeout(1500);
 
             const gameOverText = page.locator('p:has-text("You Win!"), p:has-text("You Lose"), p:has-text("Draw!")');
             if ((await gameOverText.count()) > 0) break;
@@ -71,13 +71,13 @@ test.describe('Connect 4 — full game flows', () => {
     });
 
     test('test_connect4_resume_after_page_refresh', async ({ page }) => {
+        const newgameResp = page.waitForResponse(r => r.url().includes('/connect4/newgame'));
         await page.locator('button:has-text("Play as Red")').click();
         const board = page.locator('[aria-label="Connect 4 board"]');
-        await expect(board).toBeVisible({ timeout: 5000 });
-        await page.waitForTimeout(2000);
+        await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
         await page.locator('[aria-label="Column 4"]').click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(500);
 
         await page.reload();
         await page.waitForLoadState('networkidle');
