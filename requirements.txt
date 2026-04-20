@@ -190,7 +190,7 @@ pydantic==2.12.5
     #   -r requirements.in
     #   fastapi
     #   sqlmodel
-pydantic-core==2.41.5
+pydantic-core==2.46.3
     # via pydantic
 pydocstyle==6.3.0
     # via -r requirements.in
