@@ -32,10 +32,6 @@ charset-normalizer==3.4.7
     # via requests
 click==8.3.2
     # via uvicorn
-colorama==0.4.6
-    # via
-    #   click
-    #   pytest
 cryptography==46.0.7
     # via google-auth
 dnspython==2.8.0
@@ -242,9 +238,11 @@ typing-inspection==0.4.2
     # via
     #   fastapi
     #   pydantic
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
 uvicorn==0.44.0
+    # via -r requirements.in
+uvloop==0.22.1 ; sys_platform != "win32"
     # via -r requirements.in
 watchfiles==1.1.1
     # via -r requirements.in
