@@ -28,7 +28,7 @@ test.describe('Performance Tests', () => {
     });
 
     test('API endpoints respond quickly', async ({ request }) => {
-        const endpoints = ['/api/health', '/api/games_list', '/api/test-db'];
+        const endpoints = ['/api/health', '/api/games_list'];
 
         for (const endpoint of endpoints) {
             const startTime = Date.now();

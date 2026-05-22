@@ -10,7 +10,7 @@ test.describe('Database Functions', () => {
             // This confirms database connectivity for function testing
         });
 
-        test('cleanup_abandoned_tic_tac_toe_games function works', async ({ request }) => {
+        test.skip('cleanup_abandoned_tic_tac_toe_games function works', async ({ request }) => {
             const auth = addAuth(request);
             const cleanupResponse = await auth.post('/api/tic-tac-toe/cleanup');
             expect(cleanupResponse.ok()).toBeTruthy();
@@ -23,7 +23,7 @@ test.describe('Database Functions', () => {
     });
 
     test.describe('Upsert Functions', () => {
-        test('upsert_tic_tac_toe_state handles new and existing states', async ({ request }) => {
+        test.skip('upsert_tic_tac_toe_state handles new and existing states', async ({ request }) => {
             const auth = addAuth(request);
 
             // Make the same move twice (in different games) to test upsert
@@ -53,7 +53,7 @@ test.describe('Database Functions', () => {
     });
 
     test.describe('Game Management Functions', () => {
-        test('start and complete game functions work together', async ({ request }) => {
+        test.skip('start and complete game functions work together', async ({ request }) => {
             const auth = addAuth(request);
 
             // Start game

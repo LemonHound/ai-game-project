@@ -26,10 +26,11 @@ test.describe('SEO API Endpoints', () => {
         expect(body).toContain('<loc>');
 
         const locMatches = body.match(/<loc>/g);
-        expect(locMatches).toHaveLength(3);
+        expect(locMatches).toHaveLength(4);
 
         expect(body).toMatch(/<loc>.*\/<\/loc>/);
         expect(body).toContain('/games</loc>');
         expect(body).toContain('/about</loc>');
+        expect(body).toContain('/stats</loc>');
     });
 });
