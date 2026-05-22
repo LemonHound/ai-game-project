@@ -14,7 +14,7 @@ test.describe('About page', () => {
 
         await expect(page.locator('text=Games Played')).toBeVisible();
         await expect(page.locator('text=Moves Analyzed')).toBeVisible();
-        await expect(page.locator('text=Players')).toBeVisible();
+        await expect(page.locator('text=Registered Players')).toBeVisible();
         await expect(page.locator('text=AI Win Rate')).toBeVisible();
 
         const coffeeLink = page.locator('a:has-text("Buy us a coffee")');

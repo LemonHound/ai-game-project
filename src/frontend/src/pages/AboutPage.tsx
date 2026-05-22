@@ -16,14 +16,16 @@ const TEAM_MEMBERS = [
         role: 'Architect & Engineer',
         bio: 'Kevin has held roles across every layer of the stack over his career — product, design, frontend, backend, and database. He designed and built AI Game Hub from the ground up.',
         initials: 'KZ',
-        // TODO: Brian to update
+        github: 'https://github.com/LemonHound',
+        linkedin: 'https://www.linkedin.com/in/kevin-zookski-9a031427b/',
     },
     {
         name: 'Brian Waskevich',
         role: 'ML & Data',
         bio: 'Brian has taken sole ownership of the ML models, training pipeline, and the database schema designed to let the AI adapt quickly to different playstyles.',
         initials: 'BW',
-        // TODO: Brian to update — add social links when ready
+        github: 'https://github.com/Brian-Waskevich',
+        linkedin: 'https://www.linkedin.com/in/brianwaskevich/',
     },
 ];
 
@@ -93,6 +95,22 @@ export default function AboutPage() {
                                     <h3 className='text-lg font-bold'>{member.name}</h3>
                                     <p className='text-sm opacity-60'>{member.role}</p>
                                     <p className='mt-1 text-sm'>{member.bio}</p>
+                                    <div className='mt-2 flex gap-3'>
+                                        <a
+                                            href={member.github}
+                                            target='_blank'
+                                            rel='noopener noreferrer'
+                                            className='link link-primary text-sm'>
+                                            GitHub
+                                        </a>
+                                        <a
+                                            href={member.linkedin}
+                                            target='_blank'
+                                            rel='noopener noreferrer'
+                                            className='link link-primary text-sm'>
+                                            LinkedIn
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

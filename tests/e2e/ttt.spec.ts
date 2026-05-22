@@ -45,15 +45,13 @@ test.describe('TTT — full game flows', () => {
         const board = page.locator('[aria-label="Tic-Tac-Toe board"]');
         await Promise.all([expect(board).toBeVisible({ timeout: 5000 }), newgameResp]);
 
-        const cells = board.locator('button');
-
-        await cells.nth(0).click();
+        await board.locator('button:not([disabled])').first().click();
         await page.waitForTimeout(1500);
 
-        await cells.nth(1).click();
+        await board.locator('button:not([disabled])').first().click();
         await page.waitForTimeout(1500);
 
-        await cells.nth(2).click();
+        await board.locator('button:not([disabled])').first().click();
         await page.waitForTimeout(1500);
 
         const banner = page.locator('.alert');

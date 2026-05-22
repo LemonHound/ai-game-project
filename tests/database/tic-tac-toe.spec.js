@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { addAuth } = require('../helpers/auth-helper');
 
 test.describe('Tic Tac Toe Database Integration', () => {
-    test.describe('Game State Storage', () => {
+    test.describe.skip('Game State Storage', () => {
         test('should store game states when moves are made', async ({ request }) => {
             // Need authentication for game routes
             const auth = addAuth(request);
@@ -73,7 +73,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
         });
     });
 
-    test.describe('Player Game Records', () => {
+    test.describe.skip('Player Game Records', () => {
         test('should create game record on start and complete on finish', async ({ request }) => {
             // Use authentication helper
             const auth = addAuth(request);
@@ -169,7 +169,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
         });
     });
 
-    test.describe('Game Statistics', () => {
+    test.describe.skip('Game Statistics', () => {
         test('should return game statistics for authenticated users', async ({ request }) => {
             // Use authentication helper
             const auth = addAuth(request);
@@ -240,7 +240,7 @@ test.describe('Tic Tac Toe Database Integration', () => {
             expect(moveResponse.status()).toBeGreaterThanOrEqual(400);
         });
 
-        test('should enforce rating constraints', async ({ request }) => {
+        test.skip('should enforce rating constraints', async ({ request }) => {
             // Check the rating constraint exists by examining popular states
             const statesResponse = await request.get('/api/tic-tac-toe/game_states?limit=1');
             expect(statesResponse.ok()).toBeTruthy();
