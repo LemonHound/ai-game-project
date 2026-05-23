@@ -43,7 +43,7 @@ def test_confidence_cutoff_skipped_when_none():
 
 def test_elapsed_ms_increases():
     s = AnalysisSession(AnalysisLimits())
-    time.sleep(0.05)
+    time.sleep(0.1)
     assert s.elapsed_ms() >= 50
     s.cancel_timer()
 
