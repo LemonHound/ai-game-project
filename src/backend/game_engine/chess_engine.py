@@ -3,6 +3,7 @@ import copy
 from typing import Optional
 
 from game_engine.base import AIStrategy, GameEngine, GameState, Move
+from game_engine import chess_pgn
 from game_logic.chess import chess_game
 
 SEARCH_DEPTH = 2
@@ -398,6 +399,51 @@ class ChessEngine(GameEngine):
         """
         valid = chess_game._get_valid_moves(state, from_row, from_col)
         return [{"toRow": tr, "toCol": tc} for tr, tc in valid]
+
+    def get_state_fen(self, state: GameState) -> str:
+        """Serialize the current board position to a FEN string.
+
+        Args:
+            state: Current game state dict as produced by ChessEngine.
+
+        Returns:
+            FEN string representing the board, active color, castling rights,
+            en passant target, and placeholder half-move/full-move clocks.
+        """
+        return self._to_fen(state)
+
+    def get_state_pgn(
+        self,
+        state: GameState,
+        algebraic_moves: list[str],
+        white_name: str = "Player",
+        black_name: str = "AI",
+        result: Optional[str] = None,
+    ) -> str:
+        """Build a PGN string for the game associated with the given state.
+
+        The PGN is derived from ``algebraic_moves``, not re-parsed from the board.
+        ``state`` is accepted for interface consistency but is not read here.
+        Callers should supply the full SAN move history sourced from
+        ``chess_games.move_list_algebraic`` in the database.
+
+        Args:
+            state: Current game state dict (unused; present for interface consistency).
+            algebraic_moves: Ordered list of SAN move strings for the full game.
+            white_name: Name written to the PGN White header.
+            black_name: Name written to the PGN Black header.
+            result: PGN result token ("1-0", "0-1", "1/2-1/2"), or None for an
+                ongoing game (header will be "*").
+
+        Returns:
+            A PGN-formatted string with the standard seven-tag roster and move text.
+        """
+        return chess_pgn.moves_to_pgn(
+            algebraic_moves,
+            white_name=white_name,
+            black_name=black_name,
+            result=result,
+        )
 
     def outcome_to_persistence(self, state: GameState) -> Optional[str]:
         """Return the persistence outcome string for the given terminal state, or None."""

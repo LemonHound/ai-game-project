@@ -144,3 +144,58 @@ def test_chess_move_stores_fen(engine, fresh_state):
     assert len(parts) == 6, f"FEN must have 6 space-separated fields, got: {fen}"
     assert parts[1] in ("w", "b"), f"Active color must be 'w' or 'b', got: {parts[1]}"
     assert re.match(r"^[KQRBNPkqrbnp1-8/]+$", parts[0]), f"Piece placement invalid: {parts[0]}"
+
+
+def test_get_state_fen_returns_six_field_fen(engine, fresh_state):
+    import re
+
+    fen = engine.get_state_fen(fresh_state)
+    parts = fen.split(" ")
+    assert len(parts) == 6
+    assert re.match(r"^[KQRBNPkqrbnp1-8/]+$", parts[0])
+    assert parts[1] in ("w", "b")
+
+
+def test_get_state_fen_matches_internal_to_fen(engine, fresh_state):
+    assert engine.get_state_fen(fresh_state) == engine._to_fen(fresh_state)
+
+
+def test_get_state_fen_reflects_active_color(engine, fresh_state):
+    move = {"fromRow": 6, "fromCol": 4, "toRow": 4, "toCol": 4}
+    after_white = engine.apply_move(fresh_state, move)
+    fen = engine.get_state_fen(after_white)
+    assert fen.split(" ")[1] == "b"
+
+
+def test_get_state_pgn_contains_headers(engine, fresh_state):
+    pgn = engine.get_state_pgn(fresh_state, ["e4", "e5"])
+    assert '[White "Player"]' in pgn
+    assert '[Black "AI"]' in pgn
+    assert "[Result" in pgn
+
+
+def test_get_state_pgn_contains_moves(engine, fresh_state):
+    pgn = engine.get_state_pgn(fresh_state, ["e4", "e5", "Nf3"])
+    assert "1. e4" in pgn
+    assert "e5" in pgn
+    assert "Nf3" in pgn
+
+
+def test_get_state_pgn_empty_move_list(engine, fresh_state):
+    pgn = engine.get_state_pgn(fresh_state, [])
+    assert "[Event" in pgn
+    assert "*" in pgn
+
+
+def test_get_state_pgn_custom_names_and_result(engine, fresh_state):
+    pgn = engine.get_state_pgn(
+        fresh_state, ["e4"], white_name="Alice", black_name="Bob", result="1-0"
+    )
+    assert '[White "Alice"]' in pgn
+    assert '[Black "Bob"]' in pgn
+    assert '[Result "1-0"]' in pgn
+
+
+def test_get_state_pgn_state_arg_not_required_to_have_moves(engine, fresh_state):
+    pgn = engine.get_state_pgn(fresh_state, ["d4", "d5"])
+    assert "1. d4" in pgn
