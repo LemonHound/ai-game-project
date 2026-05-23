@@ -109,11 +109,9 @@ def expand_position(state: dict[str, Any]) -> list[dict[str, Any]]:
 
 def analyze_position(state: dict[str, Any], limits: AnalysisLimits) -> dict[str, Any]:
     session = AnalysisSession(limits)
-    best_move: dict[str, Any] | None = None
-    best_score = float("-inf")
-    best_notation: str | None = None
+    engine = ChessEngine()
     try:
-        best_move, best_score, best_notation = _dfs(state, session, limits, depth=0)
+        best_move, best_score, best_notation = _dfs(state, session, limits, depth=0, engine=engine)
     finally:
         session.cancel_timer()
 
@@ -136,11 +134,11 @@ def _dfs(
     session: AnalysisSession,
     limits: AnalysisLimits,
     depth: int,
+    engine: ChessEngine,
 ) -> tuple[dict[str, Any] | None, float, str | None]:
     if not session.should_continue():
         return None, float("-inf"), None
 
-    engine = ChessEngine()
     moving_player: str = state.get("current_player", "white")
     legal_moves = engine.get_legal_moves(state)
     if not legal_moves:
@@ -170,7 +168,7 @@ def _dfs(
         terminal, _ = engine.is_terminal(child)
         depth_ok = limits.max_depth is None or depth + 1 < limits.max_depth
         if depth_ok and not terminal:
-            _, child_score, _ = _dfs(child, session, limits, depth + 1)
+            _, child_score, _ = _dfs(child, session, limits, depth + 1, engine)
             if child_score != float("-inf"):
                 score = child_score
 
