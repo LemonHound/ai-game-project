@@ -17,6 +17,7 @@ from about import router as about_router
 from auth import router as auth_router
 from db import init_db, close_db
 from games import router as games_router
+from ml.routes import router as ml_router
 from stats import router as stats_router
 from telemetry import setup_telemetry
 
@@ -86,6 +87,7 @@ app.include_router(about_router, prefix="/api/about", tags=["About"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(games_router, prefix="/api", tags=["Games"])
 app.include_router(stats_router, prefix="/api", tags=["Stats"])
+app.include_router(ml_router, prefix="/api", tags=["ML"])
 
 
 @app.exception_handler(HTTPException)
