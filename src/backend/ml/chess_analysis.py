@@ -170,7 +170,7 @@ def _dfs(
         if depth_ok and not terminal:
             _, child_score, _ = _dfs(child, session, limits, depth + 1, engine)
             if child_score != float("-inf"):
-                score = child_score
+                score = -child_score
 
         if score > best_score:
             best_score = score

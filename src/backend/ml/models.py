@@ -20,11 +20,11 @@ class ChessMoveOut(BaseModel):
 
 class MoveExpansion(BaseModel):
     move: ChessMoveOut
-    notation: str | None
+    notation: str | None = None
     state: dict[str, Any]
     is_terminal: bool
-    terminal_outcome: str | None
-    eval_score: float | None
+    terminal_outcome: str | None = None
+    eval_score: float | None = None
 
 
 class PositionExpandRequest(BaseModel):

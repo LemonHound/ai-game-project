@@ -64,3 +64,13 @@ def test_analyze_cutoff_reason_in_payload(client, state):
     r = client.post("/api/ml/chess/analyze", json=body)
     data = r.json()
     assert data["analysis"]["cutoff_reason"] == "positions"
+
+
+def test_expand_rejects_missing_board(client):
+    r = client.post("/api/ml/chess/expand", json={"state": {"current_player": "white"}})
+    assert r.status_code == 422
+
+
+def test_analyze_rejects_missing_board(client):
+    r = client.post("/api/ml/chess/analyze", json={"state": {"current_player": "white"}})
+    assert r.status_code == 422

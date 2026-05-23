@@ -1,7 +1,7 @@
 from __future__ import annotations
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from auth_deps import require_user
 from ml.chess_analysis import analyze_position, expand_position
@@ -15,6 +15,15 @@ from ml.models import (
     PositionExpandResponse,
 )
 
+_REQUIRED_STATE_KEYS = {"board", "current_player"}
+
+
+def _check_state(state: dict) -> None:
+    missing = _REQUIRED_STATE_KEYS - set(state.keys())
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing state fields: {sorted(missing)}")
+
+
 router = APIRouter(prefix="/ml/chess", tags=["ML"])
 
 
@@ -23,6 +32,7 @@ async def expand_chess_position(
     request: PositionExpandRequest,
     _user: dict = Depends(require_user),
 ) -> PositionExpandResponse:
+    _check_state(request.state)
     moves_raw = await asyncio.to_thread(expand_position, request.state)
     moves = [
         MoveExpansion(**{**m, "move": ChessMoveOut(**m["move"])})
@@ -36,6 +46,7 @@ async def analyze_chess_position(
     request: ChessAnalysisRequest,
     _user: dict = Depends(require_user),
 ) -> ChessAnalysisResponse:
+    _check_state(request.state)
     result = await asyncio.to_thread(analyze_position, request.state, request.limits)
     return ChessAnalysisResponse(
         best_move=ChessMoveOut(**result["best_move"]) if result["best_move"] else None,
