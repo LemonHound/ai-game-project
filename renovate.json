@@ -3,6 +3,13 @@
     "extends": ["config:recommended"],
     "schedule": ["before 9am on Monday"],
     "timezone": "America/New_York",
+    "lockFileMaintenance": {
+        "enabled": true,
+        "automerge": true,
+        "automergeType": "pr",
+        "platformAutomerge": true,
+        "schedule": ["before 9am on Monday"]
+    },
     "packageRules": [
         {
             "groupName": "npm minor/patch",
@@ -20,10 +27,8 @@
             "assignees": ["LemonHound"]
         },
         {
-            "groupName": "python dependencies",
             "matchManagers": ["pip-compile"],
-            "automerge": false,
-            "assignees": ["LemonHound"]
+            "enabled": false
         },
         {
             "groupName": "github actions",
