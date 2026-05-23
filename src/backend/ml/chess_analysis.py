@@ -3,6 +3,7 @@ import threading
 import time
 from typing import Any
 
+from game_engine.chess_engine import ChessEngine
 from ml.models import AnalysisLimits
 
 
@@ -63,3 +64,44 @@ class AnalysisSession:
     @property
     def cutoff_reason(self) -> str | None:
         return self._cutoff_reason
+
+
+def _material_score(state: dict[str, Any], for_color: str) -> float:
+    score = 0.0
+    for row in state["board"]:
+        for piece in row:
+            if not piece:
+                continue
+            piece_color = "white" if piece == piece.upper() else "black"
+            value = _MATERIAL_VALUES.get(piece.lower(), 0.0)
+            score += value if piece_color == for_color else -value
+    return max(0.0, min(1.0, (score + _MAX_MATERIAL) / (2.0 * _MAX_MATERIAL)))
+
+
+def _move_to_dict(move: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "from_row": move["fromRow"],
+        "from_col": move["fromCol"],
+        "to_row": move["toRow"],
+        "to_col": move["toCol"],
+        "promotion_piece": move.get("promotionPiece"),
+    }
+
+
+def expand_position(state: dict[str, Any]) -> list[dict[str, Any]]:
+    engine = ChessEngine()
+    moving_player: str = state.get("current_player", "white")
+    results = []
+    for move in engine.get_legal_moves(state):
+        child = engine.apply_move(state, move)
+        terminal, terminal_outcome = engine.is_terminal(child)
+        last_move = child.get("last_move") or {}
+        results.append({
+            "move": _move_to_dict(move),
+            "notation": last_move.get("notation"),
+            "state": child,
+            "is_terminal": terminal,
+            "terminal_outcome": terminal_outcome,
+            "eval_score": _material_score(child, moving_player),
+        })
+    return results
