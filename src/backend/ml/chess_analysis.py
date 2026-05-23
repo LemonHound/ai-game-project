@@ -1,3 +1,4 @@
+"""Chess position analysis: tree search with configurable time, depth, and confidence limits."""
 from __future__ import annotations
 import threading
 import time
@@ -12,7 +13,14 @@ _MAX_MATERIAL = 39.0
 
 
 class AnalysisSession:
+    """Tracks search state and enforces optional analysis limits for one run."""
+
     def __init__(self, limits: AnalysisLimits) -> None:
+        """Initialize the session and start the background timer if max_time_ms is set.
+
+        Args:
+            limits: Optional caps on depth, positions, time, and confidence.
+        """
         self.limits = limits
         self.depth_reached: int = 0
         self.positions_analyzed: int = 0
@@ -33,6 +41,14 @@ class AnalysisSession:
         self._timed_out.set()
 
     def should_continue(self, confidence: float | None = None) -> bool:
+        """Return False if any active limit has been reached, recording the first reason.
+
+        Args:
+            confidence: Current eval score (0–1); checked against min_confidence when provided.
+
+        Returns:
+            True if the search may continue, False if a limit was hit.
+        """
         if self._timed_out.is_set():
             if self._cutoff_reason is None:
                 self._cutoff_reason = "time"
@@ -55,14 +71,21 @@ class AnalysisSession:
         return True
 
     def elapsed_ms(self) -> int:
+        """Return milliseconds elapsed since this session was created.
+
+        Returns:
+            Elapsed wall-clock time in milliseconds.
+        """
         return int((time.monotonic() - self._start_time) * 1000)
 
     def cancel_timer(self) -> None:
+        """Cancel the background timer if one was started, preventing a late callback."""
         if self._timer is not None:
             self._timer.cancel()
 
     @property
     def cutoff_reason(self) -> str | None:
+        """The first limit that was hit during this session, or None if still running."""
         return self._cutoff_reason
 
 
@@ -89,6 +112,15 @@ def _move_to_dict(move: dict[str, Any]) -> dict[str, Any]:
 
 
 def expand_position(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return all legal moves from the given state with the resulting child state and eval.
+
+    Args:
+        state: Current board state dict as produced by ChessEngine.
+
+    Returns:
+        List of dicts, each containing move, notation, state, is_terminal,
+        terminal_outcome, and eval_score.
+    """
     engine = ChessEngine()
     moving_player: str = state.get("current_player", "white")
     results = []
@@ -108,6 +140,15 @@ def expand_position(state: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def analyze_position(state: dict[str, Any], limits: AnalysisLimits) -> dict[str, Any]:
+    """Search the position tree and return the best move found within the given limits.
+
+    Args:
+        state: Current board state dict as produced by ChessEngine.
+        limits: Optional caps on depth, positions, time, and confidence.
+
+    Returns:
+        Dict with keys best_move, best_move_notation, confidence, and analysis metadata.
+    """
     session = AnalysisSession(limits)
     engine = ChessEngine()
     try:

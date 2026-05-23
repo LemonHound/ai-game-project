@@ -1,3 +1,4 @@
+"""FastAPI router for ML chess position expansion and analysis endpoints."""
 from __future__ import annotations
 import asyncio
 
@@ -32,6 +33,15 @@ async def expand_chess_position(
     request: PositionExpandRequest,
     _user: dict = Depends(require_user),
 ) -> PositionExpandResponse:
+    """Enumerate all legal moves from the given board state with resulting child states.
+
+    Args:
+        request: Body containing the current board state.
+        _user: Injected authenticated user (unused beyond auth enforcement).
+
+    Returns:
+        All legal moves and their resulting states with evaluation scores.
+    """
     _check_state(request.state)
     moves_raw = await asyncio.to_thread(expand_position, request.state)
     moves = [
@@ -46,6 +56,15 @@ async def analyze_chess_position(
     request: ChessAnalysisRequest,
     _user: dict = Depends(require_user),
 ) -> ChessAnalysisResponse:
+    """Run a bounded tree search from the given position and return the best move found.
+
+    Args:
+        request: Body containing the board state and optional analysis limits.
+        _user: Injected authenticated user (unused beyond auth enforcement).
+
+    Returns:
+        Best move, confidence score, and search metadata.
+    """
     _check_state(request.state)
     result = await asyncio.to_thread(analyze_position, request.state, request.limits)
     return ChessAnalysisResponse(
