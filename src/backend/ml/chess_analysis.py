@@ -105,3 +105,79 @@ def expand_position(state: dict[str, Any]) -> list[dict[str, Any]]:
             "eval_score": _material_score(child, moving_player),
         })
     return results
+
+
+def analyze_position(state: dict[str, Any], limits: AnalysisLimits) -> dict[str, Any]:
+    session = AnalysisSession(limits)
+    best_move: dict[str, Any] | None = None
+    best_score = float("-inf")
+    best_notation: str | None = None
+    try:
+        best_move, best_score, best_notation = _dfs(state, session, limits, depth=0)
+    finally:
+        session.cancel_timer()
+
+    cutoff = session.cutoff_reason or ("exhausted" if best_move is not None else None)
+    return {
+        "best_move": _move_to_dict(best_move) if best_move else None,
+        "best_move_notation": best_notation,
+        "confidence": best_score if best_score != float("-inf") else None,
+        "analysis": {
+            "depth_reached": session.depth_reached,
+            "positions_analyzed": session.positions_analyzed,
+            "time_elapsed_ms": session.elapsed_ms(),
+            "cutoff_reason": cutoff,
+        },
+    }
+
+
+def _dfs(
+    state: dict[str, Any],
+    session: AnalysisSession,
+    limits: AnalysisLimits,
+    depth: int,
+) -> tuple[dict[str, Any] | None, float, str | None]:
+    if not session.should_continue():
+        return None, float("-inf"), None
+
+    engine = ChessEngine()
+    moving_player: str = state.get("current_player", "white")
+    legal_moves = engine.get_legal_moves(state)
+    if not legal_moves:
+        return None, float("-inf"), None
+
+    best_move: dict[str, Any] | None = None
+    best_score = float("-inf")
+    best_notation: str | None = None
+
+    for move in legal_moves:
+        if not session.should_continue():
+            break
+
+        child = engine.apply_move(state, move)
+        session.positions_analyzed += 1
+        session.depth_reached = max(session.depth_reached, depth + 1)
+        score = _material_score(child, moving_player)
+
+        if not session.should_continue(confidence=score):
+            if score > best_score:
+                best_score = score
+                best_move = move
+                last_move = child.get("last_move") or {}
+                best_notation = last_move.get("notation")
+            break
+
+        terminal, _ = engine.is_terminal(child)
+        depth_ok = limits.max_depth is None or depth + 1 < limits.max_depth
+        if depth_ok and not terminal:
+            _, child_score, _ = _dfs(child, session, limits, depth + 1)
+            if child_score != float("-inf"):
+                score = child_score
+
+        if score > best_score:
+            best_score = score
+            best_move = move
+            last_move = child.get("last_move") or {}
+            best_notation = last_move.get("notation")
+
+    return best_move, best_score, best_notation
