@@ -87,7 +87,7 @@ app.include_router(about_router, prefix="/api/about", tags=["About"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(games_router, prefix="/api", tags=["Games"])
 app.include_router(stats_router, prefix="/api", tags=["Stats"])
-app.include_router(ml_router, prefix="/api", tags=["ML"])
+app.include_router(ml_router, prefix="/api")
 
 
 @app.exception_handler(HTTPException)

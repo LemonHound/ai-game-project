@@ -55,7 +55,7 @@ def test_analyze_returns_best_move(client, state):
 
 
 def test_analyze_all_limits_optional(client, state):
-    r = client.post("/api/ml/chess/analyze", json={"state": state, "limits": {"max_depth": 1}})
+    r = client.post("/api/ml/chess/analyze", json={"state": state, "limits": {"max_time_ms": 500}})
     assert r.status_code == 200
 
 

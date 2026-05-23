@@ -1,6 +1,5 @@
 from __future__ import annotations
 import asyncio
-from typing import Any
 
 from fastapi import APIRouter, Depends
 
@@ -26,14 +25,7 @@ async def expand_chess_position(
 ) -> PositionExpandResponse:
     moves_raw = await asyncio.to_thread(expand_position, request.state)
     moves = [
-        MoveExpansion(
-            move=ChessMoveOut(**m["move"]),
-            notation=m["notation"],
-            state=m["state"],
-            is_terminal=m["is_terminal"],
-            terminal_outcome=m["terminal_outcome"],
-            eval_score=m["eval_score"],
-        )
+        MoveExpansion(**{**m, "move": ChessMoveOut(**m["move"])})
         for m in moves_raw
     ]
     return PositionExpandResponse(moves=moves, count=len(moves))
