@@ -215,7 +215,7 @@ requests-oauthlib==2.0.0
     # via google-auth-oauthlib
 snowballstemmer==3.0.1
     # via pydocstyle
-sqlalchemy==2.0.49
+sqlalchemy==2.0.50
     # via
     #   -r requirements.in
     #   alembic
