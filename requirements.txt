@@ -122,19 +122,19 @@ opentelemetry-exporter-gcp-monitoring==1.11.0a0
     # via -r requirements.in
 opentelemetry-exporter-gcp-trace==1.11.0
     # via -r requirements.in
-opentelemetry-instrumentation==0.62b0
+opentelemetry-instrumentation==0.62b1
     # via
     #   opentelemetry-instrumentation-asgi
     #   opentelemetry-instrumentation-fastapi
     #   opentelemetry-instrumentation-logging
     #   opentelemetry-instrumentation-sqlalchemy
-opentelemetry-instrumentation-asgi==0.62b0
+opentelemetry-instrumentation-asgi==0.62b1
     # via opentelemetry-instrumentation-fastapi
-opentelemetry-instrumentation-fastapi==0.62b0
+opentelemetry-instrumentation-fastapi==0.62b1
     # via -r requirements.in
-opentelemetry-instrumentation-logging==0.62b0
+opentelemetry-instrumentation-logging==0.62b1
     # via -r requirements.in
-opentelemetry-instrumentation-sqlalchemy==0.62b0
+opentelemetry-instrumentation-sqlalchemy==0.62b1
     # via -r requirements.in
 opentelemetry-propagator-gcp==1.11.0
     # via -r requirements.in
@@ -155,7 +155,7 @@ opentelemetry-semantic-conventions==0.62b0
     #   opentelemetry-instrumentation-fastapi
     #   opentelemetry-instrumentation-sqlalchemy
     #   opentelemetry-sdk
-opentelemetry-util-http==0.62b0
+opentelemetry-util-http==0.62b1
     # via
     #   opentelemetry-instrumentation-asgi
     #   opentelemetry-instrumentation-fastapi
