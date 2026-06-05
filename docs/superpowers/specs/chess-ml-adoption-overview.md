@@ -52,7 +52,7 @@ A phase begins only after its own spec is approved and the prior phase's exit cr
 | Phase | Title | Project | Status | Spec |
 |-------|-------|---------|--------|------|
 | A | Inference integration (serve one artifact, flag-gated) | Hub | Implemented on `zook/reverent-hopper-b8d2a1` (unit tests green; integration fixture + full CI pending) | [spec](2026-06-05-chess-model-inference-integration-design.md), [plan](../plans/2026-06-05-chess-model-inference-integration.md) |
-| D | Data platform v1 (Lichess ingest, Postgres index, FastAPI selection service, fetch/process CLI) | Platform | v1 specced; Plans 1-2 written, awaiting execution in `chess_CNN` | [spec](2026-06-05-chess-data-platform-v1-design.md), [plan 1](../plans/2026-06-05-chess-data-platform-v1-plan1-corpus.md), [plan 2](../plans/2026-06-05-chess-data-platform-v1-plan2-serve-fetch.md) |
+| D | Data platform v1 (Lichess ingest, Postgres index, FastAPI selection service, fetch/process CLI) | Platform | Implemented in `chess_CNN` on `feat/chessdata-platform-v1` (13 commits, 17 tests green; un-pushed) | [spec](2026-06-05-chess-data-platform-v1-design.md), [plan 1](../plans/2026-06-05-chess-data-platform-v1-plan1-corpus.md), [plan 2](../plans/2026-06-05-chess-data-platform-v1-plan2-serve-fetch.md) |
 | C | Continued training, versioning, Jupyter-priority sync, RL (future) | Platform | Not started | - |
 | B | Notebook-to-code porting (repeatable, updatable) | Shared tooling | Not started | - |
 | later | Policy-guided lookahead search | Hub | Not started | - |
@@ -66,6 +66,17 @@ Remaining before merge:
 - For real playing strength, generate a trained artifact (the TF producer on the sample games, or a model from Phase D) and point `CHESS_MODEL_DIR` at it. The committed fixture is random-weights, for the serving path and tests only.
 - Compile `requirements-train.txt` in a TF-capable env.
 - Run the full suite (Vitest + pytest + lint) in Docker/CI.
+
+### Phase D status (2026-06-05)
+
+Implemented in Brian's `chess_CNN` repo on branch `feat/chessdata-platform-v1` (subagent-driven + TDD, 13 commits, 17 tests passing, un-pushed). The `chessdata` package delivers: `config`/`schema.sql`/`db` (the `games` corpus with idempotent, rollback-safe inserts), `parse`/`download`/`ingest` (streaming Lichess ingest), `query`/`server` (the parameterized, seeded-deterministic FastAPI selection service), and `process`/`client`/`cli` (the `fetch` then `process` Typer CLI that lands cleaned PGNs in `data/pgn/`). The client is a plain synchronous httpx client, safe to call from a Jupyter cell. Tests run against a Docker Postgres on port 5434; a disposable venv lives at `chess_CNN/.venv`.
+
+Remaining before this is live:
+- Run the real Lichess Elite ingest on the home server (first confirm the month pinned in `chessdata/sources/lichess_elite.yaml` against database.nikonoel.fr).
+- Serve the FastAPI app over Tailscale and point `CHESSDATA_SERVER_URL` at it.
+- Pin `chess` in `requirements.txt` (the dedup `pgn_hash` derives from python-chess's serializer; pinning keeps it stable across re-ingests) and add a `.gitignore` (`.venv/`, `__pycache__/`, `data/`).
+- Optional: enforce the shared token server-side (the client already sends `X-Token`).
+- Push the branch / open a PR in `chess_CNN` once Kevin approves (it is Brian's shared repo).
 
 ## Out of scope for now
 
