@@ -52,7 +52,7 @@ A phase begins only after its own spec is approved and the prior phase's exit cr
 | Phase | Title | Project | Status | Spec |
 |-------|-------|---------|--------|------|
 | A | Inference integration (serve one artifact, flag-gated) | Hub | Implemented on `zook/reverent-hopper-b8d2a1` (unit tests green; integration fixture + full CI pending) | [spec](2026-06-05-chess-model-inference-integration-design.md), [plan](../plans/2026-06-05-chess-model-inference-integration.md) |
-| D | Data storage and retrieval CLI | Platform | Not started | - |
+| D | Data platform v1 (Lichess ingest, Postgres index, FastAPI selection service, fetch/process CLI) | Platform | v1 specced | [spec](2026-06-05-chess-data-platform-v1-design.md) |
 | C | Continued training, versioning, Jupyter-priority sync, RL (future) | Platform | Not started | - |
 | B | Notebook-to-code porting (repeatable, updatable) | Shared tooling | Not started | - |
 | later | Policy-guided lookahead search | Hub | Not started | - |
