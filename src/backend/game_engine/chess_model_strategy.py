@@ -1,26 +1,28 @@
-"""ML-based chess AI strategy scaffold.
+"""ML chess strategy: runs Brian's CNN, served as an ONNX artifact, to pick moves.
 
-This module is only imported when CHESS_AI_STRATEGY=model. It provides the
-scaffolding for Brian to plug his locally-trained chess model into the game
-engine. The model accepts PGN input and returns UCI moves.
-
-To activate: set CHESS_AI_STRATEGY=model in your environment or docker-compose.yml.
-To deactivate: unset the variable or set it to "minimax" (the default).
-
-See INSTRUCTIONS.txt in this directory for a full walkthrough.
+Active only when CHESS_AI_STRATEGY=model. The artifact directory is given by
+CHESS_MODEL_DIR and must contain model.onnx, vocab.json, and metadata.json.
 """
+from __future__ import annotations
+
 import logging
 import os
+import random
 from typing import Optional
 
+import numpy as np
+from chess import Board
+
 from game_engine.base import AIStrategy, GameState, Move
-from game_engine.chess_pgn import moves_to_pgn
+from game_engine.chess_board_encoding import board_to_matrix
+from game_engine.chess_engine import ChessEngine
+from ml.artifact import ChessModelArtifact, load_chess_model_artifact
 
 logger = logging.getLogger(__name__)
 
 _FILES = "abcdefgh"
-_MODEL_PATH_ENV = "CHESS_MODEL_PATH"
-_DEFAULT_MODEL_PATH = "/app/model_weights/chess.pt"
+_MODEL_DIR_ENV = "CHESS_MODEL_DIR"
+_DEFAULT_MODEL_DIR = "/app/model_weights/chess"
 
 
 def uci_to_engine_move(uci: str) -> Move:
@@ -60,10 +62,7 @@ def uci_to_engine_move(uci: str) -> Move:
         promo_char = uci[4].lower()
         if promo_char not in "qrbn":
             raise ValueError(f"Invalid promotion piece in UCI move: {uci!r}")
-        if to_row == 0:
-            promotion = promo_char.upper()
-        else:
-            promotion = promo_char
+        promotion = promo_char.upper() if to_row == 0 else promo_char
 
     return {
         "fromRow": from_row,
@@ -93,98 +92,97 @@ def engine_move_to_uci(move: Move) -> str:
     return uci
 
 
-class ChessModelStrategy(AIStrategy):
-    """AI strategy that delegates move generation to an external ML model.
+def select_move(
+    predictions: np.ndarray,
+    int_to_uci: dict[int, str],
+    legal_uci: set[str],
+) -> Optional[str]:
+    """Return the highest-scoring predicted move that is legal, or None.
 
-    The model is expected to:
-    1. Accept a PGN string representing the game so far
-    2. Return a UCI move string (e.g. "e2e4", "e7e8q")
+    Args:
+        predictions: 1-D array of class scores from the model.
+        int_to_uci: Mapping from class index to UCI move string.
+        legal_uci: Legal moves for the current position, in UCI form.
 
-    The PGN is built from the algebraic move history stored in the database.
-    Call set_move_history() before each generate_move() to provide the current
-    move list.
-
-    TODO (Brian): Replace _load_model and _predict with your model's loading
-    and inference code. The rest of the plumbing (PGN construction, UCI
-    conversion, move validation retry) is handled by the framework.
+    Returns:
+        The UCI string of the best legal move, or None if no legal move is in
+        the model's vocabulary.
     """
+    for index in np.argsort(predictions)[::-1]:
+        uci = int_to_uci.get(int(index))
+        if uci is not None and uci in legal_uci:
+            return uci
+    return None
 
-    def __init__(self):
-        """Load the ML model from the path specified by CHESS_MODEL_PATH."""
-        model_path = os.getenv(_MODEL_PATH_ENV, _DEFAULT_MODEL_PATH)
-        logger.info("chess_model_strategy_init", extra={"model_path": model_path})
-        self._model = self._load_model(model_path)
-        self._move_history: list[str] = []
 
-    def _load_model(self, path: str):
-        # TODO (Brian): Replace this with your model loading code.
-        #
-        # Example with PyTorch:
-        #   import torch
-        #   model = torch.load(path, map_location="cpu")
-        #   model.eval()
-        #   return model
-        #
-        # Example with ONNX:
-        #   import onnxruntime as ort
-        #   return ort.InferenceSession(path)
-        raise NotImplementedError(
-            f"Chess model loading not implemented. "
-            f"Edit _load_model() in {__file__} to load your model from {path}. "
-            f"See INSTRUCTIONS.txt for details."
-        )
+class ChessModelStrategy(AIStrategy):
+    """AIStrategy that selects moves with Brian's CNN served as an ONNX artifact."""
 
-    def _predict(self, pgn: str) -> str:
-        # TODO (Brian): Replace this with your model's inference call.
-        #
-        # This method receives the full PGN of the game so far and should
-        # return a single UCI move string (e.g. "e2e4").
-        #
-        # Example:
-        #   output = self._model(pgn)
-        #   return output.best_move  # or however your model returns moves
-        raise NotImplementedError(
-            f"Chess model prediction not implemented. "
-            f"Edit _predict() in {__file__} to run inference with your model. "
-            f"See INSTRUCTIONS.txt for details."
-        )
+    def __init__(self, artifact: Optional[ChessModelArtifact] = None) -> None:
+        """Load the model artifact (from CHESS_MODEL_DIR unless one is injected).
+
+        Args:
+            artifact: A preloaded artifact, used by tests. When None, the artifact
+                is loaded from the directory named by CHESS_MODEL_DIR at startup.
+        """
+        if artifact is None:
+            model_dir = os.getenv(_MODEL_DIR_ENV, _DEFAULT_MODEL_DIR)
+            logger.info("chess_model_strategy_init", extra={"model_dir": model_dir})
+            artifact = load_chess_model_artifact(model_dir)
+        self._artifact = artifact
+        self._engine = ChessEngine()
 
     def set_move_history(self, algebraic_moves: list[str]) -> None:
-        """Provide the current game's SAN move list before calling generate_move.
+        """Accept the SAN move history for interface compatibility (unused).
 
-        This is called automatically by the game router before each AI turn.
-        The moves come from chess_games.move_list_algebraic in the database.
+        The model reads the board from the current FEN, so move history is not
+        needed. Retained because the game router calls this before each AI turn.
 
         Args:
-            algebraic_moves: Ordered list of SAN strings, e.g. ["e4", "e5", "Nf3"].
+            algebraic_moves: Ordered SAN move strings; ignored.
         """
-        self._move_history = list(algebraic_moves)
+        return None
 
-    def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
-        """Generate a move by passing the game's PGN to the ML model.
-
-        Builds PGN from the stored move history, sends it to the model, and
-        converts the UCI response back to the engine's move format.
+    def _predict(self, fen: str) -> Optional[str]:
+        """Run the model on a FEN and return the best legal UCI move, or None.
 
         Args:
-            state: Current game state dict (used for FEN fallback info).
+            fen: FEN string of the position to move from.
 
         Returns:
-            Tuple of (engine_move_dict, None). The eval is always None since
-            the model does not provide a numeric evaluation.
+            UCI move string, or None if no legal move is in the vocabulary.
         """
-        pgn = moves_to_pgn(
-            self._move_history,
-            white_name="Player" if state.get("player_color") == "white" else "AI",
-            black_name="AI" if state.get("player_color") == "white" else "Player",
+        board = Board(fen)
+        legal_uci = {move.uci() for move in board.legal_moves}
+        if not legal_uci:
+            return None
+        model_input = np.expand_dims(board_to_matrix(board), axis=0)
+        outputs = self._artifact.session.run(
+            None, {self._artifact.input_name: model_input}
         )
-        logger.info(
-            "chess_model_pgn_input",
-            extra={"pgn": pgn, "fen": state.get("fen", ""), "move_count": len(self._move_history)},
-        )
+        predictions = np.asarray(outputs[0]).reshape(-1)
+        return select_move(predictions, self._artifact.int_to_uci, legal_uci)
 
-        uci_move = self._predict(pgn)
-        logger.info("chess_model_uci_output", extra={"uci_move": uci_move})
+    def generate_move(self, state: GameState) -> tuple[Move, Optional[float]]:
+        """Generate a move for the current state using the model.
 
-        move = uci_to_engine_move(uci_move)
-        return move, None
+        Reads the position as FEN, asks the model for a legal move, and converts
+        it to the engine move format. Falls back to a random legal move if the
+        model declines or anything goes wrong, so a valid move is always returned.
+
+        Args:
+            state: Current game state dict with current_turn set to "ai".
+
+        Returns:
+            Tuple of (engine_move_dict, None).
+        """
+        try:
+            fen = self._engine.get_state_fen(state)
+            uci = self._predict(fen)
+            if uci is not None:
+                return uci_to_engine_move(uci), None
+            logger.warning("chess_model_no_vocab_move", extra={"fen": fen})
+        except Exception:
+            logger.exception("chess_model_predict_failed")
+        legal = self._engine.get_legal_moves(state)
+        return random.choice(legal), None
