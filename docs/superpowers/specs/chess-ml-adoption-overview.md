@@ -52,7 +52,7 @@ A phase begins only after its own spec is approved and the prior phase's exit cr
 | Phase | Title | Project | Status | Spec |
 |-------|-------|---------|--------|------|
 | A | Inference integration (serve one artifact, flag-gated) | Hub | Implemented on `zook/reverent-hopper-b8d2a1` (unit tests green; integration fixture + full CI pending) | [spec](2026-06-05-chess-model-inference-integration-design.md), [plan](../plans/2026-06-05-chess-model-inference-integration.md) |
-| D | Data platform v1 (Lichess ingest, Postgres index, FastAPI selection service, fetch/process CLI) | Platform | v1 specced; Plan 1 (corpus) written, Plan 2 (serve+fetch) pending | [spec](2026-06-05-chess-data-platform-v1-design.md), [plan 1](../plans/2026-06-05-chess-data-platform-v1-plan1-corpus.md) |
+| D | Data platform v1 (Lichess ingest, Postgres index, FastAPI selection service, fetch/process CLI) | Platform | v1 specced; Plans 1-2 written, awaiting execution in `chess_CNN` | [spec](2026-06-05-chess-data-platform-v1-design.md), [plan 1](../plans/2026-06-05-chess-data-platform-v1-plan1-corpus.md), [plan 2](../plans/2026-06-05-chess-data-platform-v1-plan2-serve-fetch.md) |
 | C | Continued training, versioning, Jupyter-priority sync, RL (future) | Platform | Not started | - |
 | B | Notebook-to-code porting (repeatable, updatable) | Shared tooling | Not started | - |
 | later | Policy-guided lookahead search | Hub | Not started | - |
