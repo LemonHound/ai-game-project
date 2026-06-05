@@ -17,6 +17,15 @@ The work splits into two independent projects connected by a single handoff:
 
 The seam between them is the model artifact.
 
+## Repository layout (code only; data and model binaries never go in git)
+
+Two repositories:
+
+- Brian's `chess_CNN` (existing): the entire Chess Data and Training Platform plus experimentation. Holds the notebooks and the engineered platform code (CLI, chess.com ingestion, storage and manifest layout, training runner, artifact producer). Use a light internal split (for example `notebooks/` for experimentation and a packaged `platform/` for the engineered tooling, with its own tests) so exploratory and production code do not tangle. Shared ownership: Brian owns the notebooks, Kevin owns the platform code.
+- AI Game Hub (this repo): the website and inference (phase A); consumes model artifacts.
+
+Datasets and trained-model binaries stay in the storage and artifact layers (home server now, GCS-capable later), never in either git repo. Phase B's notebook-to-code porting is mostly intra-repo on the platform side (notebook to platform code in `chess_CNN`), plus porting the inference pieces into the hub repo.
+
 ## The model artifact contract (the seam)
 
 An artifact is a versioned directory of three files:
