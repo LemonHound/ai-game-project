@@ -51,12 +51,21 @@ A phase begins only after its own spec is approved and the prior phase's exit cr
 
 | Phase | Title | Project | Status | Spec |
 |-------|-------|---------|--------|------|
-| A | Inference integration (serve one artifact, flag-gated) | Hub | Specced, awaiting implementation plan | [phase A](2026-06-05-chess-model-inference-integration-design.md) |
+| A | Inference integration (serve one artifact, flag-gated) | Hub | Implemented on `zook/reverent-hopper-b8d2a1` (unit tests green; integration fixture + full CI pending) | [spec](2026-06-05-chess-model-inference-integration-design.md), [plan](../plans/2026-06-05-chess-model-inference-integration.md) |
 | D | Data storage and retrieval CLI | Platform | Not started | - |
 | C | Continued training, versioning, Jupyter-priority sync, RL (future) | Platform | Not started | - |
 | B | Notebook-to-code porting (repeatable, updatable) | Shared tooling | Not started | - |
 | later | Policy-guided lookahead search | Hub | Not started | - |
 | later | Value network for position evaluation | Platform + Hub | Not started | - |
+
+### Phase A status (2026-06-05)
+
+Implemented behind the default-off `CHESS_AI_STRATEGY=model` flag; default `minimax` behaviour is unchanged. Added: board encoding (`board_to_matrix`), the ONNX artifact loader/validator (`ml/artifact.py`), the rewritten `ChessModelStrategy` (FEN to ONNX to legal-masked UCI, with a random-legal fallback), a throwaway artifact producer, a `verify_chess_model.py` script, and updated config/docs (`CHESS_MODEL_DIR`). Unit tests pass (17 passed, 2 integration skipped). games.py wiring is unchanged and compatible. Not pushed; branch kept for review.
+
+Remaining before merge:
+- Generate the artifact: run `scripts/train/produce_minimal_chess_artifact.py` in a TensorFlow env, then commit `tests/fixtures/chess_model_tiny/` (activates the 2 skipped integration tests) and place a dev artifact at `model_weights/chess`.
+- Compile `requirements-train.txt` in a TF-capable env.
+- Run the full suite (Vitest + pytest + lint) in Docker/CI.
 
 ## Out of scope for now
 
