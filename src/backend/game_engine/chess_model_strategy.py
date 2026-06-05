@@ -178,8 +178,10 @@ class ChessModelStrategy(AIStrategy):
         """
         try:
             fen = self._engine.get_state_fen(state)
+            logger.info("chess_model_fen_input", extra={"fen": fen})
             uci = self._predict(fen)
             if uci is not None:
+                logger.info("chess_model_uci_output", extra={"uci": uci})
                 return uci_to_engine_move(uci), None
             logger.warning("chess_model_no_vocab_move", extra={"fen": fen})
         except Exception:

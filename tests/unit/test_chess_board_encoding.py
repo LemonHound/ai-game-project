@@ -33,3 +33,16 @@ def test_after_e4_pawn_moves_to_e4_plane():
     matrix = board_to_matrix(board)
     assert matrix[3, 4, 0] == 1.0
     assert matrix[1, 4, 0] == 0.0
+
+
+def test_board_encoding_golden_fen():
+    board = chess.Board("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2")
+    matrix = board_to_matrix(board)
+    assert matrix.sum() == 32
+    assert matrix[3, 4, 0] == 1.0
+    assert matrix[1, 4, 0] == 0.0
+    assert matrix[2, 5, 1] == 1.0
+    assert matrix[0, 6, 1] == 0.0
+    assert matrix[4, 2, 6] == 1.0
+    assert matrix[6, 2, 6] == 0.0
+    assert matrix[7, 1, 7] == 1.0

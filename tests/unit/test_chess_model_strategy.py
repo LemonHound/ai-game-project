@@ -1,3 +1,4 @@
+import pytest
 import chess
 import numpy as np
 from game_engine.chess_model_strategy import (
@@ -81,3 +82,9 @@ def test_get_state_fen_yields_python_chess_legal_moves_at_start():
     board = chess.Board(engine.get_state_fen(state))
     assert board.legal_moves.count() == 20
     assert len(engine.get_legal_moves(state)) == 20
+
+
+def test_missing_artifact_startup_error(monkeypatch, tmp_path):
+    monkeypatch.setenv("CHESS_MODEL_DIR", str(tmp_path / "absent"))
+    with pytest.raises(FileNotFoundError):
+        ChessModelStrategy()
