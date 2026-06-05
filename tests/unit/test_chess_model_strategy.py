@@ -1,3 +1,4 @@
+import chess
 import numpy as np
 from game_engine.chess_model_strategy import (
     engine_move_to_uci,
@@ -33,9 +34,6 @@ from ml.artifact import ChessModelArtifact
 class _FakeSession:
     def __init__(self, predictions):
         self._predictions = np.asarray(predictions, dtype=np.float32)
-
-    def get_inputs(self):
-        return [type("Inp", (), {"name": "input"})()]
 
     def run(self, output_names, feed):
         return [self._predictions.reshape(1, -1)]
@@ -75,3 +73,11 @@ def test_generate_move_falls_back_to_legal_when_vocab_has_no_legal_move():
     move, score = strategy.generate_move(state)
     legal = ChessEngine().get_legal_moves(state)
     assert move in legal
+
+
+def test_get_state_fen_yields_python_chess_legal_moves_at_start():
+    engine = ChessEngine()
+    state = engine.initial_state(player_starts=False)
+    board = chess.Board(engine.get_state_fen(state))
+    assert board.legal_moves.count() == 20
+    assert len(engine.get_legal_moves(state)) == 20

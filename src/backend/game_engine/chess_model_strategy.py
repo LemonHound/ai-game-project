@@ -141,7 +141,6 @@ class ChessModelStrategy(AIStrategy):
         Args:
             algebraic_moves: Ordered SAN move strings; ignored.
         """
-        return None
 
     def _predict(self, fen: str) -> Optional[str]:
         """Run the model on a FEN and return the best legal UCI move, or None.
@@ -168,7 +167,8 @@ class ChessModelStrategy(AIStrategy):
 
         Reads the position as FEN, asks the model for a legal move, and converts
         it to the engine move format. Falls back to a random legal move if the
-        model declines or anything goes wrong, so a valid move is always returned.
+        model declines or anything goes wrong. The position is assumed
+        non-terminal; the game router only invokes the AI when legal moves exist.
 
         Args:
             state: Current game state dict with current_turn set to "ai".
@@ -185,4 +185,6 @@ class ChessModelStrategy(AIStrategy):
         except Exception:
             logger.exception("chess_model_predict_failed")
         legal = self._engine.get_legal_moves(state)
+        if not legal:
+            raise ValueError("generate_move called on a terminal position with no legal moves")
         return random.choice(legal), None
