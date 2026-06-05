@@ -1,0 +1,6 @@
+# Producer / training tooling — never installed into the serving image
+tensorflow
+tf2onnx
+chess
+numpy
+tqdm
