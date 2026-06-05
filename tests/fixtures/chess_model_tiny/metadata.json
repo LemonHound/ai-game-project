@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "class_count": 22,
+  "input_shape": [
+    8,
+    8,
+    12
+  ],
+  "source_notebook_commit": "tiny-onnx-fixture",
+  "dataset_manifest_id": null,
+  "created_at": null,
+  "content_hash": null
+}
