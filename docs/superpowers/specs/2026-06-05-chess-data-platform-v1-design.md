@@ -3,7 +3,7 @@
 Status: Draft for review
 Date: 2026-06-05
 Owner: Kevin (engineering)
-Target repo: Brian's `chess_CNN` (platform code under `platform/`). This spec lives in the hub repo alongside the program overview: [chess-ml-adoption-overview.md](chess-ml-adoption-overview.md).
+Target repo: Brian's `chess_CNN` (platform code under the `chessdata/` package — not `chessdata/`, which would shadow Python's stdlib `platform` module). This spec lives in the hub repo alongside the program overview: [chess-ml-adoption-overview.md](chess-ml-adoption-overview.md).
 
 ## 1. Context and scope
 
@@ -31,7 +31,7 @@ Three units with clear interfaces:
 
 ## 4. Components
 
-### 4.1 Schema (`platform/schema.sql`)
+### 4.1 Schema (`chessdata/schema.sql`)
 
 A `games` table, applied with `CREATE TABLE IF NOT EXISTS` at ingest:
 - `id BIGSERIAL PRIMARY KEY`
@@ -48,11 +48,11 @@ A `games` table, applied with `CREATE TABLE IF NOT EXISTS` at ingest:
 
 Indexes on `source_dataset`, `white_elo`, `black_elo`, `white_title`, `black_title` (or a composite tuned to the filters).
 
-### 4.2 Ingest (`platform/ingest.py`, Kevin-run on the server)
+### 4.2 Ingest (`chessdata/ingest.py`, Kevin-run on the server)
 
-Reads a small source manifest (`platform/sources/lichess_elite.yaml`) listing the Lichess Elite files for v1 (the most recent 1-2 months). Downloads them, and for each game parses headers with python-chess (Elo, titles, time control, result, date, ply count), then inserts metadata + PGN into Postgres via parameterized psycopg2 statements. Idempotent: the `UNIQUE (source_dataset, pgn_hash)` key plus `ON CONFLICT DO NOTHING` avoids duplicates on re-run.
+Reads a small source manifest (`chessdata/sources/lichess_elite.yaml`) listing the Lichess Elite files for v1 (the most recent 1-2 months). Downloads them, and for each game parses headers with python-chess (Elo, titles, time control, result, date, ply count), then inserts metadata + PGN into Postgres via parameterized psycopg2 statements. Idempotent: the `UNIQUE (source_dataset, pgn_hash)` key plus `ON CONFLICT DO NOTHING` avoids duplicates on re-run.
 
-### 4.3 FastAPI service (`platform/server/`)
+### 4.3 FastAPI service (`chessdata/server/`)
 
 Endpoints:
 - `GET /health` — liveness.
@@ -63,17 +63,17 @@ Defaults: `min_rating`/`max_rating` apply to both players (both Elo values withi
 
 Config via env: DB connection (host, port, name, user, password) and an optional shared-token header.
 
-### 4.4 CLI (`platform/cli.py`, Typer)
+### 4.4 CLI (`chessdata/cli.py`, Typer)
 
 - `chessdata fetch --dataset <name> --size <n> [--min-rating --max-rating --title --seed] --out <dir>` — calls `GET /games`, writes the returned PGNs to `<dir>` (staging). Service URL and optional token come from env/config.
 - `chessdata process --in <dir> --out data/pgn` — validates each game parses, dedups, and writes into `data/pgn/` as one or more `.pgn` files (chunked to a configurable games-per-file so the notebook's multi-file read works naturally).
 - `chessdata datasets` — prints `GET /datasets`.
 
-### 4.5 Config (`platform/config.py` + env)
+### 4.5 Config (`chessdata/config.py` + env)
 
 Service reads the DB DSN and optional token from the environment. CLI reads `CHESSDATA_SERVER_URL` (localhost for tests, the Tailscale host for real) and an optional token. Nothing secret is committed.
 
-### 4.6 Docs (`platform/README.md`)
+### 4.6 Docs (`chessdata/README.md`)
 
 One-time: confirm Postgres is up, apply the schema, ingest a slice, run the service (uvicorn bound to the tailnet). Daily: `fetch` then `process`. Local testing: run Postgres and the service on localhost, ingest a tiny fixture, and `fetch`/`process` into a temp folder.
 
