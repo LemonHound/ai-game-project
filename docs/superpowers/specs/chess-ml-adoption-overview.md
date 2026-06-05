@@ -60,10 +60,10 @@ A phase begins only after its own spec is approved and the prior phase's exit cr
 
 ### Phase A status (2026-06-05)
 
-Implemented behind the default-off `CHESS_AI_STRATEGY=model` flag; default `minimax` behaviour is unchanged. Added: board encoding (`board_to_matrix`), the ONNX artifact loader/validator (`ml/artifact.py`), the rewritten `ChessModelStrategy` (FEN to ONNX to legal-masked UCI, with a random-legal fallback), a throwaway artifact producer, a `verify_chess_model.py` script, and updated config/docs (`CHESS_MODEL_DIR`). Unit tests pass (17 passed, 2 integration skipped). games.py wiring is unchanged and compatible. Not pushed; branch kept for review.
+Implemented behind the default-off `CHESS_AI_STRATEGY=model` flag; default `minimax` behaviour is unchanged. Added: board encoding (`board_to_matrix`), the ONNX artifact loader/validator (`ml/artifact.py`), the rewritten `ChessModelStrategy` (FEN to ONNX to legal-masked UCI, with a random-legal fallback), a throwaway artifact producer, a `verify_chess_model.py` script, and updated config/docs (`CHESS_MODEL_DIR`). A committed TF-free tiny ONNX fixture (`tests/fixtures/chess_model_tiny`, built by `generate_tiny_onnx_fixture.py`) makes the serving path runnable end-to-end: unit + integration tests pass (19 passed, 0 skipped), and `verify_chess_model.py` prints real legal moves (e.g. `e2e4` from the opening). games.py wiring is unchanged and compatible. Not pushed; branch kept for review.
 
 Remaining before merge:
-- Generate the artifact: run `scripts/train/produce_minimal_chess_artifact.py` in a TensorFlow env, then commit `tests/fixtures/chess_model_tiny/` (activates the 2 skipped integration tests) and place a dev artifact at `model_weights/chess`.
+- For real playing strength, generate a trained artifact (the TF producer on the sample games, or a model from Phase D) and point `CHESS_MODEL_DIR` at it. The committed fixture is random-weights, for the serving path and tests only.
 - Compile `requirements-train.txt` in a TF-capable env.
 - Run the full suite (Vitest + pytest + lint) in Docker/CI.
 
