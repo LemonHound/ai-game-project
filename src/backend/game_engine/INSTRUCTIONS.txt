@@ -1,13 +1,13 @@
-============================================================
+--------------------------------------------------------------
   Chess ML Model Integration Guide
-============================================================
+--------------------------------------------------------------
 
 This guide walks through booting the app, querying the database, and plugging
 your model into the existing game engine.
 
 
 1. BOOTING THE APP
-============================================================
+--------------------------------------------------------------
 
   docker compose build
   docker compose up -d
@@ -24,7 +24,7 @@ without a rebuild. If you change requirements.txt or frontend code, rebuild:
 
 
 2. QUERYING THE DATABASE
-============================================================
+--------------------------------------------------------------
 
 Option A: psql inside the container
 
@@ -68,7 +68,7 @@ Option C: Connect from Python
 
 
 3. CHESS DATA SCHEMA
-============================================================
+--------------------------------------------------------------
 
 The chess_games table stores:
   - id:                   UUID primary key
@@ -83,32 +83,39 @@ The board_state JSONB includes a "fen" key with the FEN string after each move.
 
 
 4. YOUR MODEL INTEGRATION
-============================================================
+--------------------------------------------------------------
 
-Your model lives in: src/backend/game_engine/chess_model_strategy.py
+The model is loaded from an artifact directory containing three files:
+  model.onnx      -- ONNX model weights
+  vocab.json      -- token vocabulary (square/piece encodings)
+  metadata.json   -- input shape, output format, and version info
 
-There are two methods to implement:
+The artifact is loaded at startup via ml/artifact.py:
+  load_chess_model_artifact(directory) -> ChessModelArtifact
 
-  _load_model(self, path: str)
-    Called once at startup. Load your model weights and return the model object.
-    The path defaults to /app/model_weights/chess.pt (configurable via
-    CHESS_MODEL_PATH env var).
-
-  _predict(self, pgn: str) -> str
-    Called once per AI turn. Receives the full PGN of the game so far.
-    Must return a UCI move string (e.g. "e2e4", "e7e8q").
+At inference time, ChessModelStrategy._predict(fen: str) -> str:
+  - Encodes the FEN position as an 8x8x12 tensor
+  - Runs a forward pass through onnxruntime
+  - Masks logits to legal moves only
+  - Returns the highest-scoring move as a UCI string (e.g. "e2e4", "e7e8q")
 
 Everything else is handled:
-  - PGN is built automatically from the DB move history
+  - FEN is read from the game state on each AI turn
   - UCI output is converted to the engine's internal move format
   - Invalid moves are retried up to 5 times, then a random legal move is used
-  - The PGN and UCI strings are logged so you can see them in docker compose logs
+  - The FEN input and UCI output are logged so you can see them in docker compose logs
 
 
 5. ADDING YOUR DEPENDENCIES
-============================================================
+--------------------------------------------------------------
 
-If your model needs torch, onnx, or other packages:
+Serving dependencies required for the model are: onnxruntime, numpy, chess (python-chess).
+These are already in requirements.in.
+
+TensorFlow and PyTorch are training-side only and must NOT be added to requirements.in;
+they are too large for the serving image.
+
+To add any other package:
 
   1. Edit requirements.in (add the package name, no version pin)
   2. Run: python -m piptools compile requirements.in --output-file requirements.txt --strip-extras --upgrade
@@ -118,7 +125,7 @@ Do NOT edit requirements.txt directly -- it's auto-generated.
 
 
 6. SWITCHING BETWEEN MINIMAX AND YOUR MODEL
-============================================================
+--------------------------------------------------------------
 
 In docker-compose.yml, the app service has:
 
@@ -134,26 +141,27 @@ Then restart:
 
 To switch back, set it to "minimax" (or remove the variable entirely).
 
-When CHESS_AI_STRATEGY=model, the app logs the PGN input and UCI output for
+When CHESS_AI_STRATEGY=model, the app logs the FEN input and UCI output for
 every AI move. Watch with:
 
   docker compose logs -f app
 
 
 7. MOUNTING MODEL WEIGHTS
-============================================================
+--------------------------------------------------------------
 
 In docker-compose.yml, uncomment the volume mount under the app service:
 
   volumes:
-    - /path/to/local/model_weights:/app/model_weights
+    - ./model_weights/chess:/app/model_weights/chess
 
-Replace /path/to/local/model_weights with the directory containing your model
-file (e.g. chess.pt). The container will see it at /app/model_weights/chess.pt.
+Replace ./model_weights/chess with the local path to your artifact directory.
+The container will see it at /app/model_weights/chess, which is the default
+value of CHESS_MODEL_DIR.
 
 
 8. COORDINATE SYSTEM
-============================================================
+--------------------------------------------------------------
 
 The engine uses a row/col coordinate system:
 
@@ -172,9 +180,9 @@ and engine_move_to_uci() helpers in chess_model_strategy.py handle conversion.
 
 
 9. PGN FORMAT
-============================================================
+--------------------------------------------------------------
 
-The PGN your model receives looks like:
+The PGN format used by this project looks like:
 
   [Event "AI Game Website"]
   [Site "localhost"]
@@ -191,7 +199,7 @@ The moves use Standard Algebraic Notation (SAN): Nf3, O-O, exd5, e8=Q+, etc.
 
 
 10. TESTING YOUR MODEL INTEGRATION
-============================================================
+--------------------------------------------------------------
 
 Run chess-specific unit and API tests with:
 
@@ -204,31 +212,35 @@ request header) instead of the real AI strategy. This means:
 
   - Your model weights do not need to be present in the test environment.
   - CHESS_AI_STRATEGY is ignored in tests.
-  - All existing chess tests pass regardless of whether _load_model is
-    implemented.
+  - All existing chess tests pass regardless of whether the artifact is present.
 
 To verify your model locally without running the full test suite:
 
   1. Set CHESS_AI_STRATEGY=model in docker-compose.yml.
-  2. Mount your model weights (see section 7).
+  2. Mount your artifact directory (see section 7).
   3. docker compose up -d
   4. Log in at http://localhost:8000, start a chess game, and play a move.
   5. Watch the logs: docker compose logs -f app
 
-You should see "chess_model_pgn_input" and "chess_model_uci_output" log lines
-for each AI turn. If _load_model raises NotImplementedError, the app will fail
-to start — check the startup logs for the error message.
+You should see "chess_model_fen_input" and "chess_model_uci_output" log lines
+for each AI turn. If load_chess_model_artifact raises FileNotFoundError, the app
+will fail to start -- check the startup logs for the error message.
+
+To verify the artifact loads without starting the full app:
+
+  python scripts/verify_chess_model.py --model-dir path/to/artifact
 
 
 11. ENVIRONMENT VARIABLES REFERENCE
-============================================================
+--------------------------------------------------------------
 
   CHESS_AI_STRATEGY   "minimax" (default) or "model"
                       Controls which AIStrategy is used for chess.
 
-  CHESS_MODEL_PATH    "/app/model_weights/chess.pt" (default)
-                      Path inside the container to your model file.
-                      Override if your file has a different name or location.
+  CHESS_MODEL_DIR     "/app/model_weights/chess" (default)
+                      Path inside the container to the artifact directory.
+                      The directory must contain model.onnx, vocab.json,
+                      and metadata.json.
 
   ENVIRONMENT         "development" (default), "test", or "production"
                       Do not change this manually. The test Docker Compose
