@@ -21,7 +21,7 @@ asyncpg==0.31.0
     # via -r requirements.in
 bcrypt==5.0.0
     # via -r requirements.in
-certifi==2026.2.25
+certifi==2026.5.20
     # via
     #   httpcore
     #   httpx
