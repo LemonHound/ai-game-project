@@ -1,0 +1,83 @@
+# Chess ML Adoption — Program Overview
+
+Status: Living document (update as phases are green-lit)
+Last updated: 2026-06-05
+Owner: Kevin (engineering)
+
+## Goal
+
+Adopt Brian's chess move-prediction CNN into the product: serve it in real games, keep it improving over time, and offer players versioned difficulty levels.
+
+## Two projects, one seam
+
+The work splits into two independent projects connected by a single handoff:
+
+- AI Game Hub (this repo): serves games and runs inference. Consumes a model artifact only; never touches training data.
+- Chess Data and Training Platform (separate): gathers data, trains, and publishes versioned model artifacts. Its data hub runs on Kevin's home Linux server, reached over Tailscale, with a swappable storage backend so it can move to GCS later. Raw data is re-fetchable from public sources (chess.com API, Lichess Elite database), which removes the single-disk durability risk. A CLI tool lets Brian pull named dataset versions into an identical local layout.
+
+The seam between them is the model artifact.
+
+## Repository layout (code only; data and model binaries never go in git)
+
+Two repositories:
+
+- Brian's `chess_CNN` (existing): the entire Chess Data and Training Platform plus experimentation. Holds the notebooks and the engineered platform code (CLI, chess.com ingestion, storage and manifest layout, training runner, artifact producer). Use a light internal split (for example `notebooks/` for experimentation and a packaged `platform/` for the engineered tooling, with its own tests) so exploratory and production code do not tangle. Shared ownership: Brian owns the notebooks, Kevin owns the platform code.
+- AI Game Hub (this repo): the website and inference (phase A); consumes model artifacts.
+
+Datasets and trained-model binaries stay in the storage and artifact layers (home server now, GCS-capable later), never in either git repo. Phase B's notebook-to-code porting is mostly intra-repo on the platform side (notebook to platform code in `chess_CNN`), plus porting the inference pieces into the hub repo.
+
+## The model artifact contract (the seam)
+
+An artifact is a versioned directory of three files:
+
+- `model.onnx`: the network, converted from Keras for lightweight serving.
+- `vocab.json`: index-to-UCI move map; the decoder the notebook never persisted.
+- `metadata.json`: provenance and validation (class count, input shape, source notebook commit, dataset id, created timestamp, content hash).
+
+The platform publishes artifacts; the hub consumes them. Each side can evolve freely as long as this shape holds.
+
+## Key decisions and concepts
+
+- Serve with ONNX/onnxruntime; keep TensorFlow (~1GB) on the training side only.
+- The notebook saves weights but not the move vocabulary, and that vocabulary is not reproducible across runs; persisting `vocab.json` with the weights fixes this.
+- The model is supervised imitation of human games, not a search engine and not reinforcement learning.
+- Difficulty levers (planned product feature): shipped model version, inference-time sampling temperature, and search depth/width.
+- Lookahead (scan top X moves, recurse to depth X) is policy-guided search at inference time, hub-side, extending the existing `analyze_position` DFS in `src/backend/ml/chess_analysis.py`. It is distinct from reinforcement learning, which is a training method, platform-side, and a later effort. A learned value network to score leaf positions is the natural follow-on upgrade.
+- Reversibility rule for this program: flag any irreversible step and offer an alternative or a Brian-facing note. The main irreversible hazard is training over existing weights, handled by artifact versioning.
+
+## Phases and status
+
+A phase begins only after its own spec is approved and the prior phase's exit criteria are met.
+
+| Phase | Title | Project | Status | Spec |
+|-------|-------|---------|--------|------|
+| A | Inference integration (serve one artifact, flag-gated) | Hub | Implemented on `zook/reverent-hopper-b8d2a1` (unit tests green; integration fixture + full CI pending) | [spec](2026-06-05-chess-model-inference-integration-design.md), [plan](../plans/2026-06-05-chess-model-inference-integration.md) |
+| D | Data platform v1 (Lichess ingest, Postgres index, FastAPI selection service, fetch/process CLI) | Platform | Implemented in `chess_CNN` on `feat/chessdata-platform-v1` (13 commits, 17 tests green; un-pushed) | [spec](2026-06-05-chess-data-platform-v1-design.md), [plan 1](../plans/2026-06-05-chess-data-platform-v1-plan1-corpus.md), [plan 2](../plans/2026-06-05-chess-data-platform-v1-plan2-serve-fetch.md) |
+| C | Continued training, versioning, Jupyter-priority sync, RL (future) | Platform | Not started | - |
+| B | Notebook-to-code porting (repeatable, updatable) | Shared tooling | Not started | - |
+| later | Policy-guided lookahead search | Hub | Not started | - |
+| later | Value network for position evaluation | Platform + Hub | Not started | - |
+
+### Phase A status (2026-06-05)
+
+Implemented behind the default-off `CHESS_AI_STRATEGY=model` flag; default `minimax` behaviour is unchanged. Added: board encoding (`board_to_matrix`), the ONNX artifact loader/validator (`ml/artifact.py`), the rewritten `ChessModelStrategy` (FEN to ONNX to legal-masked UCI, with a random-legal fallback), a throwaway artifact producer, a `verify_chess_model.py` script, and updated config/docs (`CHESS_MODEL_DIR`). A committed TF-free tiny ONNX fixture (`tests/fixtures/chess_model_tiny`, built by `generate_tiny_onnx_fixture.py`) makes the serving path runnable end-to-end: unit + integration tests pass (19 passed, 0 skipped), and `verify_chess_model.py` prints real legal moves (e.g. `e2e4` from the opening). games.py wiring is unchanged and compatible. Not pushed; branch kept for review.
+
+Remaining before merge:
+- For real playing strength, generate a trained artifact (the TF producer on the sample games, or a model from Phase D) and point `CHESS_MODEL_DIR` at it. The committed fixture is random-weights, for the serving path and tests only.
+- Compile `requirements-train.txt` in a TF-capable env.
+- Run the full suite (Vitest + pytest + lint) in Docker/CI.
+
+### Phase D status (2026-06-05)
+
+Implemented in Brian's `chess_CNN` repo on branch `feat/chessdata-platform-v1` (subagent-driven + TDD, 13 commits, 17 tests passing, un-pushed). The `chessdata` package delivers: `config`/`schema.sql`/`db` (the `games` corpus with idempotent, rollback-safe inserts), `parse`/`download`/`ingest` (streaming Lichess ingest), `query`/`server` (the parameterized, seeded-deterministic FastAPI selection service), and `process`/`client`/`cli` (the `fetch` then `process` Typer CLI that lands cleaned PGNs in `data/pgn/`). The client is a plain synchronous httpx client, safe to call from a Jupyter cell. Tests run against a Docker Postgres on port 5434; a disposable venv lives at `chess_CNN/.venv`.
+
+Remaining before this is live:
+- Run the real Lichess Elite ingest on the home server (first confirm the month pinned in `chessdata/sources/lichess_elite.yaml` against database.nikonoel.fr).
+- Serve the FastAPI app over Tailscale and point `CHESSDATA_SERVER_URL` at it.
+- Pin `chess` in `requirements.txt` (the dedup `pgn_hash` derives from python-chess's serializer; pinning keeps it stable across re-ingests) and add a `.gitignore` (`.venv/`, `__pycache__/`, `data/`).
+- Optional: enforce the shared token server-side (the client already sends `X-Token`).
+- Push the branch / open a PR in `chess_CNN` once Kevin approves (it is Brian's shared repo).
+
+## Out of scope for now
+
+Cloud training GPUs, large-scale data infrastructure, and anything that flips production behavior before a phase is green-lit. Each item lands only through its own spec.

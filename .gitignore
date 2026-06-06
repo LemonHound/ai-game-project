@@ -44,3 +44,6 @@ venv/
 
 # QoL Scripts
 dev.sh
+
+# Model weights (generated artifacts; commit only tests/fixtures/)
+model_weights/
