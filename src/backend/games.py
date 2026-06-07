@@ -14,6 +14,7 @@ from opentelemetry import metrics, trace
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import model_registry
 import persistence_service
 from auth_service import AuthService
 from db import db_dependency, get_session
@@ -38,6 +39,7 @@ from models import (
     ChessNewGameRequest,
     DaBMoveRequest,
     DaBNewGameRequest,
+    EngineRegisterRequest,
     MoveRequest,
     TttMoveRequest,
     TttNewGameRequest,
@@ -1394,6 +1396,12 @@ async def chess_legal_moves(
     return {"moves": moves}
 
 
+@router.get("/game/chess/engines")
+async def chess_engines(db: AsyncSession = Depends(db_dependency)):
+    rows = await model_registry.list_active_engines(db, "chess")
+    return {"engines": model_registry.group_and_sort_engines(rows)}
+
+
 # ============================================
 # INTERNAL ENDPOINTS
 # ============================================
@@ -1431,6 +1439,27 @@ async def cleanup_sessions(
         total += count
 
     return {"cleaned": total}
+
+
+@router.post("/internal/engines")
+async def register_engine_endpoint(
+    request: EngineRegisterRequest,
+    x_internal_key: Optional[str] = Header(None, alias="X-Internal-Key"),
+    db: AsyncSession = Depends(db_dependency),
+):
+    expected = os.getenv("INTERNAL_API_KEY")
+    if not expected or x_internal_key != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    engine_id = await model_registry.register_engine(
+        db,
+        game=request.game,
+        difficulty=request.difficulty,
+        version=request.version,
+        gcs_path=request.gcs_path,
+        class_count=request.class_count,
+        source_commit=request.source_commit,
+    )
+    return {"id": engine_id}
 
 
 # ============================================
