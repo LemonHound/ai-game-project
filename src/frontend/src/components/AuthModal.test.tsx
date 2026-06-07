@@ -126,4 +126,11 @@ describe('AuthModal', () => {
             expect(document.querySelector('svg path[fill="#EA4335"]')).not.toBeNull();
         });
     });
+
+    it('renders the google button with a white background to match the logo asset', () => {
+        renderWithProviders(<AuthModal open initialTab='login' onClose={() => {}} />);
+        const button = (document.querySelector('img') as HTMLImageElement).closest('a');
+        expect(button).not.toBeNull();
+        expect(button?.className).toContain('bg-white');
+    });
 });
