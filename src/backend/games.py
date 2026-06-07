@@ -1338,6 +1338,8 @@ async def chess_events(
 
     broadcaster = StatusBroadcaster()
 
+    game_strategy = await _resolve_chess_strategy(db, game_record.engine_version_id)
+
     async def process_moves():
         try:
             state = game_record.board_state
@@ -1368,16 +1370,16 @@ async def chess_events(
                 broadcaster.emit(StatusEvent("player_move", payload=_chess_state_payload(player_state, "player")))
                 broadcaster.emit(StatusEvent("status", message="Thinking..."))
 
-                if hasattr(_chess_strategy, "set_move_history"):
+                if hasattr(game_strategy, "set_move_history"):
                     fresh_record = await persistence_service.get_game(db, sid, "chess")
-                    _chess_strategy.set_move_history(
+                    game_strategy.set_move_history(
                         fresh_record.move_list if fresh_record else []
                     )
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
                     ai_span.set_attribute("game.id", session_id)
                     t0 = time.monotonic()
-                    ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, _chess_strategy, player_state)
+                    ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, game_strategy, player_state)
                     compute_ms = (time.monotonic() - t0) * 1000
                     ai_span.set_attribute("compute_duration_ms", compute_ms)
                     _ai_duration.record(compute_ms, {"game.id": "chess"})
