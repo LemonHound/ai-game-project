@@ -27,6 +27,7 @@ export interface ChessGameState {
         notation: string;
     } | null;
     in_check: boolean;
+    move_history?: string[];
 }
 
 export interface ChessMoveData extends Partial<ChessGameState> {

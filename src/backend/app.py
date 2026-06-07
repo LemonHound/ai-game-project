@@ -1,5 +1,6 @@
 """Main entry point for the game-ai backend application."""
 import logging
+import mimetypes
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -78,10 +79,13 @@ app.add_middleware(
 )
 
 # Serve Vite build assets (only present after `npm run build`)
+mimetypes.add_type("application/wasm", ".wasm")
 if (DIST_DIR / "assets").exists():
     app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="assets")
 if (DIST_DIR / "images").exists():
     app.mount("/images", StaticFiles(directory=str(DIST_DIR / "images")), name="images")
+if (DIST_DIR / "engine").exists():
+    app.mount("/engine", StaticFiles(directory=str(DIST_DIR / "engine")), name="engine")
 
 app.include_router(about_router, prefix="/api/about", tags=["About"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])

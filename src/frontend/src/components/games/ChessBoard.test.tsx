@@ -51,6 +51,33 @@ describe('ChessBoard', () => {
         expect(onSquareClick).toHaveBeenCalled();
     });
 
+    it('lets the player click an empty destination square to move, not just drag', async () => {
+        const user = userEvent.setup();
+        const onSquareClick = vi.fn();
+        const { container } = render(
+            <ChessBoard
+                {...defaultProps}
+                selectedSquare={[6, 4]}
+                legalDestinations={[[4, 4]]}
+                onSquareClick={onSquareClick}
+            />
+        );
+        const squares = container.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        await user.click(squares[36]);
+        expect(onSquareClick).toHaveBeenCalledWith(4, 4);
+    });
+
+    it('highlights king-from, king-to and rook-to squares for a castling last move', () => {
+        const { container } = render(
+            <ChessBoard {...defaultProps} lastMove={{ fromRow: 7, fromCol: 4, toRow: 7, toCol: 6, isCastling: true }} />
+        );
+        const squares = container.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        expect(squares[60].className).toContain('yellow');
+        expect(squares[62].className).toContain('yellow');
+        expect(squares[61].className).toContain('yellow');
+        expect(squares[63].className).not.toContain('yellow');
+    });
+
     it('renders board structure', () => {
         const { container } = render(<ChessBoard {...defaultProps} />);
         expect(container.querySelector('[class*="border-amber"]')).toBeInTheDocument();

@@ -92,9 +92,13 @@ export default function ChessPage() {
     });
     const [selectedSquare, setSelectedSquare] = useState<[number, number] | null>(null);
     const [legalDestinations, setLegalDestinations] = useState<[number, number][]>([]);
-    const [lastMove, setLastMove] = useState<{ fromRow: number; fromCol: number; toRow: number; toCol: number } | null>(
-        null
-    );
+    const [lastMove, setLastMove] = useState<{
+        fromRow: number;
+        fromCol: number;
+        toRow: number;
+        toCol: number;
+        isCastling?: boolean;
+    } | null>(null);
     const [statusText, setStatusText] = useState<string>('');
     const [boardLocked, setBoardLocked] = useState(false);
     const [winner, setWinner] = useState<string | null>(null);
@@ -136,8 +140,24 @@ export default function ChessPage() {
             const es = chessSubscribeSSE(sid, {
                 onStatus: msg => setStatusText(msg),
                 onPlayerMove: (data: ChessMoveData) => {
-                    if (data.fen) setCurrentFen(data.fen);
+                    applyStateFromData(data);
                     if (data.notation) setMoveHistory(h => [...h, data.notation!]);
+                    if (
+                        data.toRow !== null &&
+                        data.toRow !== undefined &&
+                        data.fromRow !== null &&
+                        data.fromRow !== undefined
+                    ) {
+                        setLastMove({
+                            fromRow: data.fromRow!,
+                            fromCol: data.fromCol!,
+                            toRow: data.toRow!,
+                            toCol: data.toCol!,
+                            isCastling: data.is_castling ?? false,
+                        });
+                    }
+                    setSelectedSquare(null);
+                    setLegalDestinations([]);
                 },
                 onMove: (data: ChessMoveData) => {
                     applyStateFromData(data);
@@ -153,6 +173,7 @@ export default function ChessPage() {
                             fromCol: data.fromCol!,
                             toRow: data.toRow!,
                             toCol: data.toCol!,
+                            isCastling: data.is_castling ?? false,
                         });
                     }
                     setSelectedSquare(null);
@@ -196,6 +217,7 @@ export default function ChessPage() {
                     setPlayerColor(state.player_color);
                     setInCheck(state.in_check ?? false);
                     setCapturedPieces(state.captured_pieces);
+                    setMoveHistory(state.move_history ?? []);
                     if (state.king_positions) setKingPositions(state.king_positions);
                     if (state.last_move) {
                         setLastMove({
@@ -203,6 +225,7 @@ export default function ChessPage() {
                             fromCol: state.last_move.fromCol,
                             toRow: state.last_move.toRow,
                             toCol: state.last_move.toCol,
+                            isCastling: state.last_move.is_castling,
                         });
                     }
                     setSessionId(id);
@@ -273,6 +296,7 @@ export default function ChessPage() {
         setPlayerColor(state.player_color);
         setInCheck(state.in_check ?? false);
         setCapturedPieces(state.captured_pieces);
+        setMoveHistory(state.move_history ?? []);
         if (state.king_positions) setKingPositions(state.king_positions);
         if (state.last_move) {
             setLastMove({
@@ -280,6 +304,7 @@ export default function ChessPage() {
                 fromCol: state.last_move.fromCol,
                 toRow: state.last_move.toRow,
                 toCol: state.last_move.toCol,
+                isCastling: state.last_move.is_castling,
             });
         }
         const isPlayerTurn = state.current_player === state.player_color;
@@ -324,6 +349,7 @@ export default function ChessPage() {
                     fromCol: state.last_move.fromCol,
                     toRow: state.last_move.toRow,
                     toCol: state.last_move.toCol,
+                    isCastling: state.last_move.is_castling,
                 });
                 if (state.last_move.notation) {
                     setMoveHistory([state.last_move.notation]);
@@ -356,7 +382,7 @@ export default function ChessPage() {
         setSelectedSquare(null);
         setLegalDestinations([]);
         setBoardLocked(true);
-        setStatusText('');
+        setStatusText('Sending move...');
 
         const newBoard = board.map(r => [...r]);
         newBoard[fromRow][fromCol] = null;
@@ -379,7 +405,13 @@ export default function ChessPage() {
         }
 
         setBoard(newBoard);
-        setLastMove({ fromRow, fromCol, toRow, toCol });
+        setLastMove({
+            fromRow,
+            fromCol,
+            toRow,
+            toCol,
+            isCastling: movingPiece?.toLowerCase() === 'k' && Math.abs(toCol - fromCol) === 2,
+        });
 
         try {
             await chessMove(fromRow, fromCol, toRow, toCol, promotionPiece ?? undefined);
@@ -492,8 +524,6 @@ export default function ChessPage() {
     };
 
     const showInfo = phase === 'resumeprompt' || phase === 'playing' || phase === 'terminal';
-    const aiColor = playerColor === 'white' ? 'Black' : 'White';
-    const playerColorLabel = playerColor === 'white' ? 'White' : 'Black';
 
     const playerResult: 'win' | 'loss' | 'draw' | null =
         phase === 'terminal' && winner !== null
@@ -553,14 +583,12 @@ export default function ChessPage() {
     return (
         <div className='container mx-auto px-4 py-4 max-w-4xl'>
             <PageMeta title='Chess' description='Challenge an adaptive AI in a game of Chess.' noindex />
-            <h1 className='mb-3 text-3xl font-bold text-center'>Chess</h1>
 
             <div className='flex gap-4 items-stretch'>
                 <div className='flex flex-col'>
                     <PlayerCard
                         name='AI Opponent'
                         isAi
-                        symbol={showInfo ? aiColor : undefined}
                         statusText={phase === 'playing' ? statusText : undefined}
                         result={aiResult}
                     />
@@ -663,12 +691,7 @@ export default function ChessPage() {
                         </div>
                     )}
 
-                    <PlayerCard
-                        name={user.displayName}
-                        avatarUrl={user.profilePicture}
-                        symbol={showInfo ? playerColorLabel : undefined}
-                        result={playerResult}
-                    />
+                    <PlayerCard name={user.displayName} avatarUrl={user.profilePicture} result={playerResult} />
                 </div>
 
                 {showInfo && (

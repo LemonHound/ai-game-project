@@ -1173,7 +1173,8 @@ async def chess_resume(
         return {"id": None, "state": None}
 
     span.set_attribute("game.id", str(game.id))
-    return {"id": str(game.id), "state": game.board_state}
+    state = {**game.board_state, "move_history": game.move_list or []}
+    return {"id": str(game.id), "state": state}
 
 
 @router.post("/game/chess/newgame")

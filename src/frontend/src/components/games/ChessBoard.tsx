@@ -5,7 +5,7 @@ interface ChessBoardProps {
     playerColor: 'white' | 'black';
     selectedSquare: [number, number] | null;
     legalDestinations: [number, number][];
-    lastMove: { fromRow: number; fromCol: number; toRow: number; toCol: number } | null;
+    lastMove: { fromRow: number; fromCol: number; toRow: number; toCol: number; isCastling?: boolean } | null;
     inCheck: boolean;
     locked: boolean;
     onSquareClick: (row: number, col: number) => void;
@@ -90,7 +90,7 @@ export default function ChessBoard({
             if (!drag) return;
             const dx = e.clientX - drag.startX;
             const dy = e.clientY - drag.startY;
-            if (!drag.active && Math.sqrt(dx * dx + dy * dy) > 8) {
+            if (!drag.active && drag.piece && Math.sqrt(dx * dx + dy * dy) > 8) {
                 drag.active = true;
                 onSquareClickRef.current(drag.fromRow, drag.fromCol);
             }
@@ -127,9 +127,16 @@ export default function ChessBoard({
 
     const isLegalDest = (r: number, c: number) => legalDestinations.some(([lr, lc]) => lr === r && lc === c);
 
-    const isLastMove = (r: number, c: number) =>
-        lastMove !== null &&
-        ((lastMove.fromRow === r && lastMove.fromCol === c) || (lastMove.toRow === r && lastMove.toCol === c));
+    const isLastMove = (r: number, c: number) => {
+        if (lastMove === null) return false;
+        if (lastMove.fromRow === r && lastMove.fromCol === c) return true;
+        if (lastMove.toRow === r && lastMove.toCol === c) return true;
+        if (lastMove.isCastling && lastMove.fromRow === r) {
+            const rookCol = lastMove.toCol > lastMove.fromCol ? lastMove.toCol - 1 : lastMove.toCol + 1;
+            if (rookCol === c) return true;
+        }
+        return false;
+    };
 
     const isKingInCheck = (r: number, c: number) => {
         if (!inCheck || !kingInCheckColor || !kingPositions) return false;
@@ -150,8 +157,6 @@ export default function ChessBoard({
 
     const handleMouseDown = (r: number, c: number, e: React.MouseEvent) => {
         if (lockedRef.current) return;
-        const piece = board[r][c];
-        if (!piece) return;
         e.preventDefault();
         dragRef.current = {
             fromRow: r,
@@ -159,7 +164,7 @@ export default function ChessBoard({
             startX: e.clientX,
             startY: e.clientY,
             active: false,
-            piece,
+            piece: board[r][c] ?? '',
         };
     };
 
