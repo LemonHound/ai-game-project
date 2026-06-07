@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import os
 
@@ -50,3 +51,20 @@ def test_status_broadcaster_min_interval(monkeypatch):
 def test_status_broadcaster_test_env_override(monkeypatch):
     b = reload_base(monkeypatch, {"GAME_SERVER_MIN_EVENT_INTERVAL_MS": "5000", "ENVIRONMENT": "test"})
     assert b.StatusBroadcaster.MIN_INTERVAL <= 0.05
+
+
+def test_status_broadcaster_delivers_player_move_with_payload(monkeypatch):
+    b = reload_base(monkeypatch, {"ENVIRONMENT": "test"})
+    broadcaster = b.StatusBroadcaster()
+    broadcaster.emit(b.StatusEvent("player_move", payload={"notation": "e5", "player": "player"}))
+    broadcaster.emit(b.StatusEvent("move", payload={"notation": "Nf3", "status": "complete"}))
+
+    async def collect():
+        chunks = []
+        async for chunk in broadcaster.stream():
+            chunks.append(chunk)
+        return chunks
+
+    out = "".join(asyncio.run(collect()))
+    assert '"type": "player_move"' in out
+    assert '"notation": "e5"' in out

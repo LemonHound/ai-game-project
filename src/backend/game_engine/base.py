@@ -232,8 +232,8 @@ class StatusEvent:
             return 'data: {"type": "heartbeat"}\n\n'
         if self.type == "status":
             return f'data: {json.dumps({"type": "status", "message": self.data["message"]})}\n\n'
-        if self.type == "move":
-            return f'data: {json.dumps({"type": "move", "data": self.data["payload"]})}\n\n'
+        if self.type in ("move", "player_move"):
+            return f'data: {json.dumps({"type": self.type, "data": self.data["payload"]})}\n\n'
         if self.type == "error":
             return f'data: {json.dumps({"type": "error", "code": self.data.get("code"), "message": self.data.get("message")})}\n\n'
         return f'data: {json.dumps({"type": self.type})}\n\n'
@@ -287,7 +287,9 @@ class StatusBroadcaster:
                     last_sent = time.monotonic()
                 continue
 
-            if event.type in ("move", "error"):
+            if event.type == "player_move":
+                yield event.to_sse()
+            elif event.type in ("move", "error"):
                 if pending is not None:
                     remaining = self.MIN_INTERVAL - (time.monotonic() - last_sent)
                     if remaining > 0:
