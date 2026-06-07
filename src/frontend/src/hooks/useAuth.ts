@@ -37,25 +37,10 @@ export function useLogin() {
     });
 }
 
-/**
- * Return a TanStack Query mutation for new user registration.
- * On success, updates the cached user in the query client.
- *
- * @returns Mutation object with mutateAsync({ username, email, password, displayName? }).
- */
 export function useRegister() {
     return useMutation({
-        mutationFn: ({
-            username,
-            email,
-            password,
-            displayName,
-        }: {
-            username: string;
-            email: string;
-            password: string;
-            displayName?: string;
-        }) => register(username, email, password, displayName),
+        mutationFn: ({ email, password, displayName }: { email: string; password: string; displayName?: string }) =>
+            register(email, password, displayName),
         onSuccess: ({ user }) => {
             queryClient.setQueryData(USER_QUERY_KEY, user);
         },

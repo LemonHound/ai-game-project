@@ -13,8 +13,8 @@ async def test_auth_create_user_persists(seeded_db):
     )
     row = result.fetchone()
     assert row is not None
-    assert row.username == "test"
     assert row.email == "test@example.com"
+    assert row.username == row.email
 
 
 @pytest.mark.asyncio

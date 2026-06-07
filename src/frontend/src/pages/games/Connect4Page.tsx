@@ -378,7 +378,7 @@ export default function Connect4Page() {
             </div>
 
             <PlayerCard
-                name={user.displayName || user.username}
+                name={user.displayName}
                 avatarUrl={user.profilePicture}
                 symbol={showSymbols ? playerSymbol : undefined}
                 result={playerResult}

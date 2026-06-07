@@ -408,7 +408,7 @@ export default function DotsAndBoxesPage() {
             </div>
 
             <PlayerCard
-                name={user.displayName || user.username}
+                name={user.displayName}
                 avatarUrl={user.profilePicture}
                 symbol={showScores ? String(playerScore) : undefined}
                 result={playerResult}

@@ -62,7 +62,6 @@ test.describe('Authentication API', () => {
 
         const response = await page.request.post('/api/auth/register', {
             data: {
-                username: 'dupetest',
                 email: 'demo@aigamehub.com',
                 password: 'password123',
                 displayName: 'Dupe Test',

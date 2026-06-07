@@ -529,7 +529,7 @@ export default function CheckersPage() {
                     )}
 
                     <PlayerCard
-                        name={user.displayName || user.username}
+                        name={user.displayName}
                         avatarUrl={user.profilePicture}
                         symbol={showSymbols ? playerLabel : undefined}
                         result={playerResult}

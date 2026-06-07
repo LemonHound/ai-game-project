@@ -4,17 +4,19 @@ import { renderWithProviders } from '../test-utils';
 import ProfilePage from './ProfilePage';
 
 describe('ProfilePage', () => {
-    it('renders user profile', async () => {
+    it('renders the display name', async () => {
         renderWithProviders(<ProfilePage />);
         await waitFor(() => {
-            expect(screen.queryByText('testuser') || screen.queryByText('Test User')).toBeTruthy();
+            expect(screen.getByText('Test User')).toBeInTheDocument();
         });
     });
 
-    it('renders stats display', async () => {
+    it('does not expose the email as a public @handle', async () => {
         renderWithProviders(<ProfilePage />);
         await waitFor(() => {
-            expect(screen.queryByText('testuser') || screen.queryByText('Test User')).toBeTruthy();
+            expect(screen.getByText('Test User')).toBeInTheDocument();
         });
+        expect(screen.queryByText('@test@example.com')).toBeNull();
+        expect(screen.queryByText('@testuser')).toBeNull();
     });
 });

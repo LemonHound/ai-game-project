@@ -664,7 +664,7 @@ export default function ChessPage() {
                     )}
 
                     <PlayerCard
-                        name={user.displayName || user.username}
+                        name={user.displayName}
                         avatarUrl={user.profilePicture}
                         symbol={showInfo ? playerColorLabel : undefined}
                         result={playerResult}

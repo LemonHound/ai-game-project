@@ -97,7 +97,6 @@ export default function ProfilePage() {
                         </div>
                         <div>
                             <h2 className='text-xl font-semibold'>{user.displayName}</h2>
-                            <p className='text-sm opacity-60'>@{user.username}</p>
                         </div>
                     </div>
                     <div className='divider' />
