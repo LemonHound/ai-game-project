@@ -78,6 +78,7 @@ class ChessNewGameRequest(BaseModel):
     """Request body for starting a new Chess game."""
 
     player_starts: bool = True
+    engine_version_id: Optional[int] = None
 
 
 class ChessMoveRequest(BaseModel):

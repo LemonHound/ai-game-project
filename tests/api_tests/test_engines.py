@@ -39,3 +39,23 @@ def test_register_then_discoverable(client):
     groups = listing.json()["engines"]
     cnn = next(g for g in groups if g["difficulty"] == "cnn")
     assert any(v["id"] == engine_id and v["version"] == "1.2.0" for v in cnn["versions"])
+
+
+def test_newgame_defaults_to_latest_engine_and_resume_reports_it(auth_client):
+    new = auth_client.post("/api/game/chess/newgame", json={"player_starts": True})
+    assert new.status_code == 200
+
+    resumed = auth_client.get("/api/game/chess/resume")
+    assert resumed.status_code == 200
+    engine = resumed.json()["engine"]
+    assert engine is not None
+    assert engine["difficulty"]
+    assert engine["version"]
+
+
+def test_newgame_rejects_unknown_engine(auth_client):
+    response = auth_client.post(
+        "/api/game/chess/newgame",
+        json={"player_starts": True, "engine_version_id": 999999},
+    )
+    assert response.status_code == 422

@@ -1201,11 +1201,16 @@ async def chess_resume(
 
     game = await persistence_service.get_active_game(db, user["id"], "chess")
     if not game:
-        return {"id": None, "state": None}
+        return {"id": None, "state": None, "engine": None}
 
     span.set_attribute("game.id", str(game.id))
+    engine = None
+    if game.engine_version_id is not None:
+        row = await model_registry.get_engine(db, game.engine_version_id)
+        if row:
+            engine = {"id": row["id"], "difficulty": row["difficulty"], "version": row["version"]}
     state = {**game.board_state, "move_history": game.move_list or []}
-    return {"id": str(game.id), "state": state}
+    return {"id": str(game.id), "state": state, "engine": engine}
 
 
 @router.post("/game/chess/newgame")
@@ -1231,12 +1236,23 @@ async def chess_newgame(
             q.put_nowait({"__close__": True})
         await persistence_service.close_game(db, existing.id, "chess")
 
+    engine_version_id = request.engine_version_id
+    if engine_version_id is not None:
+        engine = await model_registry.get_engine(db, engine_version_id)
+        if not engine or not engine["active"] or engine["game"] != "chess":
+            raise HTTPException(status_code=422, detail="Invalid engine_version_id")
+    else:
+        engine_version_id = await model_registry.latest_active_engine_id(db, "chess")
+
     state = _chess_engine.initial_state(request.player_starts)
-    game = await persistence_service.create_game(db, user["id"], "chess", state)
+    game = await persistence_service.create_game(
+        db, user["id"], "chess", state, engine_version_id=engine_version_id
+    )
     span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
-        strategy = _resolve_strategy(_chess_strategy, raw_request.headers)
+        base_strategy = await _resolve_chess_strategy(db, engine_version_id)
+        strategy = _resolve_strategy(base_strategy, raw_request.headers)
         if hasattr(strategy, "set_move_history"):
             strategy.set_move_history([])
         ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, strategy, state)
