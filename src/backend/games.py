@@ -81,6 +81,35 @@ else:
 _chess_processor = MoveProcessor()
 _chess_move_queues: dict[UUID, asyncio.Queue] = {}
 
+_CHESS_WEIGHTS_ROOT = os.getenv("CHESS_MODEL_WEIGHTS_ROOT", "/app/model_weights")
+_chess_engine_cache: dict[str, object] = {}
+
+
+def _strategy_for_gcs_path(gcs_path: str):
+    cached = _chess_engine_cache.get(gcs_path)
+    if cached is not None:
+        return cached
+    from game_engine.chess_model_strategy import ChessModelStrategy
+    from ml.artifact import load_chess_model_artifact
+
+    model_dir = os.path.join(_CHESS_WEIGHTS_ROOT, gcs_path)
+    strategy = ChessModelStrategy(load_chess_model_artifact(model_dir))
+    _chess_engine_cache[gcs_path] = strategy
+    return strategy
+
+
+async def _resolve_chess_strategy(db, engine_version_id):
+    if engine_version_id is None:
+        return _chess_strategy
+    engine = await model_registry.get_engine(db, engine_version_id)
+    if not engine:
+        return _chess_strategy
+    try:
+        return _strategy_for_gcs_path(engine["gcs_path"])
+    except Exception:
+        logger.exception("chess_engine_load_failed", extra={"engine_id": engine_version_id})
+        return _chess_strategy
+
 
 _is_test_env = os.getenv("ENVIRONMENT") == "test"
 _TEST_DELAY = 0.05
