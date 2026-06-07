@@ -8,6 +8,7 @@ import ChessBoard from '../../components/games/ChessBoard';
 import EvalBar from '../../components/games/EvalBar';
 import { useAuth } from '../../hooks/useAuth';
 import { useStockfishEval } from '../../hooks/useStockfishEval';
+import { boardToFen } from '../../lib/chessFen';
 import {
     chessLegalMoves,
     chessMove,
@@ -90,6 +91,10 @@ export default function ChessPage() {
         white: [7, 4],
         black: [0, 4],
     });
+    const [castlingRights, setCastlingRights] = useState<ChessGameState['castling_rights']>({
+        white: { kingside: true, queenside: true },
+        black: { kingside: true, queenside: true },
+    });
     const [selectedSquare, setSelectedSquare] = useState<[number, number] | null>(null);
     const [legalDestinations, setLegalDestinations] = useState<[number, number][]>([]);
     const [lastMove, setLastMove] = useState<{
@@ -131,6 +136,7 @@ export default function ChessPage() {
         if ('in_check' in data && data.in_check !== undefined) setInCheck(data.in_check ?? false);
         if ('captured_pieces' in data && data.captured_pieces) setCapturedPieces(data.captured_pieces);
         if ('king_positions' in data && data.king_positions) setKingPositions(data.king_positions);
+        if ('castling_rights' in data && data.castling_rights) setCastlingRights(data.castling_rights);
         if ('fen' in data && data.fen) setCurrentFen(data.fen);
     }, []);
 
@@ -218,6 +224,7 @@ export default function ChessPage() {
                     setInCheck(state.in_check ?? false);
                     setCapturedPieces(state.captured_pieces);
                     setMoveHistory(state.move_history ?? []);
+                    if (state.castling_rights) setCastlingRights(state.castling_rights);
                     if (state.king_positions) setKingPositions(state.king_positions);
                     if (state.last_move) {
                         setLastMove({
@@ -297,6 +304,7 @@ export default function ChessPage() {
         setInCheck(state.in_check ?? false);
         setCapturedPieces(state.captured_pieces);
         setMoveHistory(state.move_history ?? []);
+        if (state.castling_rights) setCastlingRights(state.castling_rights);
         if (state.king_positions) setKingPositions(state.king_positions);
         if (state.last_move) {
             setLastMove({
@@ -342,6 +350,7 @@ export default function ChessPage() {
             setPlayerColor(state.player_color);
             setInCheck(state.in_check ?? false);
             setCapturedPieces(state.captured_pieces);
+            if (state.castling_rights) setCastlingRights(state.castling_rights);
             if (state.king_positions) setKingPositions(state.king_positions);
             if (state.last_move) {
                 setLastMove({
@@ -379,6 +388,7 @@ export default function ChessPage() {
     ) => {
         const movingPiece = board[fromRow][fromCol];
         const prevBoard = board.map(r => [...r]);
+        const prevFen = currentFen;
         setSelectedSquare(null);
         setLegalDestinations([]);
         setBoardLocked(true);
@@ -413,6 +423,24 @@ export default function ChessPage() {
             isCastling: movingPiece?.toLowerCase() === 'k' && Math.abs(toCol - fromCol) === 2,
         });
 
+        const moverLower = movingPiece?.toLowerCase();
+        const nextCastling = {
+            white: { ...castlingRights.white },
+            black: { ...castlingRights.black },
+        };
+        if (moverLower === 'k') {
+            nextCastling[playerColor].kingside = false;
+            nextCastling[playerColor].queenside = false;
+        } else if (moverLower === 'r') {
+            if (fromCol === 0) nextCastling[playerColor].queenside = false;
+            if (fromCol === 7) nextCastling[playerColor].kingside = false;
+        }
+        const nextEnPassant: [number, number] | null =
+            moverLower === 'p' && Math.abs(toRow - fromRow) === 2
+                ? [playerColor === 'white' ? fromRow - 1 : fromRow + 1, fromCol]
+                : null;
+        setCurrentFen(boardToFen(newBoard, playerColor === 'white' ? 'b' : 'w', nextCastling, nextEnPassant));
+
         try {
             await chessMove(fromRow, fromCol, toRow, toCol, promotionPiece ?? undefined);
         } catch (err) {
@@ -421,6 +449,7 @@ export default function ChessPage() {
                 setShowAuthModal(true);
             } else {
                 setBoard(prevBoard);
+                setCurrentFen(prevFen);
                 setLastMove(null);
                 setStatusText('Move rejected — please try again.');
                 setBoardLocked(false);
