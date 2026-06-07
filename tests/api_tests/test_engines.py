@@ -1,6 +1,3 @@
-import os
-
-
 def test_register_requires_key(client):
     response = client.post(
         "/api/internal/engines",
@@ -16,11 +13,11 @@ def test_register_requires_key(client):
     assert response.status_code == 403
 
 
-def test_register_then_discoverable(client):
-    key = os.environ["INTERNAL_API_KEY"]
+def test_register_then_discoverable(client, monkeypatch):
+    monkeypatch.setenv("INTERNAL_API_KEY", "test-internal-key")
     response = client.post(
         "/api/internal/engines",
-        headers={"X-Internal-Key": key},
+        headers={"X-Internal-Key": "test-internal-key"},
         json={
             "game": "chess",
             "difficulty": "cnn",
