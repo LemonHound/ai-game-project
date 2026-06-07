@@ -61,6 +61,7 @@
         "npm-check-updates": "^19.6.6",
         "postcss": "^8.5.8",
         "prettier": "^3.8.1",
+        "stockfish": "^16.0.0",
         "tailwindcss": "^4.2.2",
         "typescript": "^6.0.2",
         "vite": "^8.0.3",
