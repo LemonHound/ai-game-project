@@ -53,6 +53,15 @@ def test_chess_invalid_move_returns_422(auth_client):
     assert response.status_code == 422
 
 
+def test_chess_resume_includes_move_history(auth_client):
+    auth_client.post("/api/game/chess/newgame", json={"player_starts": False})
+    response = auth_client.get("/api/game/chess/resume")
+    assert response.status_code == 200
+    state = response.json()["state"]
+    assert isinstance(state.get("move_history"), list)
+    assert len(state["move_history"]) >= 1
+
+
 def test_completed_game_move_list_queryable(auth_client):
     """Verify a chess game record includes a queryable move_list field."""
     auth_client.post("/api/game/chess/newgame", json={"player_starts": True})
