@@ -17,10 +17,10 @@ const EvalBar = ({ cp, mate, perspective }: EvalBarProps) => {
             style={{ display: 'flex', flexDirection: perspective === 'white' ? 'column-reverse' : 'column' }}>
             <div
                 data-testid='eval-bar-white'
-                className='w-full bg-base-100 transition-[height] duration-300'
+                className='w-full bg-white transition-[height] duration-300'
                 style={{ height: `${whitePct}%` }}
             />
-            <span className='pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] font-semibold text-neutral-content'>
+            <span className='pointer-events-none absolute inset-x-0 bottom-0.5 text-center text-[9px] font-semibold text-white mix-blend-difference'>
                 {label}
             </span>
         </div>
