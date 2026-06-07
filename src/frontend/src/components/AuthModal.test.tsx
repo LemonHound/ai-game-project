@@ -133,4 +133,10 @@ describe('AuthModal', () => {
         expect(button).not.toBeNull();
         expect(button?.className).toContain('bg-white');
     });
+
+    it('points the google button at the current route via redirect_to', () => {
+        renderWithProviders(<AuthModal open initialTab='login' onClose={() => {}} />, { route: '/game/chess' });
+        const button = (document.querySelector('img') as HTMLImageElement).closest('a');
+        expect(button?.getAttribute('href')).toBe('/api/auth/google?redirect_to=%2Fgame%2Fchess');
+    });
 });

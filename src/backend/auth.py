@@ -53,6 +53,12 @@ def _is_production() -> bool:
     return os.getenv("ENVIRONMENT") == "production"
 
 
+def _safe_redirect(path: Optional[str]) -> str:
+    if not path or not path.startswith("/") or path.startswith("//") or "\\" in path or "\r" in path or "\n" in path:
+        return "/"
+    return path
+
+
 def set_session_cookie(response: Response, session_id: str, max_age: int = 7 * 24 * 60 * 60):
     """Set the httpOnly session cookie on a response.
 
@@ -471,17 +477,7 @@ async def google_auth(request: GoogleAuthRequest, response: Response):
 
 @router.get("/google")
 async def google_login(redirect_to: str = "/"):
-    """Redirect the browser to Google's OAuth2 authorization page.
-
-    Args:
-        redirect_to: URL path to return to after successful authentication.
-
-    Returns:
-        RedirectResponse to the Google OAuth2 consent screen.
-
-    Raises:
-        HTTPException 501: If GOOGLE_CLIENT_ID is not configured.
-    """
+    redirect_to = _safe_redirect(redirect_to)
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise HTTPException(status_code=501, detail="Google OAuth not configured")
@@ -502,20 +498,7 @@ async def google_login(redirect_to: str = "/"):
 
 @router.get("/google/callback")
 async def google_callback(code: str = None, error: str = None, state: str = "/"):
-    """Handle the OAuth2 authorization code callback from Google.
-
-    Exchanges the authorization code for tokens, fetches the Google user profile,
-    creates or retrieves the local user account, and sets a 30-day session cookie.
-    Redirects to `state` URL on both success and failure.
-
-    Args:
-        code: Authorization code returned by Google.
-        error: Error string returned by Google if the user denied access.
-        state: URL path to redirect to after authentication.
-
-    Returns:
-        RedirectResponse to `state` with `?login=success` or `?error=google_auth_failed`.
-    """
+    state = _safe_redirect(state)
     with tracer.start_as_current_span("auth.google_callback"):
         try:
             if error or not code:

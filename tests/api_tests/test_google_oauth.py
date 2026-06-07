@@ -50,3 +50,44 @@ def test_google_user_stores_email_as_username(monkeypatch, client):
     user = resp.json()["user"]
     assert user["email"] == email
     assert user["username"] == email
+
+
+def test_oauth_login_route_carries_redirect_to_in_state(monkeypatch, client):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
+    response = client.get(
+        "/api/auth/google", params={"redirect_to": "/game/chess"}, follow_redirects=False
+    )
+    assert response.status_code in (302, 307)
+    assert "state=/game/chess" in response.headers["location"]
+
+
+def test_oauth_login_route_rejects_external_redirect(monkeypatch, client):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
+    response = client.get(
+        "/api/auth/google", params={"redirect_to": "https://evil.com"}, follow_redirects=False
+    )
+    location = response.headers["location"]
+    assert "evil.com" not in location
+    assert "state=/" in location
+
+
+def test_oauth_login_route_rejects_protocol_relative_redirect(monkeypatch, client):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
+    response = client.get(
+        "/api/auth/google", params={"redirect_to": "//evil.com"}, follow_redirects=False
+    )
+    location = response.headers["location"]
+    assert "evil.com" not in location
+    assert "state=/" in location
+
+
+def test_oauth_callback_rejects_external_state(client):
+    response = client.get(
+        "/api/auth/google/callback",
+        params={"error": "access_denied", "state": "https://evil.com"},
+        follow_redirects=False,
+    )
+    assert response.status_code in (302, 307)
+    location = response.headers["location"]
+    assert "evil.com" not in location
+    assert location.startswith("/")
