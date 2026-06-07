@@ -145,7 +145,9 @@ function GoogleLogoFallback() {
 function GoogleButton() {
     const [failed, setFailed] = useState(false);
     return (
-        <a href='/api/auth/google' className='btn btn-outline w-full gap-2'>
+        <a
+            href='/api/auth/google'
+            className='btn w-full gap-2 border-[#dadce0] bg-white text-[#1f1f1f] hover:border-[#dadce0] hover:bg-[#f8f9fa] hover:text-[#1f1f1f]'>
             {failed ? (
                 <GoogleLogoFallback />
             ) : (
