@@ -7,6 +7,8 @@ substitutions:
     _CLOUDSQL_INSTANCE: halogen-episode-455311-t4:us-central1:game-database
     _ENVIRONMENT: production
     _WEBSITE_URL: https://game-ai-website-w4453qrbcq-uc.a.run.app
+    _LOGO_BUCKET: halogen-episode-455311-t4-assets
+    _LOGO_SA: google-logo-retriever@halogen-episode-455311-t4.iam.gserviceaccount.com
 
 steps:
     - name: 'gcr.io/cloud-builders/docker'
@@ -79,7 +81,7 @@ steps:
           - '--execution-environment=gen2'
           - '--add-volume=name=models,type=cloud-storage,bucket=halogen-episode-455311-t4-models'
           - '--add-volume-mount=volume=models,mount-path=/app/model_weights'
-          - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT},WEBSITE_URL=${_WEBSITE_URL},GOOGLE_REDIRECT_URI=${_WEBSITE_URL}/api/auth/google/callback,CHESS_AI_STRATEGY=model,CHESS_MODEL_DIR=/app/model_weights/chess/untrained/0.1.0'
+          - '--set-env-vars=ENVIRONMENT=${_ENVIRONMENT},WEBSITE_URL=${_WEBSITE_URL},GOOGLE_REDIRECT_URI=${_WEBSITE_URL}/api/auth/google/callback,CHESS_AI_STRATEGY=model,CHESS_MODEL_DIR=/app/model_weights/chess/untrained/0.1.0,GOOGLE_LOGO_BUCKET=${_LOGO_BUCKET},GOOGLE_LOGO_SA=${_LOGO_SA}'
           - >-
               --set-secrets=DB_HOST=DB_HOST:latest,DB_NAME=DB_NAME:latest,DB_USER=DB_USER:latest,DB_PASSWORD=DB_PASSWORD:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest
 

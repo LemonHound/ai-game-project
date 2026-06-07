@@ -42,6 +42,18 @@ def _bucket():
     try:
         from google.cloud import storage
 
+        target_sa = os.getenv("GOOGLE_LOGO_SA")
+        if target_sa:
+            import google.auth
+            from google.auth import impersonated_credentials
+
+            source_credentials, _ = google.auth.default()
+            credentials = impersonated_credentials.Credentials(
+                source_credentials=source_credentials,
+                target_principal=target_sa,
+                target_scopes=["https://www.googleapis.com/auth/devstorage.read_write"],
+            )
+            return storage.Client(credentials=credentials).bucket(name)
         return storage.Client().bucket(name)
     except Exception:
         logger.exception("Google logo: GCS client unavailable")
