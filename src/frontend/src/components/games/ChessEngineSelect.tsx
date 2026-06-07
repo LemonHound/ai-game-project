@@ -44,8 +44,7 @@ export default function ChessEngineSelect({ onChange }: ChessEngineSelectProps) 
                     className='select select-bordered select-sm'
                     aria-label='Model'
                     value={model}
-                    onChange={e => setModel(e.target.value)}
-                >
+                    onChange={e => setModel(e.target.value)}>
                     {groups.map(g => (
                         <option key={g.difficulty} value={g.difficulty}>
                             {g.difficulty}
@@ -63,8 +62,7 @@ export default function ChessEngineSelect({ onChange }: ChessEngineSelectProps) 
                         const id = Number(e.target.value);
                         setVersionId(id);
                         onChange(id);
-                    }}
-                >
+                    }}>
                     {(current?.versions ?? []).map(v => (
                         <option key={v.id} value={v.id}>
                             {v.version}
