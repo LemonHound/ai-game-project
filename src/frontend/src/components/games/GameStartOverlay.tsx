@@ -1,16 +1,22 @@
+import { type ReactNode } from 'react';
+
 interface GameStartOverlayProps {
     canResume: boolean;
     onResume: () => void;
     optionA: { label: string; onClick: () => void };
     optionB: { label: string; onClick: () => void };
     title?: string;
+    extra?: ReactNode;
 }
 
-/**
- * Renders an overlay with resume and new game options shown before or after a game.
- * Pass `title` to display a result heading (e.g. "You Win!") at the top.
- */
-export default function GameStartOverlay({ canResume, onResume, optionA, optionB, title }: GameStartOverlayProps) {
+export default function GameStartOverlay({
+    canResume,
+    onResume,
+    optionA,
+    optionB,
+    title,
+    extra,
+}: GameStartOverlayProps) {
     return (
         <div className='absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 rounded-lg bg-base-100/90 backdrop-blur-sm'>
             {title && <p className='text-2xl font-bold'>{title}</p>}
@@ -18,6 +24,7 @@ export default function GameStartOverlay({ canResume, onResume, optionA, optionB
                 Continue Game
             </button>
 
+            {extra}
             <div className='flex flex-col items-center gap-2 w-full max-w-xs px-4'>
                 <div className='flex items-center gap-2 w-full'>
                     <div className='flex-1 h-px bg-base-content/20' />

@@ -70,7 +70,11 @@ async def get_active_game(
 
 
 async def create_game(
-    session: AsyncSession, user_id: int, game_type: str, initial_board_state: dict
+    session: AsyncSession,
+    user_id: int,
+    game_type: str,
+    initial_board_state: dict,
+    engine_version_id: Optional[int] = None,
 ) -> GameRecord:
     """Creates a new game record with empty move_list and the given initial board state.
 
@@ -98,11 +102,14 @@ async def create_game(
         span.set_attribute("user.id", user_id)
 
         Model = GAME_TYPE_TO_MODEL[game_type]
-        record = Model(
-            user_id=user_id,
-            board_state=initial_board_state,
-            move_list=[],
-        )
+        record_kwargs: dict = {
+            "user_id": user_id,
+            "board_state": initial_board_state,
+            "move_list": [],
+        }
+        if engine_version_id is not None:
+            record_kwargs["engine_version_id"] = engine_version_id
+        record = Model(**record_kwargs)
         session.add(record)
         await session.commit()
         await session.refresh(record)

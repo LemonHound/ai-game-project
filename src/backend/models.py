@@ -78,6 +78,7 @@ class ChessNewGameRequest(BaseModel):
     """Request body for starting a new Chess game."""
 
     player_starts: bool = True
+    engine_version_id: Optional[int] = None
 
 
 class ChessMoveRequest(BaseModel):
@@ -88,3 +89,12 @@ class ChessMoveRequest(BaseModel):
     toRow: int
     toCol: int
     promotionPiece: Optional[str] = None
+
+
+class EngineRegisterRequest(BaseModel):
+    game: str
+    difficulty: str
+    version: str
+    gcs_path: str
+    class_count: Optional[int] = None
+    source_commit: Optional[str] = None

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, Column, Index, String, text
+from sqlalchemy import BigInteger, CheckConstraint, Column, Index, String, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlmodel import Field, SQLModel
 
@@ -60,6 +60,10 @@ class ChessGame(GameRecord, table=True):
     )
     move_list_algebraic: list[str] = Field(
         sa_column=Column("move_list_algebraic", ARRAY(String), nullable=False, server_default="{}")
+    )
+    engine_version_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column("engine_version_id", BigInteger, nullable=True),
     )
     __table_args__ = (
         CheckConstraint(

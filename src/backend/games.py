@@ -14,6 +14,7 @@ from opentelemetry import metrics, trace
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import model_registry
 import persistence_service
 from auth_service import AuthService
 from db import db_dependency, get_session
@@ -38,6 +39,7 @@ from models import (
     ChessNewGameRequest,
     DaBMoveRequest,
     DaBNewGameRequest,
+    EngineRegisterRequest,
     MoveRequest,
     TttMoveRequest,
     TttNewGameRequest,
@@ -78,6 +80,35 @@ else:
     _chess_strategy = ChessAIStrategy()
 _chess_processor = MoveProcessor()
 _chess_move_queues: dict[UUID, asyncio.Queue] = {}
+
+_CHESS_WEIGHTS_ROOT = os.getenv("CHESS_MODEL_WEIGHTS_ROOT", "/app/model_weights")
+_chess_engine_cache: dict[str, object] = {}
+
+
+def _strategy_for_gcs_path(gcs_path: str):
+    cached = _chess_engine_cache.get(gcs_path)
+    if cached is not None:
+        return cached
+    from game_engine.chess_model_strategy import ChessModelStrategy
+    from ml.artifact import load_chess_model_artifact
+
+    model_dir = os.path.join(_CHESS_WEIGHTS_ROOT, gcs_path)
+    strategy = ChessModelStrategy(load_chess_model_artifact(model_dir))
+    _chess_engine_cache[gcs_path] = strategy
+    return strategy
+
+
+async def _resolve_chess_strategy(db, engine_version_id):
+    if engine_version_id is None:
+        return _chess_strategy
+    engine = await model_registry.get_engine(db, engine_version_id)
+    if not engine:
+        return _chess_strategy
+    try:
+        return _strategy_for_gcs_path(engine["gcs_path"])
+    except Exception:
+        logger.exception("chess_engine_load_failed", extra={"engine_id": engine_version_id})
+        return _chess_strategy
 
 
 _is_test_env = os.getenv("ENVIRONMENT") == "test"
@@ -1170,11 +1201,16 @@ async def chess_resume(
 
     game = await persistence_service.get_active_game(db, user["id"], "chess")
     if not game:
-        return {"id": None, "state": None}
+        return {"id": None, "state": None, "engine": None}
 
     span.set_attribute("game.id", str(game.id))
+    engine = None
+    if game.engine_version_id is not None:
+        row = await model_registry.get_engine(db, game.engine_version_id)
+        if row:
+            engine = {"id": row["id"], "difficulty": row["difficulty"], "version": row["version"]}
     state = {**game.board_state, "move_history": game.move_list or []}
-    return {"id": str(game.id), "state": state}
+    return {"id": str(game.id), "state": state, "engine": engine}
 
 
 @router.post("/game/chess/newgame")
@@ -1200,12 +1236,23 @@ async def chess_newgame(
             q.put_nowait({"__close__": True})
         await persistence_service.close_game(db, existing.id, "chess")
 
+    engine_version_id = request.engine_version_id
+    if engine_version_id is not None:
+        engine = await model_registry.get_engine(db, engine_version_id)
+        if not engine or not engine["active"] or engine["game"] != "chess":
+            raise HTTPException(status_code=422, detail="Invalid engine_version_id")
+    else:
+        engine_version_id = await model_registry.latest_active_engine_id(db, "chess")
+
     state = _chess_engine.initial_state(request.player_starts)
-    game = await persistence_service.create_game(db, user["id"], "chess", state)
+    game = await persistence_service.create_game(
+        db, user["id"], "chess", state, engine_version_id=engine_version_id
+    )
     span.set_attribute("game.id", str(game.id))
 
     if not request.player_starts:
-        strategy = _resolve_strategy(_chess_strategy, raw_request.headers)
+        base_strategy = await _resolve_chess_strategy(db, engine_version_id)
+        strategy = _resolve_strategy(base_strategy, raw_request.headers)
         if hasattr(strategy, "set_move_history"):
             strategy.set_move_history([])
         ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, strategy, state)
@@ -1291,6 +1338,8 @@ async def chess_events(
 
     broadcaster = StatusBroadcaster()
 
+    game_strategy = await _resolve_chess_strategy(db, game_record.engine_version_id)
+
     async def process_moves():
         try:
             state = game_record.board_state
@@ -1321,16 +1370,16 @@ async def chess_events(
                 broadcaster.emit(StatusEvent("player_move", payload=_chess_state_payload(player_state, "player")))
                 broadcaster.emit(StatusEvent("status", message="Thinking..."))
 
-                if hasattr(_chess_strategy, "set_move_history"):
+                if hasattr(game_strategy, "set_move_history"):
                     fresh_record = await persistence_service.get_game(db, sid, "chess")
-                    _chess_strategy.set_move_history(
+                    game_strategy.set_move_history(
                         fresh_record.move_list if fresh_record else []
                     )
 
                 with tracer.start_as_current_span("game.ai.move") as ai_span:
                     ai_span.set_attribute("game.id", session_id)
                     t0 = time.monotonic()
-                    ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, _chess_strategy, player_state)
+                    ai_state, engine_eval = _chess_processor.process_ai_turn(_chess_engine, game_strategy, player_state)
                     compute_ms = (time.monotonic() - t0) * 1000
                     ai_span.set_attribute("compute_duration_ms", compute_ms)
                     _ai_duration.record(compute_ms, {"game.id": "chess"})
@@ -1394,6 +1443,12 @@ async def chess_legal_moves(
     return {"moves": moves}
 
 
+@router.get("/game/chess/engines")
+async def chess_engines(db: AsyncSession = Depends(db_dependency)):
+    rows = await model_registry.list_active_engines(db, "chess")
+    return {"engines": model_registry.group_and_sort_engines(rows)}
+
+
 # ============================================
 # INTERNAL ENDPOINTS
 # ============================================
@@ -1431,6 +1486,27 @@ async def cleanup_sessions(
         total += count
 
     return {"cleaned": total}
+
+
+@router.post("/internal/engines")
+async def register_engine_endpoint(
+    request: EngineRegisterRequest,
+    x_internal_key: Optional[str] = Header(None, alias="X-Internal-Key"),
+    db: AsyncSession = Depends(db_dependency),
+):
+    expected = os.getenv("INTERNAL_API_KEY")
+    if not expected or x_internal_key != expected:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    engine_id = await model_registry.register_engine(
+        db,
+        game=request.game,
+        difficulty=request.difficulty,
+        version=request.version,
+        gcs_path=request.gcs_path,
+        class_count=request.class_count,
+        source_commit=request.source_commit,
+    )
+    return {"id": engine_id}
 
 
 # ============================================

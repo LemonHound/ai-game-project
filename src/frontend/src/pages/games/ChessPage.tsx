@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStatsPanel from '../../components/games/GameStatsPanel';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import ChessEngineSelect from '../../components/games/ChessEngineSelect';
 import GameLayout from '../../components/games/GameLayout';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
@@ -84,6 +85,7 @@ export default function ChessPage() {
     const [currentFen, setCurrentFen] = useState<string | null>(null);
     const [board, setBoard] = useState<(string | null)[][]>(emptyBoard());
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
+    const [selectedEngineId, setSelectedEngineId] = useState<number | null>(null);
     const [currentPlayer, setCurrentPlayer] = useState<'white' | 'black'>('white');
     const [inCheck, setInCheck] = useState(false);
     const [capturedPieces, setCapturedPieces] = useState<{ player: string[]; ai: string[] }>({ player: [], ai: [] });
@@ -343,7 +345,7 @@ export default function ChessPage() {
         setBoardLocked(true);
         setPhase('playing');
         try {
-            const { id, state } = await chessNewGame(goFirst);
+            const { id, state } = await chessNewGame(goFirst, selectedEngineId ?? undefined);
             setSessionId(id);
             setCurrentFen(state.fen ?? null);
             setBoard(state.board);
@@ -650,6 +652,7 @@ export default function ChessPage() {
                                     onResume={handleResume}
                                     optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
                                     optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                    extra={<ChessEngineSelect onChange={setSelectedEngineId} />}
                                 />
                             )}
 
@@ -678,6 +681,7 @@ export default function ChessPage() {
                                     onResume={() => {}}
                                     optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
                                     optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                    extra={<ChessEngineSelect onChange={setSelectedEngineId} />}
                                 />
                             )}
 

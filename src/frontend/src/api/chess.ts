@@ -46,9 +46,28 @@ export interface ChessMoveData extends Partial<ChessGameState> {
     winner: 'player' | 'ai' | 'draw' | null;
 }
 
+export interface ChessEngineVersion {
+    id: number;
+    version: string;
+    class_count: number | null;
+    created_at: string;
+}
+
+export interface ChessEngineGroup {
+    difficulty: string;
+    versions: ChessEngineVersion[];
+}
+
+export interface ChessEngineRef {
+    id: number;
+    difficulty: string;
+    version: string;
+}
+
 export interface ChessResumeResponse {
     id: string | null;
     state: ChessGameState | null;
+    engine?: ChessEngineRef | null;
 }
 
 export interface ChessNewGameResponse {
@@ -86,10 +105,10 @@ export async function chessResume(): Promise<ChessResumeResponse> {
  * @returns New game session id and initial board state.
  * @throws {GameApiError} If the request fails.
  */
-export async function chessNewGame(playerStarts: boolean): Promise<ChessNewGameResponse> {
+export async function chessNewGame(playerStarts: boolean, engineVersionId?: number): Promise<ChessNewGameResponse> {
     return request<ChessNewGameResponse>('/api/game/chess/newgame', {
         method: 'POST',
-        body: JSON.stringify({ player_starts: playerStarts }),
+        body: JSON.stringify({ player_starts: playerStarts, engine_version_id: engineVersionId ?? null }),
     });
 }
 
@@ -181,4 +200,9 @@ export async function chessLegalMoves(fromRow: number, fromCol: number): Promise
         `/api/game/chess/legal-moves?from_row=${fromRow}&from_col=${fromCol}`
     );
     return data.moves;
+}
+
+export async function fetchChessEngines(): Promise<ChessEngineGroup[]> {
+    const data = await request<{ engines: ChessEngineGroup[] }>('/api/game/chess/engines');
+    return data.engines;
 }
