@@ -4,7 +4,7 @@ export const handlers = [
     http.get('/api/auth/me', () => {
         return HttpResponse.json({
             id: 1,
-            username: 'testuser',
+            username: 'test@example.com',
             email: 'test@example.com',
             displayName: 'Test User',
             authProvider: 'local',
@@ -21,7 +21,7 @@ export const handlers = [
         return HttpResponse.json({
             user: {
                 id: 1,
-                username: 'testuser',
+                username: body.email,
                 email: body.email,
                 displayName: 'Test User',
                 authProvider: 'local',
@@ -33,12 +33,13 @@ export const handlers = [
 
     http.post('/api/auth/register', async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
+        const email = String(body.email);
         return HttpResponse.json({
             user: {
                 id: 2,
-                username: body.username,
-                email: body.email,
-                displayName: body.displayName || body.username,
+                username: email,
+                email,
+                displayName: body.displayName || email.split('@')[0],
                 authProvider: 'local',
                 emailVerified: false,
                 statsPublic: true,

@@ -18,21 +18,7 @@ class AuthService:
     async def create_google_user(
         self, email: str, google_id: str, display_name: str, profile_picture: str
     ) -> Dict:
-        """Create a new user record from a verified Google OAuth identity.
-
-        Derives the username from the email local part. Sets auth_provider='google'
-        and email_verified=True. Raises IntegrityError if the email already exists.
-
-        Args:
-            email: Verified email address from Google's ID token.
-            google_id: Google account subject identifier (sub field).
-            display_name: Full name from Google profile.
-            profile_picture: Profile picture URL from Google profile.
-
-        Returns:
-            dict with keys: id, username, email, display_name, auth_provider,
-            created_at, profile_picture.
-        """
+        display_name = display_name or email.split("@")[0]
         async with get_session() as session:
             result = await session.execute(
                 text("""
@@ -45,7 +31,7 @@ class AuthService:
                     RETURNING id, username, email, display_name, auth_provider, created_at
                 """),
                 {
-                    "username": email.split("@")[0],
+                    "username": email,
                     "email": email,
                     "google_id": google_id,
                     "display_name": display_name,

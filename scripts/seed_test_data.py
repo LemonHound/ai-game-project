@@ -24,21 +24,21 @@ from db import get_session, init_db, close_db
 
 _TEST_USERS = [
     {
-        "username": "demo",
+        "username": "demo@aigamehub.com",
         "email": "demo@aigamehub.com",
         "password_hash": "$2b$12$yRa5XdiD234Dvuavu0Cx0u5lJXaPsyufv9aG3QdIun9FIUx.t0cVS",
         "display_name": "Demo Player",
         "stats_public": True,
     },
     {
-        "username": "test",
+        "username": "test@example.com",
         "email": "test@example.com",
         "password_hash": "$2b$12$ZzFtjWukLb1z7wJ8B8EM.uUijqU1b0LcUFqXhp2LH646KezufWtni",
         "display_name": "Test User",
         "stats_public": True,
     },
     {
-        "username": "player1",
+        "username": "player1@example.com",
         "email": "player1@example.com",
         "password_hash": "$2b$12$ZzFtjWukLb1z7wJ8B8EM.uUijqU1b0LcUFqXhp2LH646KezufWtni",
         "display_name": "Player One",

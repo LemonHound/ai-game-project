@@ -21,6 +21,6 @@ describe('useAuth', () => {
             expect(result.current.isLoading).toBe(false);
         });
         expect(result.current.user).not.toBeNull();
-        expect(result.current.user?.username).toBe('testuser');
+        expect(result.current.user?.username).toBe('test@example.com');
     });
 });

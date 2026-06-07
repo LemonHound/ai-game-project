@@ -15,6 +15,7 @@ import secrets
 
 from sqlalchemy import text
 
+import google_logo
 from auth_service import AuthService
 from db import get_session
 
@@ -29,9 +30,6 @@ csrf_tokens: dict = {}
 
 
 class RegisterRequest(BaseModel):
-    """Request body for the /register endpoint."""
-
-    username: str
     email: EmailStr
     password: str
     displayName: Optional[str] = None
@@ -154,45 +152,24 @@ async def get_current_user(
 
 @router.post("/register", status_code=201)
 async def register(request: RegisterRequest, response: Response):
-    """Register a new local user account and return an authenticated session.
-
-    Validates password length (min 6) and username length (min 3). Returns 409 if
-    the email or username is already taken. Sets a session cookie on success.
-
-    Args:
-        request: RegisterRequest with username, email, password, and optional displayName.
-        response: FastAPI Response used to set the session cookie.
-
-    Returns:
-        dict: `{"message": ..., "user": {id, username, email, displayName, authProvider}}`.
-
-    Raises:
-        HTTPException 400: Invalid password or username length.
-        HTTPException 409: Email or username already registered.
-        HTTPException 500: Unexpected registration failure.
-    """
     if len(request.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
-    if len(request.username) < 3:
-        raise HTTPException(status_code=400, detail="Username must be at least 3 characters long")
 
     with tracer.start_as_current_span("auth.register") as span:
-        span.set_attribute("auth.username", request.username)
+        span.set_attribute("auth.email", request.email)
 
         existing_email = await auth_service.find_user_by_email(request.email)
         if existing_email:
             raise HTTPException(status_code=409, detail="Email already registered")
 
-        existing_username = await auth_service.find_user_by_username(request.username)
-        if existing_username:
-            raise HTTPException(status_code=409, detail="Username already taken")
+        display_name = (request.displayName or "").strip() or request.email.split("@")[0]
 
         try:
             user = await auth_service.create_user(
-                username=request.username,
+                username=request.email,
                 email=request.email,
                 password=request.password,
-                display_name=request.displayName or request.username,
+                display_name=display_name,
             )
             session_id = await auth_service.create_session(user["id"])
             set_session_cookie(response, session_id)
@@ -210,7 +187,7 @@ async def register(request: RegisterRequest, response: Response):
         except HTTPException:
             raise
         except Exception:
-            logger.exception("Registration failed for username=%s", request.username)
+            logger.exception("Registration failed for email=%s", request.email)
             raise HTTPException(status_code=500, detail="Registration failed. Please try again.")
 
 
@@ -405,6 +382,18 @@ async def auth_health():
         "database": db_status,
         "timestamp": datetime.now().isoformat(),
     }
+
+
+@router.get("/google-logo")
+async def google_logo_asset():
+    data = await google_logo.get_logo()
+    if not data:
+        raise HTTPException(status_code=404, detail="Google logo unavailable")
+    return Response(
+        content=data,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 class GoogleAuthRequest(BaseModel):

@@ -15,6 +15,7 @@ bcrypt
 google-auth
 google-auth-httplib2
 google-auth-oauthlib
+google-cloud-storage
 httpx
 
 # Data validation

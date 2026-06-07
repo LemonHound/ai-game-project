@@ -39,25 +39,10 @@ export async function login(email: string, password: string, rememberMe = false)
     });
 }
 
-/**
- * Register a new local user account and start a session.
- *
- * @param username - Desired username (minimum 3 characters).
- * @param email - Unique email address.
- * @param password - Password (minimum 6 characters).
- * @param displayName - Optional display name; defaults to username on the server.
- * @returns Object containing the newly created User profile.
- * @throws {Error} If the username or email is already taken, or validation fails.
- */
-export async function register(
-    username: string,
-    email: string,
-    password: string,
-    displayName?: string
-): Promise<{ user: User }> {
+export async function register(email: string, password: string, displayName?: string): Promise<{ user: User }> {
     return request<{ user: User }>('/api/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ username, email, password, displayName }),
+        body: JSON.stringify({ email, password, displayName }),
     });
 }
 

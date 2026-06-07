@@ -368,7 +368,7 @@ export default function TicTacToePage() {
             </div>
 
             <PlayerCard
-                name={user.displayName || user.username}
+                name={user.displayName}
                 avatarUrl={user.profilePicture}
                 symbol={showSymbols ? playerSymbol : undefined}
                 result={playerResult}

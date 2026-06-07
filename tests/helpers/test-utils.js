@@ -30,7 +30,6 @@ async function waitForGameLoad(page) {
 function generateTestUser() {
     const timestamp = Date.now();
     return {
-        username: `testuser${timestamp}`,
         email: `test${timestamp}@example.com`,
         password: 'password123',
         displayName: `Test User ${timestamp}`,
