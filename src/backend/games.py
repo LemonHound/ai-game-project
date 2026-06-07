@@ -1148,6 +1148,7 @@ def _chess_state_payload(state: dict, player: Optional[str] = None) -> dict:
         "captured_pieces": state.get("captured_pieces", {"player": [], "ai": []}),
         "en_passant_target": state.get("en_passant_target"),
         "castling_rights": state.get("castling_rights"),
+        "fen": state.get("fen"),
         "status": "complete" if terminal else "in_progress",
         "winner": winner,
     }

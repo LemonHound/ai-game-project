@@ -5,7 +5,9 @@ import GameStartOverlay from '../../components/games/GameStartOverlay';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import ChessBoard from '../../components/games/ChessBoard';
+import EvalBar from '../../components/games/EvalBar';
 import { useAuth } from '../../hooks/useAuth';
+import { useStockfishEval } from '../../hooks/useStockfishEval';
 import {
     chessLegalMoves,
     chessMove,
@@ -77,6 +79,7 @@ export default function ChessPage() {
     const { user, isLoading: authLoading } = useAuth();
 
     const [phase, setPhase] = useState<Phase>(getHint() ? 'loading' : 'newgame');
+    const [currentFen, setCurrentFen] = useState<string | null>(null);
     const [board, setBoard] = useState<(string | null)[][]>(emptyBoard());
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
     const [currentPlayer, setCurrentPlayer] = useState<'white' | 'black'>('white');
@@ -109,6 +112,7 @@ export default function ChessPage() {
 
     const esRef = useRef<EventSource | null>(null);
     const moveListRef = useRef<HTMLDivElement>(null);
+    const evalState = useStockfishEval(phase === 'playing' ? currentFen : null);
 
     const closeSSE = useCallback(() => {
         if (esRef.current) {
@@ -123,6 +127,7 @@ export default function ChessPage() {
         if ('in_check' in data && data.in_check !== undefined) setInCheck(data.in_check ?? false);
         if ('captured_pieces' in data && data.captured_pieces) setCapturedPieces(data.captured_pieces);
         if ('king_positions' in data && data.king_positions) setKingPositions(data.king_positions);
+        if ('fen' in data && data.fen) setCurrentFen(data.fen);
     }, []);
 
     const subscribeSSE = useCallback(
@@ -131,6 +136,7 @@ export default function ChessPage() {
             const es = chessSubscribeSSE(sid, {
                 onStatus: msg => setStatusText(msg),
                 onPlayerMove: (data: ChessMoveData) => {
+                    if (data.fen) setCurrentFen(data.fen);
                     if (data.notation) setMoveHistory(h => [...h, data.notation!]);
                 },
                 onMove: (data: ChessMoveData) => {
@@ -185,6 +191,7 @@ export default function ChessPage() {
                 setHint();
                 if (!state.game_active) {
                     setBoard(state.board);
+                    setCurrentFen(state.fen ?? null);
                     setCurrentPlayer(state.current_player);
                     setPlayerColor(state.player_color);
                     setInCheck(state.in_check ?? false);
@@ -260,6 +267,7 @@ export default function ChessPage() {
         if (!pendingResume) return;
         const { sessionId: sid, state } = pendingResume;
         setSessionId(sid);
+        setCurrentFen(state.fen ?? null);
         setBoard(state.board);
         setCurrentPlayer(state.current_player);
         setPlayerColor(state.player_color);
@@ -289,6 +297,7 @@ export default function ChessPage() {
         clearHint();
         setPendingResume(null);
         setBoard(emptyBoard());
+        setCurrentFen(null);
         setMoveHistory([]);
         setCapturedPieces({ player: [], ai: [] });
         setLastMove(null);
@@ -302,6 +311,7 @@ export default function ChessPage() {
         try {
             const { id, state } = await chessNewGame(goFirst);
             setSessionId(id);
+            setCurrentFen(state.fen ?? null);
             setBoard(state.board);
             setCurrentPlayer(state.current_player);
             setPlayerColor(state.player_color);
@@ -462,6 +472,7 @@ export default function ChessPage() {
         closeSSE();
         clearHint();
         setSessionId(null);
+        setCurrentFen(null);
         setPendingResume(null);
         setWinner(null);
         setStatusText('');
@@ -554,7 +565,10 @@ export default function ChessPage() {
                         result={aiResult}
                     />
 
-                    <div className='relative my-2 flex justify-center'>
+                    <div className='relative my-2 flex items-stretch justify-center gap-2'>
+                        {phase === 'playing' && (
+                            <EvalBar cp={evalState.cp} mate={evalState.mate} perspective={playerColor} />
+                        )}
                         <div className='relative'>
                             <ChessBoard
                                 board={board}

@@ -109,7 +109,7 @@ class ChessEngine(GameEngine):
         Returns:
             Full game state dict with the standard starting position.
         """
-        return {
+        state: GameState = {
             "board": chess_game._create_initial_board(),
             "current_player": "white",
             "player_color": "white" if player_starts else "black",
@@ -125,6 +125,8 @@ class ChessEngine(GameEngine):
             "last_move": None,
             "in_check": False,
         }
+        state["fen"] = self._to_fen(state)
+        return state
 
     def validate_move(self, state: GameState, move: Move) -> bool:
         """Returns True if the move is pseudo-legal for the current player.
