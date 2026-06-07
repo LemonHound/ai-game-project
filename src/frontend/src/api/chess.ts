@@ -6,6 +6,7 @@ export interface ChessGameState {
     player_color: 'white' | 'black';
     game_active: boolean;
     player_starts: boolean;
+    fen?: string;
     king_positions: { white: [number, number]; black: [number, number] };
     castling_rights: {
         white: { kingside: boolean; queenside: boolean };
