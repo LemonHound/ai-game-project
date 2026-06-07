@@ -27,7 +27,7 @@ describe('useStockfishEval', () => {
             initialProps: { f: START as string | null },
         });
         expect(fake.posted).toContain(`position fen ${START}`);
-        expect(fake.posted).toContain('go movetime 500');
+        expect(fake.posted).toContain('go depth 15');
         act(() => fake.emit('info depth 12 score cp 30 pv e2e4'));
         expect(result.current.cp).toBe(30);
         expect(result.current.depth).toBe(12);

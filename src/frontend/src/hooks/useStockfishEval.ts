@@ -8,7 +8,7 @@ export interface EvalState extends WhiteScore {
     ready: boolean;
 }
 
-const MOVETIME_MS = 500;
+const MAX_DEPTH = 15;
 
 export const useStockfishEval = (
     fen: string | null,
@@ -45,7 +45,7 @@ export const useStockfishEval = (
         setState(s => ({ ...s, cp: null, mate: null, depth: 0 }));
         engine.post('stop');
         engine.post(`position fen ${fen}`);
-        engine.post(`go movetime ${MOVETIME_MS}`);
+        engine.post(`go depth ${MAX_DEPTH}`);
     }, [fen]);
 
     return state;
