@@ -82,10 +82,10 @@ export default function Connect4Board({
 
     return (
         <div
-            className='w-full max-w-sm mx-auto select-none'
+            className='flex h-full w-full flex-col select-none'
             aria-label='Connect 4 board'
             onMouseLeave={() => setHoveredCol(null)}>
-            <div className='grid grid-cols-7 mb-1'>
+            <div className='grid grid-cols-7 mb-1 shrink-0'>
                 {Array.from({ length: 7 }, (_, col) => {
                     const full = isColumnFull(col);
                     const clickable = isInteractive && !full;
@@ -112,8 +112,8 @@ export default function Connect4Board({
                 })}
             </div>
 
-            <div className='bg-blue-700 rounded-lg p-2'>
-                <div className='grid grid-cols-7 gap-1'>
+            <div className='min-h-0 flex-1 rounded-lg bg-blue-700 p-2'>
+                <div className='grid h-full w-full grid-cols-7 grid-rows-6 gap-1'>
                     {board.map((rowArr, rowIdx) =>
                         rowArr.map((cell, colIdx) => {
                             const winning = isWinningCell(rowIdx, colIdx);
@@ -133,7 +133,7 @@ export default function Connect4Board({
                             return (
                                 <div
                                     key={`${rowIdx}-${colIdx}`}
-                                    className='aspect-square rounded-full bg-blue-900 flex items-center justify-center p-0.5'
+                                    className='mx-auto flex aspect-square h-full max-w-full items-center justify-center rounded-full bg-blue-900 p-0.5'
                                     style={{ cursor: cellClickable ? 'pointer' : 'default' }}
                                     onMouseEnter={() => setHoveredCol(colIdx)}
                                     onClick={() => cellClickable && onColumnClick(colIdx)}>

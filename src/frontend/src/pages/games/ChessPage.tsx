@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStatsPanel from '../../components/games/GameStatsPanel';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import GameLayout from '../../components/games/GameLayout';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import ChessBoard from '../../components/games/ChessBoard';
@@ -610,23 +611,18 @@ export default function ChessPage() {
     void sessionId;
 
     return (
-        <div className='container mx-auto px-4 py-4 max-w-4xl'>
+        <>
             <PageMeta title='Chess' description='Challenge an adaptive AI in a game of Chess.' noindex />
-
-            <div className='flex gap-4 items-stretch'>
-                <div className='flex flex-col'>
-                    <PlayerCard
-                        name='AI Opponent'
-                        isAi
-                        statusText={phase === 'playing' ? statusText : undefined}
-                        result={aiResult}
-                    />
-
-                    <div className='relative my-2 flex items-stretch justify-center gap-2'>
-                        {phase === 'playing' && (
-                            <EvalBar cp={evalState.cp} mate={evalState.mate} perspective={playerColor} />
-                        )}
-                        <div className='relative'>
+            <GameLayout
+                aspect={1.03}
+                board={
+                    <div className='flex h-full w-full items-stretch gap-1'>
+                        <div className='flex w-5 shrink-0'>
+                            {phase === 'playing' && (
+                                <EvalBar cp={evalState.cp} mate={evalState.mate} perspective={playerColor} />
+                            )}
+                        </div>
+                        <div className='relative min-w-0 flex-1'>
                             <ChessBoard
                                 board={board}
                                 playerColor={playerColor}
@@ -686,9 +682,9 @@ export default function ChessPage() {
                             )}
 
                             {showPromotionModal && pendingPromotion && (
-                                <div className='absolute inset-0 flex items-center justify-center bg-base-100/80 backdrop-blur-sm rounded-lg z-30'>
-                                    <div className='bg-base-200 rounded-xl p-4 shadow-lg'>
-                                        <p className='text-sm font-medium text-center mb-3'>Promote pawn to:</p>
+                                <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/80 backdrop-blur-sm'>
+                                    <div className='rounded-xl bg-base-200 p-4 shadow-lg'>
+                                        <p className='mb-3 text-center text-sm font-medium'>Promote pawn to:</p>
                                         <div className='flex gap-2'>
                                             {PROMOTION_PIECES.map(({ piece, label }) => {
                                                 const imgKey =
@@ -696,13 +692,13 @@ export default function ChessPage() {
                                                 return (
                                                     <button
                                                         key={piece}
-                                                        className='btn btn-outline btn-square w-14 h-14'
+                                                        className='btn btn-outline btn-square h-14 w-14'
                                                         title={label}
                                                         onClick={() => handlePromotion(piece)}>
                                                         <img
                                                             src={PIECE_IMG[imgKey]}
                                                             alt={label}
-                                                            className='w-10 h-10 object-contain'
+                                                            className='h-10 w-10 object-contain'
                                                         />
                                                     </button>
                                                 );
@@ -713,58 +709,62 @@ export default function ChessPage() {
                             )}
                         </div>
                     </div>
-
-                    {showInfo && inCheck && currentPlayer === playerColor && phase === 'playing' && (
-                        <div className='text-center mb-1'>
-                            <span className='badge badge-error badge-lg'>Check!</span>
-                        </div>
-                    )}
-
-                    <PlayerCard name={user.displayName} avatarUrl={user.profilePicture} result={playerResult} />
-                </div>
-
-                {showInfo && (
-                    <div className='flex flex-col flex-1 min-h-0 overflow-hidden bg-base-200 rounded-lg p-3'>
-                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
-                            {capturedPieces.ai.map((p, i) => (
-                                <img key={i} src={PIECE_IMG[p]} alt={p} className='w-5 h-5 object-contain' />
-                            ))}
-                        </div>
-
-                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
-
-                        <div ref={moveListRef} className='flex-1 min-h-0 max-h-[50vh] overflow-y-auto'>
-                            {movePairs.map((pair, i) => (
-                                <div key={i} className='flex text-xs gap-1 leading-5'>
-                                    <span className='w-6 text-base-content/50 shrink-0'>{i + 1}.</span>
-                                    <span className='flex-1'>{pair.white ?? ''}</span>
-                                    <span className='flex-1'>{pair.black ?? ''}</span>
+                }
+                opponent={
+                    <PlayerCard
+                        name='AI Opponent'
+                        isAi
+                        statusText={phase === 'playing' ? statusText : undefined}
+                        result={aiResult}
+                    />
+                }
+                player={<PlayerCard name={user.displayName} avatarUrl={user.profilePicture} result={playerResult} />}
+                controls={
+                    <div className='flex h-full w-full flex-col gap-2'>
+                        {showInfo && (
+                            <>
+                                {inCheck && currentPlayer === playerColor && phase === 'playing' && (
+                                    <div className='shrink-0 text-center'>
+                                        <span className='badge badge-error badge-sm'>Check!</span>
+                                    </div>
+                                )}
+                                <div className='flex min-h-6 shrink-0 flex-wrap gap-1'>
+                                    {capturedPieces.ai.map((p, i) => (
+                                        <img key={i} src={PIECE_IMG[p]} alt={p} className='h-5 w-5 object-contain' />
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-
-                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
-
-                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
-                            {capturedPieces.player.map((p, i) => (
-                                <img key={i} src={PIECE_IMG[p]} alt={p} className='w-5 h-5 object-contain' />
-                            ))}
-                        </div>
+                                <div className='h-px shrink-0 bg-base-content/20' />
+                                <div ref={moveListRef} className='min-h-0 flex-1 overflow-y-auto'>
+                                    {movePairs.map((pair, i) => (
+                                        <div key={i} className='flex gap-1 text-xs leading-5'>
+                                            <span className='w-6 shrink-0 text-base-content/50'>{i + 1}.</span>
+                                            <span className='flex-1'>{pair.white ?? ''}</span>
+                                            <span className='flex-1'>{pair.black ?? ''}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className='h-px shrink-0 bg-base-content/20' />
+                                <div className='flex min-h-6 shrink-0 flex-wrap gap-1'>
+                                    {capturedPieces.player.map((p, i) => (
+                                        <img key={i} src={PIECE_IMG[p]} alt={p} className='h-5 w-5 object-contain' />
+                                    ))}
+                                </div>
+                            </>
+                        )}
 
                         {phase === 'playing' && (
-                            <div className='mt-2 shrink-0'>
-                                <NewGameButtons
-                                    optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
-                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
-                                    onResign={handleResign}
-                                />
-                            </div>
+                            <NewGameButtons
+                                className='flex flex-wrap justify-center gap-2'
+                                optionA={{ label: 'Play as White', onClick: () => handleStartGame(true) }}
+                                optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                                onResign={handleResign}
+                            />
                         )}
-                    </div>
-                )}
-            </div>
 
-            <GameStatsPanel gameType='chess' />
+                        <GameStatsPanel gameType='chess' />
+                    </div>
+                }
+            />
 
             {showAuthModal && (
                 <AuthModal
@@ -777,6 +777,6 @@ export default function ChessPage() {
                     }}
                 />
             )}
-        </div>
+        </>
     );
 }

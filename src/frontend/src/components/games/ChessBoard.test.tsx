@@ -29,7 +29,7 @@ describe('ChessBoard', () => {
         const user = userEvent.setup();
         const onSquareClick = vi.fn();
         const { container } = render(<ChessBoard {...defaultProps} onSquareClick={onSquareClick} />);
-        const squares = container.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        const squares = container.querySelectorAll('[data-square]');
         expect(squares.length).toBeGreaterThanOrEqual(64);
         await user.click(squares[0]);
         expect(onSquareClick).toHaveBeenCalled();
@@ -46,7 +46,7 @@ describe('ChessBoard', () => {
                 onSquareClick={onSquareClick}
             />
         );
-        const squares = container.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        const squares = container.querySelectorAll('[data-square]');
         await user.click(squares[0]);
         expect(onSquareClick).toHaveBeenCalled();
     });
@@ -62,7 +62,7 @@ describe('ChessBoard', () => {
                 onSquareClick={onSquareClick}
             />
         );
-        const squares = container.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        const squares = container.querySelectorAll('[data-square]');
         await user.click(squares[36]);
         expect(onSquareClick).toHaveBeenCalledWith(4, 4);
     });
@@ -71,7 +71,7 @@ describe('ChessBoard', () => {
         const { container } = render(
             <ChessBoard {...defaultProps} lastMove={{ fromRow: 7, fromCol: 4, toRow: 7, toCol: 6, isCastling: true }} />
         );
-        const squares = container.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        const squares = container.querySelectorAll('[data-square]');
         expect(squares[60].className).toContain('yellow');
         expect(squares[62].className).toContain('yellow');
         expect(squares[61].className).toContain('yellow');
@@ -80,7 +80,7 @@ describe('ChessBoard', () => {
 
     it('renders board structure', () => {
         const { container } = render(<ChessBoard {...defaultProps} />);
-        expect(container.querySelector('[class*="border-amber"]')).toBeInTheDocument();
+        expect(container.querySelectorAll('[data-square]').length).toBe(64);
     });
 
     it('renders piece images not letters', () => {
@@ -94,8 +94,8 @@ describe('ChessBoard', () => {
     it('flips board for black player', () => {
         const { container: whiteContainer } = render(<ChessBoard {...defaultProps} playerColor='white' />);
         const { container: blackContainer } = render(<ChessBoard {...defaultProps} playerColor='black' />);
-        const whiteSquares = whiteContainer.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
-        const blackSquares = blackContainer.querySelectorAll('[class*="select-none"][class*="w-10"][class*="h-10"]');
+        const whiteSquares = whiteContainer.querySelectorAll('[data-square]');
+        const blackSquares = blackContainer.querySelectorAll('[data-square]');
         expect(whiteSquares.length).toBeGreaterThanOrEqual(64);
         expect(blackSquares.length).toBeGreaterThanOrEqual(64);
         const whiteFirstImg = whiteContainer.querySelector('img');

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStatsPanel from '../../components/games/GameStatsPanel';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import GameLayout from '../../components/games/GameLayout';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import Connect4Board from '../../components/games/Connect4Board';
@@ -319,81 +320,96 @@ export default function Connect4Page() {
     void sessionId;
 
     return (
-        <div className='container mx-auto px-4 py-6 max-w-lg'>
+        <>
             <PageMeta title='Connect 4' description='Drop pieces and outsmart the AI in Connect 4.' noindex />
-            <h1 className='mb-4 text-4xl font-bold text-center'>Connect 4</h1>
+            <GameLayout
+                aspect={7 / 6}
+                board={
+                    <div className='relative h-full w-full'>
+                        <Connect4Board
+                            board={board}
+                            playerStarts={playerStarts}
+                            currentTurn={currentTurn}
+                            locked={
+                                boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'
+                            }
+                            winningCells={winningCells}
+                            lastDrop={lastDrop}
+                            onColumnClick={handleColumnClick}
+                            hidePieces={phase !== 'playing'}
+                        />
 
-            <PlayerCard
-                name='AI Opponent'
-                isAi
-                symbol={showSymbols ? aiSymbol : undefined}
-                statusText={phase === 'playing' ? statusText : undefined}
-                result={aiResult}
-            />
+                        {phase === 'loading' && (
+                            <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
+                                <span className='loading loading-spinner loading-lg' />
+                            </div>
+                        )}
 
-            <div className='relative my-4'>
-                <Connect4Board
-                    board={board}
-                    playerStarts={playerStarts}
-                    currentTurn={currentTurn}
-                    locked={boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'}
-                    winningCells={winningCells}
-                    lastDrop={lastDrop}
-                    onColumnClick={handleColumnClick}
-                    hidePieces={phase !== 'playing'}
-                />
+                        {(phase === 'newgame' || phase === 'resumeprompt') && (
+                            <GameStartOverlay
+                                canResume={phase === 'resumeprompt'}
+                                onResume={handleResume}
+                                optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                                optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
+                            />
+                        )}
 
-                {phase === 'loading' && (
-                    <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
-                        <span className='loading loading-spinner loading-lg' />
+                        {phase === 'terminal' && !showGameOverOverlay && (
+                            <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/90 backdrop-blur-sm'>
+                                <p className='text-2xl font-bold'>
+                                    {playerResult === 'win'
+                                        ? 'You Win!'
+                                        : playerResult === 'loss'
+                                          ? 'You Lose'
+                                          : 'Draw!'}
+                                </p>
+                            </div>
+                        )}
+
+                        {phase === 'terminal' && showGameOverOverlay && (
+                            <GameStartOverlay
+                                title={
+                                    playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'
+                                }
+                                canResume={false}
+                                onResume={() => {}}
+                                optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                                optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
+                            />
+                        )}
                     </div>
-                )}
-
-                {(phase === 'newgame' || phase === 'resumeprompt') && (
-                    <GameStartOverlay
-                        canResume={phase === 'resumeprompt'}
-                        onResume={handleResume}
-                        optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
-                        optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
+                }
+                opponent={
+                    <PlayerCard
+                        name='AI Opponent'
+                        isAi
+                        symbol={showSymbols ? aiSymbol : undefined}
+                        statusText={phase === 'playing' ? statusText : undefined}
+                        result={aiResult}
                     />
-                )}
-
-                {phase === 'terminal' && !showGameOverOverlay && (
-                    <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/90 backdrop-blur-sm'>
-                        <p className='text-2xl font-bold'>
-                            {playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
-                        </p>
-                    </div>
-                )}
-
-                {phase === 'terminal' && showGameOverOverlay && (
-                    <GameStartOverlay
-                        title={playerResult === 'win' ? 'You Win!' : playerResult === 'loss' ? 'You Lose' : 'Draw!'}
-                        canResume={false}
-                        onResume={() => {}}
-                        optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
-                        optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
+                }
+                player={
+                    <PlayerCard
+                        name={user.displayName}
+                        avatarUrl={user.profilePicture}
+                        symbol={showSymbols ? playerSymbol : undefined}
+                        result={playerResult}
                     />
-                )}
-            </div>
-
-            <PlayerCard
-                name={user.displayName}
-                avatarUrl={user.profilePicture}
-                symbol={showSymbols ? playerSymbol : undefined}
-                result={playerResult}
+                }
+                controls={
+                    <>
+                        {phase === 'playing' && (
+                            <NewGameButtons
+                                className='flex flex-wrap justify-center gap-2'
+                                optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                                optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
+                                onResign={handleResign}
+                            />
+                        )}
+                        <GameStatsPanel gameType='connect4' />
+                    </>
+                }
             />
-
-            {phase === 'playing' && (
-                <NewGameButtons
-                    className='flex justify-center mt-4'
-                    optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
-                    optionB={{ label: 'Play as Yellow', onClick: () => handleStartGame(false) }}
-                    onResign={handleResign}
-                />
-            )}
-
-            <GameStatsPanel gameType='connect4' />
 
             {showAuthModal && (
                 <AuthModal
@@ -406,6 +422,6 @@ export default function Connect4Page() {
                     }}
                 />
             )}
-        </div>
+        </>
     );
 }
