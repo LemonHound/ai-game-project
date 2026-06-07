@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface CheckersBoardProps {
     board: string[];
@@ -25,6 +26,7 @@ interface DragState {
     active: boolean;
     isRed: boolean;
     isKing: boolean;
+    size: number;
 }
 
 function PieceDisplay({ code }: { code: string }) {
@@ -61,7 +63,13 @@ export default function CheckersBoard({
 }: CheckersBoardProps) {
     const rows = flipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
 
-    const [dragGhost, setDragGhost] = useState<{ x: number; y: number; isRed: boolean; isKing: boolean } | null>(null);
+    const [dragGhost, setDragGhost] = useState<{
+        x: number;
+        y: number;
+        isRed: boolean;
+        isKing: boolean;
+        size: number;
+    } | null>(null);
     const dragRef = useRef<DragState | null>(null);
     const squareRefs = useRef<(HTMLDivElement | null)[]>(Array(64).fill(null));
     const onPieceDragStartRef = useRef(onPieceDragStart);
@@ -99,7 +107,7 @@ export default function CheckersBoard({
                 onPieceDragStartRef.current(drag.fromPos);
             }
             if (drag.active) {
-                setDragGhost({ x: e.clientX, y: e.clientY, isRed: drag.isRed, isKing: drag.isKing });
+                setDragGhost({ x: e.clientX, y: e.clientY, isRed: drag.isRed, isKing: drag.isKing, size: drag.size });
             }
         };
 
@@ -138,13 +146,14 @@ export default function CheckersBoard({
             active: false,
             isRed: piece === 'R' || piece === 'r',
             isKing: piece === 'r' || piece === 'b',
+            size: (squareRefs.current[pos]?.getBoundingClientRect().width ?? 48) * 0.75,
         };
     };
 
     return (
         <div
-            className='inline-grid border-2 border-neutral-700'
-            style={{ gridTemplateColumns: 'repeat(8, 1fr)', width: '100%', maxWidth: '480px' }}
+            className='grid h-full w-full'
+            style={{ gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)' }}
             aria-label='Checkers board'>
             {rows.map(row =>
                 [0, 1, 2, 3, 4, 5, 6, 7].map(col => {
@@ -213,36 +222,39 @@ export default function CheckersBoard({
                 })
             )}
 
-            {!hidePieces && dragGhost && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        left: dragGhost.x - 20,
-                        top: dragGhost.y - 20,
-                        width: 40,
-                        height: 40,
-                        pointerEvents: 'none',
-                        zIndex: 9999,
-                        borderRadius: '50%',
-                        border: `2px solid ${dragGhost.isRed ? '#b91c1c' : '#44403c'}`,
-                        backgroundColor: dragGhost.isRed ? '#ef4444' : '#1c1917',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}>
-                    {dragGhost.isKing && (
-                        <div
-                            style={{
-                                width: '50%',
-                                height: '50%',
-                                borderRadius: '50%',
-                                backgroundColor: 'rgba(255,255,255,0.4)',
-                                border: '1px solid rgba(255,255,255,0.6)',
-                            }}
-                        />
-                    )}
-                </div>
-            )}
+            {!hidePieces &&
+                dragGhost &&
+                createPortal(
+                    <div
+                        style={{
+                            position: 'fixed',
+                            left: dragGhost.x - dragGhost.size / 2,
+                            top: dragGhost.y - dragGhost.size / 2,
+                            width: dragGhost.size,
+                            height: dragGhost.size,
+                            pointerEvents: 'none',
+                            zIndex: 9999,
+                            borderRadius: '50%',
+                            border: `2px solid ${dragGhost.isRed ? '#b91c1c' : '#44403c'}`,
+                            backgroundColor: dragGhost.isRed ? '#ef4444' : '#1c1917',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                        {dragGhost.isKing && (
+                            <div
+                                style={{
+                                    width: '50%',
+                                    height: '50%',
+                                    borderRadius: '50%',
+                                    backgroundColor: 'rgba(255,255,255,0.4)',
+                                    border: '1px solid rgba(255,255,255,0.6)',
+                                }}
+                            />
+                        )}
+                    </div>,
+                    document.body
+                )}
         </div>
     );
 }

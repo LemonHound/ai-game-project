@@ -7,3 +7,16 @@
         cyberpunk,
         synthwave;
 }
+
+.game-board-box {
+    aspect-ratio: var(--board-aspect, 1);
+    width: min(100cqw, calc(100cqh * var(--board-aspect, 1)));
+    max-height: 70cqh;
+}
+
+@media (min-width: 1024px) {
+    .game-board-box {
+        width: min(calc(100cqh * var(--board-aspect, 1)), calc(100cqw - 30.5rem));
+        max-height: 100cqh;
+    }
+}

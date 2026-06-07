@@ -214,11 +214,7 @@ export default function DotsAndBoxesBoard({
     }
 
     return (
-        <svg
-            viewBox={`0 0 ${svgSize} ${svgSize}`}
-            width='100%'
-            style={{ display: 'block', maxWidth: svgSize }}
-            aria-label='Dots and Boxes board'>
+        <svg viewBox={`0 0 ${svgSize} ${svgSize}`} className='block h-full w-full' aria-label='Dots and Boxes board'>
             {!hidePieces && boxFills}
             {horizontalLineElements}
             {verticalLineElements}

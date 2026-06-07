@@ -19,7 +19,7 @@ export default function TicTacToeBoard({
     hidePieces = false,
 }: TicTacToeBoardProps) {
     return (
-        <div className='grid grid-cols-3 gap-2 w-full max-w-xs sm:max-w-sm mx-auto' aria-label='Tic-Tac-Toe board'>
+        <div className='grid grid-cols-3 grid-rows-3 gap-2 w-full h-full' aria-label='Tic-Tac-Toe board'>
             {board.map((cell, index) => {
                 const isWinning = winningPositions?.includes(index) ?? false;
                 const isLast = !isWinning && lastPosition === index && cell !== null;
@@ -33,8 +33,8 @@ export default function TicTacToeBoard({
                         disabled={!isClickable}
                         onClick={() => isClickable && onCellClick(index)}
                         className={[
-                            'aspect-square min-h-[64px] flex items-center justify-center',
-                            'text-4xl font-bold rounded-lg border-2 transition-colors',
+                            'flex items-center justify-center',
+                            'text-4xl sm:text-5xl md:text-6xl font-bold rounded-lg border-2 transition-colors',
                             isWinning
                                 ? 'border-primary bg-primary/20'
                                 : isLast

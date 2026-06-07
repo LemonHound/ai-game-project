@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AuthModal from '../../components/AuthModal';
 import GameStatsPanel from '../../components/games/GameStatsPanel';
 import GameStartOverlay from '../../components/games/GameStartOverlay';
+import GameLayout from '../../components/games/GameLayout';
 import NewGameButtons from '../../components/games/NewGameButtons';
 import PlayerCard from '../../components/PlayerCard';
 import CheckersBoard from '../../components/games/CheckersBoard';
@@ -446,12 +447,65 @@ export default function CheckersPage() {
     void sessionId;
 
     return (
-        <div className='container mx-auto px-4 py-6 max-w-4xl'>
+        <>
             <PageMeta title='Checkers' description='Play Checkers against an AI opponent.' noindex />
-            <h1 className='mb-4 text-4xl font-bold text-center'>Checkers</h1>
+            <GameLayout
+                aspect={1}
+                board={
+                    <div className='relative h-full w-full'>
+                        <CheckersBoard
+                            board={board}
+                            playerSymbol={playerSymbol}
+                            currentTurn={currentTurn}
+                            selectedPiece={selectedPiece}
+                            validDestinations={validDestinations}
+                            legalPieces={legalPieces}
+                            mustCapture={mustCapture}
+                            locked={
+                                boardLocked || phase === 'terminal' || phase === 'newgame' || phase === 'resumeprompt'
+                            }
+                            flipped={flipped}
+                            lastMove={lastMove}
+                            hidePieces={phase !== 'playing'}
+                            onPieceClick={handlePieceClick}
+                            onPieceDragStart={handlePieceDragStart}
+                            onSquareClick={handleSquareClick}
+                            onSquareDrop={handleSquareClick}
+                        />
 
-            <div className='flex gap-4 items-stretch'>
-                <div className='flex flex-col flex-1 min-w-0'>
+                        {phase === 'loading' && (
+                            <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
+                                <span className='loading loading-spinner loading-lg' />
+                            </div>
+                        )}
+
+                        {(phase === 'newgame' || phase === 'resumeprompt') && (
+                            <GameStartOverlay
+                                canResume={phase === 'resumeprompt'}
+                                onResume={handleResume}
+                                optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                                optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                            />
+                        )}
+
+                        {phase === 'terminal' && !showGameOverOverlay && (
+                            <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/90 backdrop-blur-sm'>
+                                <p className='text-2xl font-bold'>{playerResult === 'win' ? 'You Win!' : 'You Lose'}</p>
+                            </div>
+                        )}
+
+                        {phase === 'terminal' && showGameOverOverlay && (
+                            <GameStartOverlay
+                                title={playerResult === 'win' ? 'You Win!' : 'You Lose'}
+                                canResume={false}
+                                onResume={() => {}}
+                                optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
+                                optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
+                            />
+                        )}
+                    </div>
+                }
+                opponent={
                     <PlayerCard
                         name='AI Opponent'
                         isAi
@@ -459,122 +513,58 @@ export default function CheckersPage() {
                         statusText={phase === 'playing' ? statusText : undefined}
                         result={aiResult}
                     />
-
-                    <div className='relative my-4 flex justify-center'>
-                        <div className='relative w-full max-w-sm'>
-                            <CheckersBoard
-                                board={board}
-                                playerSymbol={playerSymbol}
-                                currentTurn={currentTurn}
-                                selectedPiece={selectedPiece}
-                                validDestinations={validDestinations}
-                                legalPieces={legalPieces}
-                                mustCapture={mustCapture}
-                                locked={
-                                    boardLocked ||
-                                    phase === 'terminal' ||
-                                    phase === 'newgame' ||
-                                    phase === 'resumeprompt'
-                                }
-                                flipped={flipped}
-                                lastMove={lastMove}
-                                hidePieces={phase !== 'playing'}
-                                onPieceClick={handlePieceClick}
-                                onPieceDragStart={handlePieceDragStart}
-                                onSquareClick={handleSquareClick}
-                                onSquareDrop={handleSquareClick}
-                            />
-
-                            {phase === 'loading' && (
-                                <div className='absolute inset-0 flex items-center justify-center rounded-lg bg-base-100/80'>
-                                    <span className='loading loading-spinner loading-lg' />
-                                </div>
-                            )}
-
-                            {(phase === 'newgame' || phase === 'resumeprompt') && (
-                                <GameStartOverlay
-                                    canResume={phase === 'resumeprompt'}
-                                    onResume={handleResume}
-                                    optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
-                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
-                                />
-                            )}
-
-                            {phase === 'terminal' && !showGameOverOverlay && (
-                                <div className='absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-base-100/90 backdrop-blur-sm'>
-                                    <p className='text-2xl font-bold'>
-                                        {playerResult === 'win' ? 'You Win!' : 'You Lose'}
-                                    </p>
-                                </div>
-                            )}
-
-                            {phase === 'terminal' && showGameOverOverlay && (
-                                <GameStartOverlay
-                                    title={playerResult === 'win' ? 'You Win!' : 'You Lose'}
-                                    canResume={false}
-                                    onResume={() => {}}
-                                    optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
-                                    optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                    {phase === 'playing' && currentTurn === 'player' && (
-                        <div className='flex items-center justify-center gap-2 py-2 animate-pulse text-primary font-semibold text-sm'>
-                            <span>&#9650;</span>
-                            <span>{mustCapture !== null ? 'Your turn — capture required' : 'Your turn'}</span>
-                            <span>&#9650;</span>
-                        </div>
-                    )}
-
+                }
+                player={
                     <PlayerCard
                         name={user.displayName}
                         avatarUrl={user.profilePicture}
                         symbol={showSymbols ? playerLabel : undefined}
                         result={playerResult}
                     />
-                </div>
+                }
+                controls={
+                    <>
+                        {showSidePanel && (
+                            <div className='flex w-full flex-col items-center gap-2'>
+                                <div className='flex min-h-5 flex-wrap justify-center gap-1'>
+                                    {Array.from({ length: aiCaptures }, (_, i) => (
+                                        <div
+                                            key={i}
+                                            className={`h-4 w-4 rounded-full border ${isPlayerRed ? 'bg-red-500 border-red-700' : 'bg-neutral-800 border-neutral-600'}`}
+                                        />
+                                    ))}
+                                </div>
+                                <div className='h-px w-full bg-base-content/20' />
+                                <div className='flex min-h-5 flex-wrap justify-center gap-1'>
+                                    {Array.from({ length: playerCaptures }, (_, i) => (
+                                        <div
+                                            key={i}
+                                            className={`h-4 w-4 rounded-full border ${isAiRed ? 'bg-red-500 border-red-700' : 'bg-neutral-800 border-neutral-600'}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                {showSidePanel && (
-                    <div className='flex flex-col overflow-hidden bg-base-200 rounded-lg p-3 w-32 shrink-0'>
-                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
-                            {Array.from({ length: aiCaptures }, (_, i) => (
-                                <div
-                                    key={i}
-                                    className={`w-4 h-4 rounded-full border ${isPlayerRed ? 'bg-red-500 border-red-700' : 'bg-neutral-800 border-neutral-600'}`}
-                                />
-                            ))}
-                        </div>
-
-                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
-
-                        <div className='flex-1' />
-
-                        <div className='h-px bg-base-content/20 my-2 shrink-0' />
-
-                        <div className='flex flex-wrap gap-1 min-h-6 shrink-0'>
-                            {Array.from({ length: playerCaptures }, (_, i) => (
-                                <div
-                                    key={i}
-                                    className={`w-4 h-4 rounded-full border ${isAiRed ? 'bg-red-500 border-red-700' : 'bg-neutral-800 border-neutral-600'}`}
-                                />
-                            ))}
-                        </div>
+                        {phase === 'playing' && currentTurn === 'player' && (
+                            <div className='animate-pulse text-center text-sm font-semibold text-primary'>
+                                {mustCapture !== null ? 'Your turn — capture required' : 'Your turn'}
+                            </div>
+                        )}
 
                         {phase === 'playing' && (
                             <NewGameButtons
-                                className='mt-2'
+                                className='flex flex-wrap justify-center gap-2'
                                 optionA={{ label: 'Play as Red', onClick: () => handleStartGame(true) }}
                                 optionB={{ label: 'Play as Black', onClick: () => handleStartGame(false) }}
                                 onResign={handleResign}
                             />
                         )}
-                    </div>
-                )}
-            </div>
 
-            <GameStatsPanel gameType='checkers' />
+                        <GameStatsPanel gameType='checkers' />
+                    </>
+                }
+            />
 
             {showAuthModal && (
                 <AuthModal
@@ -587,6 +577,6 @@ export default function CheckersPage() {
                     }}
                 />
             )}
-        </div>
+        </>
     );
 }

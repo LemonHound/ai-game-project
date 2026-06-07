@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ChessBoardProps {
     board: (string | null)[][];
@@ -37,11 +38,9 @@ interface DragState {
     startY: number;
     active: boolean;
     piece: string;
+    size: number;
 }
 
-/**
- * Renders the interactive Chess board with piece selection, legal move highlights, and drag-and-drop.
- */
 export default function ChessBoard({
     board,
     playerColor,
@@ -59,7 +58,7 @@ export default function ChessBoard({
     const rows = playerColor === 'black' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
     const cols = playerColor === 'black' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
 
-    const [dragGhost, setDragGhost] = useState<{ x: number; y: number; piece: string } | null>(null);
+    const [dragGhost, setDragGhost] = useState<{ x: number; y: number; piece: string; size: number } | null>(null);
     const dragRef = useRef<DragState | null>(null);
     const squareRefs = useRef<(HTMLDivElement | null)[][]>(Array.from({ length: 8 }, () => Array(8).fill(null)));
     const onSquareClickRef = useRef(onSquareClick);
@@ -95,7 +94,7 @@ export default function ChessBoard({
                 onSquareClickRef.current(drag.fromRow, drag.fromCol);
             }
             if (drag.active) {
-                setDragGhost({ x: e.clientX, y: e.clientY, piece: drag.piece });
+                setDragGhost({ x: e.clientX, y: e.clientY, piece: drag.piece, size: drag.size });
             }
         };
 
@@ -165,6 +164,7 @@ export default function ChessBoard({
             startY: e.clientY,
             active: false,
             piece: board[r][c] ?? '',
+            size: squareRefs.current[r][c]?.getBoundingClientRect().width ?? 56,
         };
     };
 
@@ -172,80 +172,72 @@ export default function ChessBoard({
     const getFileLabel = (c: number) => String.fromCharCode(97 + c);
 
     return (
-        <div className='inline-flex'>
-            <div className='flex flex-col justify-around pr-1'>
-                {rows.map(r => (
-                    <div
-                        key={r}
-                        className='flex items-center justify-center w-4 h-10 sm:h-12 md:h-14 text-xs text-base-content/50 select-none'>
-                        {getRankLabel(r)}
-                    </div>
-                ))}
-            </div>
+        <div className='grid h-full w-full select-none grid-cols-8 grid-rows-8'>
+            {rows.map((r, displayRow) =>
+                cols.map((c, displayCol) => {
+                    const piece = board[r][c];
+                    const imgSrc = piece ? PIECE_IMAGES[piece] : null;
+                    const isDragging = isDraggingFrom(r, c);
+                    const isLight = (r + c) % 2 === 0;
+                    const labelColor = isLight ? 'text-amber-800' : 'text-amber-100';
 
-            <div className='flex flex-col'>
-                <div className='border-2 border-amber-900 rounded'>
-                    {rows.map(r => (
-                        <div key={r} className='flex'>
-                            {cols.map(c => {
-                                const piece = board[r][c];
-                                const imgSrc = piece ? PIECE_IMAGES[piece] : null;
-                                const isDragging = isDraggingFrom(r, c);
-
-                                return (
-                                    <div
-                                        key={c}
-                                        ref={el => {
-                                            squareRefs.current[r][c] = el;
-                                        }}
-                                        className={`relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 select-none ${getSquareBg(r, c)} ${!locked ? 'cursor-pointer hover:opacity-90' : ''}`}
-                                        onMouseDown={e => handleMouseDown(r, c, e)}>
-                                        {!hidePieces && isLegalDest(r, c) && (
-                                            <div
-                                                className={`absolute rounded-full z-10 ${piece ? 'inset-0 border-4 border-black/30' : 'w-3 h-3 bg-black/30'}`}
-                                            />
-                                        )}
-                                        {!hidePieces && imgSrc && (
-                                            <img
-                                                src={imgSrc}
-                                                alt={piece ?? ''}
-                                                className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 z-20 object-contain drop-shadow-md pointer-events-none${isDragging ? ' opacity-30' : ''}`}
-                                            />
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ))}
-                </div>
-
-                <div className='flex pt-1'>
-                    {cols.map(c => (
+                    return (
                         <div
-                            key={c}
-                            className='flex items-center justify-center w-10 sm:w-12 md:w-14 h-4 text-xs text-base-content/50 select-none'>
-                            {getFileLabel(c)}
+                            key={`${r}-${c}`}
+                            data-square={`${r}-${c}`}
+                            ref={el => {
+                                squareRefs.current[r][c] = el;
+                            }}
+                            className={`relative flex items-center justify-center ${getSquareBg(r, c)} ${!locked ? 'cursor-pointer hover:opacity-90' : ''}`}
+                            onMouseDown={e => handleMouseDown(r, c, e)}>
+                            {displayCol === 0 && (
+                                <span
+                                    className={`pointer-events-none absolute left-0.5 top-0 text-[0.55rem] font-semibold ${labelColor}`}>
+                                    {getRankLabel(r)}
+                                </span>
+                            )}
+                            {displayRow === 7 && (
+                                <span
+                                    className={`pointer-events-none absolute bottom-0 right-0.5 text-[0.55rem] font-semibold ${labelColor}`}>
+                                    {getFileLabel(c)}
+                                </span>
+                            )}
+                            {!hidePieces && isLegalDest(r, c) && (
+                                <div
+                                    className={`absolute z-10 rounded-full ${piece ? 'inset-0 border-4 border-black/30' : 'h-1/4 w-1/4 bg-black/30'}`}
+                                />
+                            )}
+                            {!hidePieces && imgSrc && (
+                                <img
+                                    src={imgSrc}
+                                    alt={piece ?? ''}
+                                    className={`pointer-events-none z-20 h-[85%] w-[85%] object-contain drop-shadow-md${isDragging ? ' opacity-30' : ''}`}
+                                />
+                            )}
                         </div>
-                    ))}
-                </div>
-            </div>
-
-            {!hidePieces && dragGhost && (
-                <img
-                    src={PIECE_IMAGES[dragGhost.piece]}
-                    alt=''
-                    style={{
-                        position: 'fixed',
-                        left: dragGhost.x - 24,
-                        top: dragGhost.y - 24,
-                        width: 48,
-                        height: 48,
-                        pointerEvents: 'none',
-                        zIndex: 9999,
-                        objectFit: 'contain',
-                    }}
-                />
+                    );
+                })
             )}
+
+            {!hidePieces &&
+                dragGhost &&
+                createPortal(
+                    <img
+                        src={PIECE_IMAGES[dragGhost.piece]}
+                        alt=''
+                        style={{
+                            position: 'fixed',
+                            left: dragGhost.x - dragGhost.size / 2,
+                            top: dragGhost.y - dragGhost.size / 2,
+                            width: dragGhost.size,
+                            height: dragGhost.size,
+                            pointerEvents: 'none',
+                            zIndex: 9999,
+                            objectFit: 'contain',
+                        }}
+                    />,
+                    document.body
+                )}
         </div>
     );
 }
