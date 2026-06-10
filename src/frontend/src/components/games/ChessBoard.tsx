@@ -172,7 +172,7 @@ export default function ChessBoard({
     const getFileLabel = (c: number) => String.fromCharCode(97 + c);
 
     return (
-        <div className='grid h-full w-full select-none grid-cols-8 grid-rows-8'>
+        <div data-testid='chess-board' className='grid h-full w-full select-none grid-cols-8 grid-rows-8'>
             {rows.map((r, displayRow) =>
                 cols.map((c, displayCol) => {
                     const piece = board[r][c];
