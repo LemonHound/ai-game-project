@@ -32,7 +32,7 @@ charset-normalizer==3.4.7
     # via requests
 chess==1.11.2
     # via -r requirements.in
-click==8.3.2
+click==8.5.0
     # via uvicorn
 colorama==0.4.6
     # via
