@@ -48,7 +48,7 @@ fastapi==0.136.3
     # via -r requirements.in
 flatbuffers==25.12.19
     # via onnxruntime
-google-api-core==2.30.3
+google-api-core==2.36.0
     # via
     #   google-cloud-core
     #   google-cloud-monitoring
