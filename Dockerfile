@@ -8,7 +8,7 @@ COPY src/frontend/ ./src/frontend/
 RUN npm run build
 
 # Stage 2: Python runtime
-FROM python:3.11-slim
+FROM python:3.15-slim
 WORKDIR /app
 
 COPY requirements.txt ./
