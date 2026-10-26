@@ -21,7 +21,7 @@ asyncpg==0.31.0
     # via -r requirements.in
 bcrypt==5.0.0
     # via -r requirements.in
-certifi==2026.5.20
+certifi==2026.10.19
     # via
     #   httpcore
     #   httpx
@@ -34,10 +34,6 @@ chess==1.11.2
     # via -r requirements.in
 click==8.3.2
     # via uvicorn
-colorama==0.4.6
-    # via
-    #   click
-    #   pytest
 cryptography==46.0.7
     # via google-auth
 dnspython==2.8.0
@@ -275,6 +271,8 @@ typing-inspection==0.4.2
 urllib3==2.7.0
     # via requests
 uvicorn==0.44.0
+    # via -r requirements.in
+uvloop==0.23.0 ; sys_platform != "win32"
     # via -r requirements.in
 watchfiles==1.1.1
     # via -r requirements.in
