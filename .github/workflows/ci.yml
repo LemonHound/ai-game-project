@@ -145,7 +145,7 @@ jobs:
   e2e-tests:
     name: E2E Tests (Chromium)
     needs: [changes, code-quality]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: needs.changes.outputs.code == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     services:
       postgres:
