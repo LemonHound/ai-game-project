@@ -221,7 +221,7 @@ pydocstyle==6.3.0
     # via -r requirements.in
 pygments==2.20.0
     # via pytest
-pyparsing==3.3.2
+pyparsing==3.3.3
     # via httplib2
 pytest==9.0.3
     # via
