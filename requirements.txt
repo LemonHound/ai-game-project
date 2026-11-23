@@ -246,7 +246,7 @@ sqlalchemy==2.0.50
     #   -r requirements.in
     #   alembic
     #   sqlmodel
-sqlmodel==0.0.38
+sqlmodel==0.0.50
     # via -r requirements.in
 starlette==1.10.0
     # via fastapi
